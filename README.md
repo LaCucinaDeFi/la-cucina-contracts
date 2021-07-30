@@ -1,15 +1,17 @@
-# NFT Marketplace
+# La Cucina Contracts 
 
 [![built-with openzeppelin](https://img.shields.io/badge/built%20with-OpenZeppelin-3677FF)](https://docs.openzeppelin.com/)
 ![Coverage](https://raw.githubusercontent.com/la-cucina/la-cucina-contracts/master/coverage_badge.svg)
 
+## NFT Marketplace
+
 This repository contains the smart contracts related with the NFT marketplace.
 
-This is an NFT marketplace where the admin/minter is the only one that can create NFTs and put them up for their initial sale (**New NFTs Market**).
+This is an NFT marketplace where the minter is the only one that can create NFTs and put them up for their initial sale (**New NFTs Market**).
 The sale can happen either for a fixed price for an NFT or through an auction.
-The initial sale can happen in the `PrivateMarketplace` contract - The "Private" notion comes from the fact that only the admin/minter is able to put
+The initial sale can happen in the `PrivateMarketplace` contract - The "Private" notion comes from the fact that only the minter is able to put
 NFTs for sale / auction in this market.
-The NFTs created from the admin/minter can be purchased by anyone through the methods described above (fixed price or auction).
+The NFTs created from the minter can be purchased by anyone through the methods described above (fixed price or auction).
 
 > _Note: The auction in the New NFTs Market is only available for unique NFTs._
 
