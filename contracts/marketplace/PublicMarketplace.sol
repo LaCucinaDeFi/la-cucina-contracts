@@ -46,7 +46,9 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
     uint256 _nftId,
     uint256 _nftPrice,
     address _tokenAddress
-  ) external nonReentrant returns (uint256 saleId) {
+  ) external virtual nonReentrant returns (uint256 saleId) {
+    require(_nftPrice > 0, 'PublicMarket: INVALID_NFT_PRICE');
+
     //get NFT tokens from seller
     nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
     saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, 1);
@@ -65,7 +67,9 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
     uint256 _initialPrice,
     address _tokenAddress,
     uint256 _duration
-  ) external nonReentrant returns (uint256 auctionId) {
+  ) external virtual nonReentrant returns (uint256 auctionId) {
+    require(_initialPrice > 0, 'PublicMarket: INVALID_INITIAL_NFT_PRICE');
+
     //get nft copy from sender and put it in auction
     nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
 
@@ -76,7 +80,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
    * @notice This method allows NFT sale creator to cancel the sale and claim back the nft token
    * @param _saleId indicates the saleId which user wants to cancel
    */
-  function cancelSaleAndClaimToken(uint256 _saleId) external onlyValidSaleId(_saleId) nonReentrant {
+  function cancelSaleAndClaimToken(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
     SaleInfo storage _sale = sale[_saleId];
 
     require(_sale.seller == msg.sender, 'PublicMarket: ONLY_SELLER_CAN_CANCEL');
@@ -92,7 +96,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
    * @notice This method allows auction creator to cancel the auction and claim back the nft. Auction can be cancel only if it does not have any bids.
    * @param _auctionId indicates the auctionId which user wants to cancel
    */
-  function cancelAuctionAndClaimToken(uint256 _auctionId) external onlyValidAuctionId(_auctionId) nonReentrant {
+  function cancelAuctionAndClaimToken(uint256 _auctionId) external virtual onlyValidAuctionId(_auctionId) nonReentrant {
     AuctionInfo storage _auction = auction[_auctionId];
 
     require(isActiveAuction(_auctionId), 'PublicMarket: CANNOT_CANCEL_INACTIVE_AUCTION');

@@ -58,7 +58,10 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
     address _tokenAddress,
     string memory _ipfsHash,
     uint256 _amountOfCopies
-  ) external onlyMinter nonReentrant returns (uint256 nftId, uint256 saleId) {
+  ) external virtual onlyMinter nonReentrant returns (uint256 nftId, uint256 saleId) {
+    require(_nftPrice > 0, 'PrivateMarketplace: INVALID_NFT_PRICE');
+    require(_amountOfCopies > 0, 'PrivateMarketplace: INVALID_NUMBER_OF_COPIES');
+
     //create nft
     nftId = nftContract.mint(address(this), _ipfsHash, _amountOfCopies);
     //create sale
@@ -78,7 +81,9 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
     address _tokenAddress,
     string memory _ipfsHash,
     uint256 _duration
-  ) external onlyMinter nonReentrant returns (uint256 nftId, uint256 auctionId) {
+  ) external virtual onlyMinter nonReentrant returns (uint256 nftId, uint256 auctionId) {
+    require(_initialPrice > 0, 'PrivateMarketplace: INVALID_INITIAL_NFT_PRICE');
+
     //create only one unique nft
     nftId = nftContract.mint(address(this), _ipfsHash, 1);
 
@@ -90,7 +95,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
    * @notice This method allows minter to cancel the sale, burn the token and delete the sale data
    * @param _saleId indicates the sale id
    */
-  function cancelSale(uint256 _saleId) external onlyValidSaleId(_saleId) {
+  function cancelSale(uint256 _saleId) external virtual onlyValidSaleId(_saleId) {
     SaleInfo memory _sale = sale[_saleId];
     require(isActiveSale(_saleId), 'PrivateMarketplace: CANNOT_CANCEL_INACTIVE_SALE');
     require(_sale.totalCopies == _sale.remainingCopies, 'PrivateMarketplace: CANNOT_CANCEL_SALE');
@@ -110,7 +115,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
    * @notice This method allows minter to cancel the auction, burn the token and delete the auction data
    * @param _auctionId indicates the auction id
    */
-  function cancelAuction(uint256 _auctionId) external onlyValidAuctionId(_auctionId) {
+  function cancelAuction(uint256 _auctionId) external virtual onlyValidAuctionId(_auctionId) {
     AuctionInfo storage _auction = auction[_auctionId];
 
     require(isActiveAuction(_auctionId), 'PrivateMarketplace: CANNOT_CANCEL_INACTIVE_AUCTION');
@@ -124,7 +129,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
     delete auction[_auctionId];
   }
 
-  function _removeUserSaleId(uint256 _saleId) internal {
+  function _removeUserSaleId(uint256 _saleId) internal virtual {
     uint256 saleIndex;
     for (saleIndex = 0; saleIndex < userSaleIds[msg.sender].length; saleIndex++) {
       if (userSaleIds[msg.sender][saleIndex] == _saleId) {

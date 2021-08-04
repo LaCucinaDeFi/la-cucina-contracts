@@ -430,7 +430,7 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     uint256 _nftPrice,
     address _tokenAddress,
     uint256 _amountOfCopies
-  ) internal onlySupportedTokens(_tokenAddress) returns (uint256 saleId) {
+  ) internal virtual onlySupportedTokens(_tokenAddress) returns (uint256 saleId) {
     //create sale
     saleIdCounter.increment();
 
@@ -453,7 +453,7 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     uint256 _initialPrice,
     address _tokenAddress,
     uint256 _duration
-  ) internal onlySupportedTokens(_tokenAddress) returns (uint256 auctionId) {
+  ) internal virtual onlySupportedTokens(_tokenAddress) returns (uint256 auctionId) {
     require(_duration >= minDuration, 'Market: INVALID_DURATION');
 
     //create Auction
