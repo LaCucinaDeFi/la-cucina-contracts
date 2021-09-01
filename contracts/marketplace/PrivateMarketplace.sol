@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 import './Marketplace.sol';
+import '../interfaces/IVersionedContract.sol';
 
-contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketplace {
+contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketplace, IVersionedContract {
   /*
    =======================================================================
    ======================== Constructor/Initializer ======================
@@ -15,7 +16,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
    * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
    * @param _nftContractAddress indicates the ERC1155 NFT contract address
    */
-  function initialize(address _nftContractAddress) external initializer {
+  function initialize(address _nftContractAddress) external virtual initializer {
     __AccessControl_init();
     __ReentrancyGuard_init();
 
@@ -95,7 +96,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
    * @notice This method allows minter to cancel the sale, burn the token and delete the sale data
    * @param _saleId indicates the sale id
    */
-  function cancelSale(uint256 _saleId) external virtual onlyValidSaleId(_saleId) {
+  function cancelSale(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
     SaleInfo memory _sale = sale[_saleId];
     require(isActiveSale(_saleId), 'PrivateMarketplace: CANNOT_CANCEL_INACTIVE_SALE');
     require(_sale.totalCopies == _sale.remainingCopies, 'PrivateMarketplace: CANNOT_CANCEL_SALE');
@@ -103,9 +104,6 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
 
     //burn the token
     nftContract.burn(address(this), _sale.nftId, _sale.remainingCopies);
-
-    //remove saleId from active sale ids of user
-    _removeUserSaleId(_saleId);
 
     //delete sale data
     delete sale[_saleId];
@@ -115,7 +113,7 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
    * @notice This method allows minter to cancel the auction, burn the token and delete the auction data
    * @param _auctionId indicates the auction id
    */
-  function cancelAuction(uint256 _auctionId) external virtual onlyValidAuctionId(_auctionId) {
+  function cancelAuction(uint256 _auctionId) external virtual onlyValidAuctionId(_auctionId) nonReentrant {
     AuctionInfo storage _auction = auction[_auctionId];
 
     require(isActiveAuction(_auctionId), 'PrivateMarketplace: CANNOT_CANCEL_INACTIVE_AUCTION');
@@ -129,24 +127,24 @@ contract PrivateMarketplace is Initializable, ERC1155ReceiverUpgradeable, Market
     delete auction[_auctionId];
   }
 
-  function _removeUserSaleId(uint256 _saleId) internal virtual {
-    uint256 saleIndex;
-    for (saleIndex = 0; saleIndex < userSaleIds[msg.sender].length; saleIndex++) {
-      if (userSaleIds[msg.sender][saleIndex] == _saleId) {
-        break;
-      }
-    }
-
-    if (userSaleIds[msg.sender].length > 1) {
-      //swap auction with la st auction id and pop last auction id
-      uint256 lastAuctionId = userSaleIds[msg.sender][userSaleIds[msg.sender].length - 1];
-      userSaleIds[msg.sender][saleIndex] = lastAuctionId;
-      userSaleIds[msg.sender].pop();
-    } else {
-      userSaleIds[msg.sender].pop();
-    }
+ /**
+   * @notice Returns the storage, major, minor, and patch version of the contract.
+   * @return The storage, major, minor, and patch version of the contract.
+   */
+  function getVersionNumber()
+    external
+    pure
+    virtual
+    override
+    returns (
+      uint256,
+      uint256,
+      uint256
+    )
+  {
+    return (1, 0, 0);
   }
-
+  
   function onERC1155Received(
     address,
     address,

@@ -9,6 +9,8 @@ import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 
+import './interfaces/IVersionedContract.sol';
+
 /**
  * @dev {ERC1155} token, including:
  *
@@ -35,7 +37,8 @@ contract ERC1155NFT is
   ContextUpgradeable,
   AccessControlEnumerableUpgradeable,
   ERC1155Upgradeable,
-  ERC1155PausableUpgradeable
+  ERC1155PausableUpgradeable,
+  IVersionedContract
 {
   using CountersUpgradeable for CountersUpgradeable.Counter;
 
@@ -252,6 +255,24 @@ contract ERC1155NFT is
    */
   function getCurrentNftId() external view returns (uint256) {
     return tokenCounter.current();
+  }
+
+  /**
+   * @notice Returns the storage, major, minor, and patch version of the contract.
+   * @return The storage, major, minor, and patch version of the contract.
+   */
+  function getVersionNumber()
+    external
+    pure
+    virtual
+    override
+    returns (
+      uint256,
+      uint256,
+      uint256
+    )
+  {
+    return (1, 0, 0);
   }
 
   /**

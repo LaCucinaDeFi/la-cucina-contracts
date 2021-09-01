@@ -1,10 +1,12 @@
 const { expect } = require('chai');
 const { expectRevert, BN } = require('@openzeppelin/test-helpers');
-const { deployProxy, admin } = require('@openzeppelin/truffle-upgrades');
+const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
 
 require('chai').should();
 
 const ERC1155NFT = artifacts.require('ERC1155NFT');
+const ERC1155NFTV2 = artifacts.require('ERC1155NFTV2');
+
 const url = 'https://token-cdn-domain/{id}.json';
 
 contract('ERC1155NFT', accounts => {
@@ -336,6 +338,33 @@ contract('ERC1155NFT', accounts => {
       const tokenURI = await this.ERC1155NFT.getIpfsHash('1');
 
       expect(tokenURI).to.be.eq('https://token-cdn-domain/{1}.json');
+    });
+  });
+
+  describe('upgradeProxy()', () => {
+    let versionBeforeUpgrade;
+    before('upgradeProxy', async () => {
+      this.ERC1155NFTV1 = await deployProxy(ERC1155NFT, [url], { initializer: 'initialize' });
+
+      versionBeforeUpgrade = await this.ERC1155NFTV1.getVersionNumber();
+
+      // upgrade contract
+      await upgradeProxy(this.ERC1155NFTV1.address, ERC1155NFTV2);
+    });
+
+    it('should upgrade contract correctly', async () => {
+      const versionAfterUpgrade = await this.ERC1155NFTV1.getVersionNumber();
+
+      console.log('versionBeforeUpgrade: ', versionBeforeUpgrade);
+      console.log('versionAfterUpgrade: ', versionAfterUpgrade);
+
+      expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
+      expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+
+      expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
+      expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
     });
   });
 });

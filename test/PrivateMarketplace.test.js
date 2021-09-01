@@ -2,10 +2,12 @@ require('chai').should();
 const { expect } = require('chai');
 const { expectRevert, ether, BN, time, expectEvent } = require('@openzeppelin/test-helpers');
 const { ZERO_ADDRESS, MAX_UINT256 } = require('@openzeppelin/test-helpers/src/constants');
-const { deployProxy } = require('@openzeppelin/truffle-upgrades');
+const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
 
 const ERC1155NFT = artifacts.require('ERC1155NFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
+const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
+
 const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
@@ -64,7 +66,7 @@ contract('PrivateMarketplace', accounts => {
       await this.privateMarketplace.addSupportedToken(this.sampleToken.address, { from: owner });
 
       // create the NFT and list for sale
-      this.sale1 = await this.privateMarketplace.createAndSellNFT(ether('1'), this.sampleToken.address, url, 10, {
+      this.saleTx = await this.privateMarketplace.createAndSellNFT(ether('1'), this.sampleToken.address, url, 10, {
         from: minter,
       });
     });
@@ -120,7 +122,7 @@ contract('PrivateMarketplace', accounts => {
       );
     });
     it('should emit event after successfully creating nft sale', async () => {
-      await expectEvent(this.sale1, 'NewNFTListing', [minter, '1']);
+      await expectEvent(this.saleTx, 'NewNFTListing', [minter, '1']);
     });
   });
 
@@ -129,7 +131,7 @@ contract('PrivateMarketplace', accounts => {
     let currentNftId;
     before('create and auction NFT', async () => {
       // create auction
-      this.auction1 = await this.privateMarketplace.createAndAuctionNFT(
+      this.auctionTx = await this.privateMarketplace.createAndAuctionNFT(
         ether('1'),
         this.sampleToken.address,
         url,
@@ -212,7 +214,7 @@ contract('PrivateMarketplace', accounts => {
     });
 
     it('should emit event after successfully creating nft auction', async () => {
-      await expectEvent(this.auction1, 'NFTAuction', [minter, '1']);
+      await expectEvent(this.auctionTx, 'NFTAuction', [minter, '1']);
     });
   });
 
@@ -344,7 +346,7 @@ contract('PrivateMarketplace', accounts => {
       await this.sampleToken.approve(this.privateMarketplace.address, MAX_UINT256, { from: user1 });
 
       // place bid
-      await this.privateMarketplace.placeBid(currentAuctionId, ether('2'), { from: user1 });
+      this.bidTx = await this.privateMarketplace.placeBid(currentAuctionId, ether('2'), { from: user1 });
 
       await expectRevert(
         this.privateMarketplace.updateAuction(currentAuctionId, ether('3'), String(time.duration.days('1')), {
@@ -353,6 +355,11 @@ contract('PrivateMarketplace', accounts => {
         'Market: CANNOT_UPDATE_AUCTION_WITH_NON_ZERO_BIDS',
       );
     });
+
+    it('should emit PlaceBid event when user places bid', async () => {
+      await expectEvent(this.bidTx, 'PlaceBid');
+    });
+
     it('should revert when seller tries to update the canceled auction', async () => {
       // create new Auction
       await this.privateMarketplace.createAndAuctionNFT(
@@ -578,7 +585,7 @@ contract('PrivateMarketplace', accounts => {
       privateMarketNFTBalBefore = await this.ERC1155NFT.balanceOf(this.privateMarketplace.address, currentNftId);
 
       // buy nft from sale
-      await this.privateMarketplace.buyNFT(currentSaleId, { from: user1 });
+      this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, { from: user1 });
     });
 
     it('should reflect nft in user wallet correctly', async () => {
@@ -589,6 +596,10 @@ contract('PrivateMarketplace', accounts => {
       expect(user1NFTBal).to.bignumber.be.eq(new BN('1'));
       expect(privateMarketNFTBalBefore).to.bignumber.be.eq(new BN('1'));
       expect(privateMarketNFTBalAfter).to.bignumber.be.eq(new BN('0'));
+    });
+
+    it('should emit BuySaleNFT event when user buys NFT from sale', async () => {
+      await expectEvent(this.buyNFTTx, 'BuySaleNFT');
     });
 
     it('should revert when seller tries to cancel inactive sale', async () => {
@@ -998,7 +1009,7 @@ contract('PrivateMarketplace', accounts => {
       await time.increase(String(time.duration.days('3')));
 
       // resolve auction
-      await this.privateMarketplace.resolveAuction(currentAuctionId);
+      this.resolveTx = await this.privateMarketplace.resolveAuction(currentAuctionId);
 
       const auction = await this.privateMarketplace.auction(currentAuctionId);
 
@@ -1014,6 +1025,9 @@ contract('PrivateMarketplace', accounts => {
       expect(contractBalanceBefore).to.bignumber.be.gt(contractBalanceAfter);
     });
 
+    it('should emit BuyAuctionNFT event when user resolves the auction', async () => {
+      await expectEvent(this.resolveTx, 'BuyAuctionNFT');
+    });
     it('should revert when anyone tries to resolve auction which already resolved', async () => {
       await expectRevert(
         this.privateMarketplace.resolveAuction(currentAuctionId),
@@ -1166,6 +1180,30 @@ contract('PrivateMarketplace', accounts => {
 
       isSupported = await this.privateMarketplace.isSupportedToken(this.sampleToken.address);
       expect(isSupported[0]).to.be.eq(false);
+    });
+  });
+
+  describe('upgradeProxy()', () => {
+    let versionBeforeUpgrade;
+    before('upgradeProxy', async () => {
+      versionBeforeUpgrade = await this.privateMarketplace.getVersionNumber();
+      // upgrade contract
+      await upgradeProxy(this.privateMarketplace.address, PrivateMarketplaceV2);
+    });
+
+    it('should upgrade contract correctly', async () => {
+      const versionAfterUpgrade = await this.privateMarketplace.getVersionNumber();
+
+      console.log('versionBeforeUpgrade: ', versionBeforeUpgrade);
+      console.log('versionAfterUpgrade: ', versionAfterUpgrade);
+
+      expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
+      expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+
+      expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
+      expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
     });
   });
 });

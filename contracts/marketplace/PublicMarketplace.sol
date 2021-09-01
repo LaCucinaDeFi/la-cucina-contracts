@@ -4,8 +4,9 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 
 import './Marketplace.sol';
+import '../interfaces/IVersionedContract.sol';
 
-contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketplace {
+contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketplace, IVersionedContract {
   /*
    =======================================================================
    ======================== Constructor/Initializer ======================
@@ -16,7 +17,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
    * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
    * @param _nftContractAddress indicates the ERC1155 NFT contract address
    */
-  function initialize(address _nftContractAddress) external initializer {
+  function initialize(address _nftContractAddress) external virtual initializer {
     __AccessControl_init();
     __ReentrancyGuard_init();
 
@@ -107,6 +108,24 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
 
     _auction.status = 2;
     _auction.cancelTimeStamp = block.timestamp;
+  }
+
+  /**
+   * @notice Returns the storage, major, minor, and patch version of the contract.
+   * @return The storage, major, minor, and patch version of the contract.
+   */
+  function getVersionNumber()
+    external
+    pure
+    virtual
+    override
+    returns (
+      uint256,
+      uint256,
+      uint256
+    )
+  {
+    return (1, 0, 0);
   }
 
   function onERC1155Received(

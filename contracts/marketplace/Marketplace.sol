@@ -104,8 +104,10 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
  */
   event NewNFTListing(address indexed seller, uint256 indexed saleId);
   event NFTAuction(address indexed seller, uint256 indexed auctionId);
-  event NFTBought(address indexed buyer, uint256 indexed nftId);
-
+  event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint saleId);
+  event BuyAuctionNFT(address indexed buyer, uint256 indexed nftId, uint auctionId);
+  event PlaceBid(uint auctionId, uint indexed bidId, address indexed bidderAddress, uint bidAmount);
+  
   /*
    =======================================================================
    ======================== Modifiers ====================================
@@ -221,7 +223,7 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
       _sale.sellTimeStamp = block.timestamp;
     }
 
-    emit NFTBought(msg.sender, _sale.nftId);
+    emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
   }
 
   /**
@@ -270,6 +272,8 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     _auction.bidIds.push(bidId);
 
     userBidIds[msg.sender].push(bidId);
+
+    emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount);
   }
 
   /**
@@ -289,6 +293,8 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     //close auction
     _auction.status = 0;
     _auction.buyTimestamp = block.timestamp;
+    
+    emit BuyAuctionNFT(bid[_auction.winningBidId].bidderAddress, _auction.nftId, _auctionId);
   }
 
   /**
