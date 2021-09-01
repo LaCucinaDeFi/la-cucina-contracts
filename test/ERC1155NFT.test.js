@@ -286,8 +286,8 @@ contract('ERC1155NFT', accounts => {
     await this.ERC1155NFT.addExceptedAddress(user1);
 
     const isExceptedAddressAfter = await this.ERC1155NFT.isExceptedAddress(user1);
-    expect(isExceptedAddressBefore).to.be.eq(false);
-    expect(isExceptedAddressAfter).to.be.eq(true);
+    expect(isExceptedAddressBefore[0]).to.be.eq(false);
+    expect(isExceptedAddressAfter[0]).to.be.eq(true);
     await expectRevert(this.ERC1155NFT.addExceptedAddress(user1), 'ERC1155: ALREADY_EXCEPTED_ADDRESS');
   });
 
@@ -299,8 +299,8 @@ contract('ERC1155NFT', accounts => {
     const isExceptedAddressUser1Before = await this.ERC1155NFT.isExceptedAddress(user1);
     const isExceptedAddressUser2Before = await this.ERC1155NFT.isExceptedAddress(user2);
 
-    expect(isExceptedAddressUser1Before).to.be.eq(true);
-    expect(isExceptedAddressUser2Before).to.be.eq(true);
+    expect(isExceptedAddressUser1Before[0]).to.be.eq(true);
+    expect(isExceptedAddressUser2Before[0]).to.be.eq(true);
 
     await this.ERC1155NFT.removeExceptedAddress(user1);
     await this.ERC1155NFT.removeExceptedAddress(user2);
@@ -308,10 +308,10 @@ contract('ERC1155NFT', accounts => {
     const isExceptedAddressUser1After = await this.ERC1155NFT.isExceptedAddress(user1);
     const isExceptedAddressUser2After = await this.ERC1155NFT.isExceptedAddress(user2);
 
-    expect(isExceptedAddressUser1After).to.be.eq(false);
-    expect(isExceptedAddressUser2After).to.be.eq(false);
+    expect(isExceptedAddressUser1After[0]).to.be.eq(false);
+    expect(isExceptedAddressUser2After[0]).to.be.eq(false);
 
-    await expectRevert(this.ERC1155NFT.removeExceptedAddress(user3), 'ERC1155NFT: CANNOT_FIND_USER');
+    await expectRevert(this.ERC1155NFT.removeExceptedAddress(user3), 'ERC1155NFT: CANNOT_REMOVE_FROM_EMPTY_LIST');
   });
 
   describe('Getters', () => {

@@ -3,12 +3,13 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
 
 import '../interfaces/INFT.sol';
 import '../interfaces/IBEP20.sol';
 
-contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
+contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable, ERC1155ReceiverUpgradeable {
   using Counters for Counters.Counter;
 
   /*
@@ -105,7 +106,6 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
   event NewNFTListing(address indexed seller, uint256 indexed saleId);
   event NFTAuction(address indexed seller, uint256 indexed auctionId);
   event NFTBought(address indexed buyer, uint256 indexed nftId);
-
   /*
    =======================================================================
    ======================== Modifiers ====================================
@@ -119,6 +119,11 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
   modifier onlySupportedTokens(address _tokenAddress) {
     (bool isSupported, ) = isSupportedToken(_tokenAddress);
     require(isSupported, 'Market: UNSUPPORTED_TOKEN');
+    _;
+  }
+
+  modifier onlyValidNftId(uint256 _nftId) {
+    require(_nftId > 0 && _nftId <= nftContract.getCurrentNftId(), 'Market:INVALID_NFT_ID');
     _;
   }
 
@@ -143,7 +148,7 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
    * @notice This method allows auction creator to update the auction starting price and extend the auction only if auction is ended with no bids.
    * @param _auctionId indicates the id of auction whose details needs to update
    * @param _newPrice indicates the new starting price for the auction.
-   * @param _timeExtension indicates the extended time for the auction.
+   * @param _timeExtension indicates the extended time for the auction. it can be zero if user only wants to update the auction price.
    */
   function updateAuction(
     uint256 _auctionId,
@@ -186,6 +191,7 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     returns (uint256 saleId)
   {
     require(isActiveAuction(_auctionId), 'Market: CANNOT_MOVE_NFT_FROM_INACTIVE_AUCTION');
+    require(_sellingPrice > 0, 'Market: INVALID_SELLING_PRICE');
 
     AuctionInfo storage _auction = auction[_auctionId];
     require(msg.sender == _auction.sellerAddress, 'Market: CALLER_NOT_THE_AUCTION_CREATOR');
@@ -208,7 +214,10 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     SaleInfo storage _sale = sale[_saleId];
 
     //transfer tokens to the seller
-    IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice);
+    require(
+      IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+      'Market: TRANSFER_FROM_FAILED'
+    );
 
     //transfer one nft to buyer
     nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
@@ -249,22 +258,26 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
       require(_bidAmount > bid[_auction.winningBidId].bidAmount, 'Market: INVALID_BID_AMOUNT');
     }
     //transferFrom the tokens
-    IBEP20(_auction.currency).transferFrom(msg.sender, address(this), _bidAmount);
+    require(
+      IBEP20(_auction.currency).transferFrom(msg.sender, address(this), _bidAmount),
+      'Market: TRANSFER_FROM_FAILED'
+    );
 
     if (_auction.winningBidId != 0) {
       //transfer back the tokens to the previous winner
-      IBEP20(_auction.currency).transfer(
-        bid[_auction.winningBidId].bidderAddress,
-        bid[_auction.winningBidId].bidAmount
+      require(
+        IBEP20(_auction.currency).transfer(
+          bid[_auction.winningBidId].bidderAddress,
+          bid[_auction.winningBidId].bidAmount
+        ),
+        'Market: TRANSFER_FAILED'
       );
     }
     //place bid
     bidIdCounter.increment();
     bidId = bidIdCounter.current();
 
-    bid[bidId].auctionId = _auctionId;
-    bid[bidId].bidderAddress = msg.sender;
-    bid[bidId].bidAmount = _bidAmount;
+    bid[bidId] = Bid(_auctionId, msg.sender, _bidAmount);
 
     _auction.winningBidId = bidId;
     _auction.bidIds.push(bidId);
@@ -282,7 +295,10 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     require(block.timestamp > (_auction.startBlock + _auction.duration), 'Market: CANNOT_RESOLVE_DURING_AUCTION');
     require(_auction.winningBidId != 0 && _auction.bidIds.length > 0, 'Market: CANNOT_RESOLVE_AUCTION_WITH_NO_BIDS');
 
-    IBEP20(_auction.currency).transfer(_auction.sellerAddress, bid[_auction.winningBidId].bidAmount);
+    require(
+      IBEP20(_auction.currency).transfer(_auction.sellerAddress, bid[_auction.winningBidId].bidAmount),
+      'Market: TRANSFER__FAILED'
+    );
 
     nftContract.safeTransferFrom(address(this), bid[_auction.winningBidId].bidderAddress, _auction.nftId, 1, '');
 
@@ -306,26 +322,26 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
    * @param _tokenAddress indicates the ERC20/BEP20 token address
    */
   function removeSupportedToken(address _tokenAddress) external virtual onlyAdmin {
+    uint256 noOfsupportedTokens = supportedTokens.length;
+    require(noOfsupportedTokens > 0, 'MARKET: NO_SUPPORTED_TOKENS_ADDED');
+
+    // check and remove if the last token is supported token to be removed.
+    if (supportedTokens[noOfsupportedTokens - 1] == _tokenAddress) {
+      supportedTokens.pop();
+      return;
+    }
+
     (bool isSupported, uint256 index) = isSupportedToken(_tokenAddress);
     require(isSupported, 'Market: TOKEN_DOES_NOT_EXISTS');
 
-    //remove supported token
-    if (supportedTokens.length > 1) {
-      address temp = supportedTokens[supportedTokens.length - 1];
+    // move supported token to last
+    if (noOfsupportedTokens > 1) {
+      address temp = supportedTokens[noOfsupportedTokens - 1];
       supportedTokens[index] = temp;
-      supportedTokens.pop();
-    } else {
-      supportedTokens.pop();
     }
-  }
 
-  /**
-   * @notice This method allow admin to update the ERC1155 NFT contract address.
-   * @param _newAddress indicates the new address of NFT contract.
-   */
-  function updateNftContract(address _newAddress) external virtual onlyAdmin {
-    require(_newAddress != address(nftContract) && _newAddress != address(0), 'Market: INVALID_CONTRACT_ADDRESS');
-    nftContract = INFT(_newAddress);
+    //remove supported token
+    supportedTokens.pop();
   }
 
   /**
@@ -436,12 +452,17 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
 
     saleId = saleIdCounter.current();
 
-    sale[saleId].seller = msg.sender;
-    sale[saleId].nftId = _nftId;
-    sale[saleId].sellingPrice = _nftPrice;
-    sale[saleId].currency = _tokenAddress;
-    sale[saleId].totalCopies = _amountOfCopies;
-    sale[saleId].remainingCopies = _amountOfCopies;
+    sale[saleId] = SaleInfo(
+      msg.sender,
+      address(0),
+      _nftId,
+      _amountOfCopies,
+      _amountOfCopies,
+      _nftPrice,
+      _tokenAddress,
+      0,
+      0
+    );
 
     userSaleIds[msg.sender].push(saleId);
 
@@ -460,16 +481,57 @@ contract Marketplace is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
     auctionIdCounter.increment();
     auctionId = auctionIdCounter.current();
 
-    auction[auctionId].nftId = _nftId;
-    auction[auctionId].sellerAddress = msg.sender;
-    auction[auctionId].initialPrice = _initialPrice;
-    auction[auctionId].currency = _tokenAddress;
-    auction[auctionId].startBlock = block.timestamp;
-    auction[auctionId].duration = _duration;
-    auction[auctionId].status = 1;
+    uint256[] memory bidIds;
+
+    auction[auctionId] = AuctionInfo(
+      _nftId,
+      msg.sender,
+      _initialPrice,
+      _tokenAddress,
+      block.timestamp,
+      _duration,
+      1,
+      0,
+      bidIds,
+      0,
+      0
+    );
 
     userAuctionIds[msg.sender].push(auctionId);
 
     emit NFTAuction(msg.sender, auctionId);
+  }
+
+  function onERC1155Received(
+    address,
+    address,
+    uint256,
+    uint256,
+    bytes memory
+  ) public virtual override returns (bytes4) {
+    return this.onERC1155Received.selector;
+  }
+
+  function onERC1155BatchReceived(
+    address,
+    address,
+    uint256[] memory,
+    uint256[] memory,
+    bytes memory
+  ) public virtual override returns (bytes4) {
+    return this.onERC1155BatchReceived.selector;
+  }
+
+  /**
+   * @dev See {IERC165-supportsInterface}.
+   */
+  function supportsInterface(bytes4 interfaceId)
+    public
+    view
+    virtual
+    override(ERC1155ReceiverUpgradeable, AccessControlUpgradeable)
+    returns (bool)
+  {
+    return super.supportsInterface(interfaceId);
   }
 }
