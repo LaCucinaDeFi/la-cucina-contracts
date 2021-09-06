@@ -1,0 +1,39 @@
+{
+  "name": "@la-cucina/nft-mix-poc",
+  "version": "0.0.1",
+  "private": "true",
+  "license": "MIT",
+  "scripts": {
+    "compile": "sudo npx truffle compile",
+    "verify_test": "truffle run verify --network bsc_test",
+    "verify_main": "truffle run verify --network bsc_main",
+    "ganache": "./scripts/start_ganache.sh",
+    "ganache_main": "./scripts/start_ganache.sh true true",
+    "ganache_test": "./scripts/start_ganache.sh true",
+    "test": "./scripts/test.sh",
+    "coverage": "./scripts/test.sh true",
+    "coverage_badge": "node ./scripts/coverage.js",
+    "migrate": "npx truffle migrate",
+    "migrate_bsc_main": "npx truffle migrate --network=bsc_main",
+    "migrate_bsc_test": "npx truffle migrate --network=bsc_test",
+    "migrate_bsc_pumapay": "npx truffle migrate --network=bsc_pumapay",
+    "unify": "./scripts/unify.sh",
+    "clean": "rimraf ./node_modules && rm -rf ./build",
+    "lint": "eslint . --ignore-path .eslintignore --ext ts --ext tsx --ext js --ext jsx"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts-upgradeable": "^4.2.0",
+    "@openzeppelin/test-environment": "^0.1.9",
+    "@openzeppelin/test-helpers": "^0.5.12",
+    "@openzeppelin/truffle-upgrades": "^1.8.0",
+    "@truffle/hdwallet-provider": "^1.4.1",
+    "child_process": "^1.0.2",
+    "fs": "^0.0.1-security",
+    "ganache-cli": "^6.12.2",
+    "lcov2badge": "^0.1.2",
+    "solidity-coverage": "^0.7.16",
+    "truffle-plugin-verify": "^0.5.10",
+    "web3": "^1.4.0"
+  }
+}
