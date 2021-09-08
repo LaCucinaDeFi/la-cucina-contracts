@@ -69,7 +69,7 @@ contract ERC1155NFT is
     mapping(uint256 => string) internal ipfsHash;
 
     /// @dev tokenId -> totalSupply
-    mapping(uint256 => uint256) internal totalSupply;
+    mapping(uint256 => uint256) public totalSupply;
 
     Counters.Counter internal tokenCounter;
 
@@ -221,9 +221,8 @@ contract ERC1155NFT is
     {
         require(
             _account != address(0),
-            "ERC1155NFT: CANNOT_EXCEPT_ZERO_ADDRESS"
+            "ERC1155NFT: CANNOT_REMOVE_ZERO_ADDRESS"
         );
-
         uint256 exceptedAddressesLength = exceptedAddresses.length;
 
         require(
@@ -262,7 +261,7 @@ contract ERC1155NFT is
     {
         require(
             _account != address(0),
-            "ERC1155NFT: CANNOT_EXCEPT_ZERO_ADDRESS"
+            "ERC1155NFT: CANNOT_REMOVE_ZERO_ADDRESS"
         );
 
         uint256 exceptedFromAddressesLength = exceptedFromAddresses.length;
@@ -413,12 +412,14 @@ contract ERC1155NFT is
         (bool isExceptedFrom, ) = isExceptedFromAddress(from);
         (bool isExcepted, ) = isExceptedAddress(to);
 
-        if (!isExceptedFrom && !isExcepted && to != address(0)) {
-            for (uint256 i = 0; i < ids.length; i++) {
-                require(
-                    balanceOf(to, ids[i]) == 0,
-                    "ERC1155NFT: TOKEN_ALREADY_EXIST"
-                );
+        if (!isExcepted && to != address(0)) {
+            if (!isExceptedFrom) {
+                for (uint256 i = 0; i < ids.length; i++) {
+                    require(
+                        balanceOf(to, ids[i]) == 0,
+                        "ERC1155NFT: TOKEN_ALREADY_EXIST"
+                    );
+                }
             }
 
             for (uint256 i = 0; i < amounts.length; i++) {

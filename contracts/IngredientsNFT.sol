@@ -118,13 +118,13 @@ contract IngredientsNFT is ERC1155NFT {
     }
 
     /**
-			@notice This method allows admin to add the ingredient details for preparing a dish.
-			@param _name - indicates the name of the ingredient
-      @param _ipfsHash - indicates the ipfs hash for ingredient
-			@param _fat - indicates the fats of the ingredient
-			@param _svg - indicates the svg of the ingredient
-			@return ingredientId - new ingredient id
-		 */
+     *  @notice This method allows admin to add the ingredient details for preparing a dish.
+     *  @param _name - indicates the name of the ingredient
+     *  @param _ipfsHash - indicates the ipfs hash for ingredient
+     *  @param _fat - indicates the fats of the ingredient
+     *  @param _svg - indicates the svg of the ingredient
+     *  @return ingredientId - new ingredient id
+     */
     function addIngredient(
         string memory _name,
         string memory _ipfsHash,
