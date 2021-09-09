@@ -1388,9 +1388,6 @@ contract('PrivateMarketplace', (accounts) => {
 		it('should upgrade contract correctly', async () => {
 			const versionAfterUpgrade = await this.privateMarketplace.getVersionNumber();
 
-			console.log('versionBeforeUpgrade: ', versionBeforeUpgrade);
-			console.log('versionAfterUpgrade: ', versionAfterUpgrade);
-
 			expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
 			expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
 			expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
