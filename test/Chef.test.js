@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const Chef = artifacts.require('Chef');
+const ChefV2 = artifacts.require('ChefV2');
+
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
 
@@ -282,6 +284,28 @@ contract('Chef', (accounts) => {
 				this.Dish.serveDish(currentDishId, {from: user1}),
 				'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH'
 			);
+		});
+	});
+
+	describe('upgradeProxy()', () => {
+		let versionBeforeUpgrade;
+		before('upgradeProxy', async () => {
+			versionBeforeUpgrade = await this.Chef.getVersionNumber();
+
+			// upgrade contract
+			await upgradeProxy(this.Chef.address, ChefV2);
+		});
+
+		it('should upgrade contract correctly', async () => {
+			const versionAfterUpgrade = await this.Chef.getVersionNumber();
+
+			expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
+			expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+			expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+
+			expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
+			expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+			expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
 		});
 	});
 });

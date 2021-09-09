@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../ERC1155NFT.sol';
+import '../../DishesNFT.sol';
 
-contract ERC1155NFTV2 is ERC1155NFT {
+contract DishesNFTV2 is DishesNFT {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -29,7 +29,7 @@ contract ERC1155NFTV2 is ERC1155NFT {
  */
 
 	function addBurner(address _burner) public virtual onlyAdmin {
-		require(_burner != address(0), 'ERC1155: ZERO_ADDRESS_FOUND');
+		require(_burner != address(0), 'DishesNFTV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}
 
