@@ -19,7 +19,8 @@
     "migrate_bsc_test": "npx truffle migrate --network=bsc_test",
     "migrate_bsc_pumapay": "npx truffle migrate --network=bsc_pumapay",
     "unify": "./scripts/unify.sh",
-    "clean": "rimraf ./node_modules && rm -rf ./build"
+    "clean": "rimraf ./node_modules && rm -rf ./build",
+    "lint": "eslint . --ignore-path .eslintignore --ext ts --ext tsx --ext js --ext jsx"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",

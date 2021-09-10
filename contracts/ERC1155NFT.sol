@@ -131,14 +131,17 @@ contract ERC1155NFT is
     address _account,
     string memory _ipfsHash,
     uint256 _amountOfCopies
-  ) public returns (uint256) {
+  ) external virtual returns (uint256) {
     require(hasRole(MINTER_ROLE, msg.sender), 'ERC1155NFT: MUST_HAVE_MINTER_ROLE_TO_MINT');
+    require(bytes(_ipfsHash).length > 0, 'ERC1155NFT: INVALID_IPFS_HASH');
 
     tokenCounter.increment();
-    _mint(_account, tokenCounter.current(), _amountOfCopies, '');
-    ipfsHash[tokenCounter.current()] = _ipfsHash;
+    uint256 nftID = tokenCounter.current();
 
-    return tokenCounter.current();
+    _mint(_account, nftID, _amountOfCopies, '');
+    ipfsHash[nftID] = _ipfsHash;
+
+    return nftID;
   }
 
   /**
@@ -151,7 +154,7 @@ contract ERC1155NFT is
     address _account,
     uint256 _tokenId,
     uint256 _amountOfCopies
-  ) public {
+  ) external virtual {
     require(hasRole(MINTER_ROLE, msg.sender), 'ERC1155NFT: MUST_HAVE_MINTER_ROLE_TO_BURN');
     _burn(_account, _tokenId, _amountOfCopies);
     delete ipfsHash[_tokenId];
@@ -189,9 +192,11 @@ contract ERC1155NFT is
    * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
    * @param _account indicates the address to add.
    */
-  function addExceptedAddress(address _account) external onlyAdmin {
+  function addExceptedAddress(address _account) external virtual onlyAdmin {
     require(_account != address(0), 'ERC1155NFT: CANNOT_EXCEPT_ZERO_ADDRESS');
-    require(!isExceptedAddress(_account), 'ERC1155: ALREADY_EXCEPTED_ADDRESS');
+
+    (bool isExcepted, ) = isExceptedAddress(_account);
+    require(!isExcepted, 'ERC1155: ALREADY_EXCEPTED_ADDRESS');
 
     exceptedAddresses.push(_account);
   }
@@ -200,27 +205,31 @@ contract ERC1155NFT is
    * @notice This method allows admin to remove the excepted addresses from having multiple tokens of same NFT.
    * @param _account indicates the address to remove.
    */
-  function removeExceptedAddress(address _account) external onlyAdmin {
+  function removeExceptedAddress(address _account) external virtual onlyAdmin {
     require(_account != address(0), 'ERC1155NFT: CANNOT_EXCEPT_ZERO_ADDRESS');
 
-    uint256 userIndex;
-    bool isUserExists;
-    for (userIndex = 0; userIndex < exceptedAddresses.length; userIndex++) {
-      if (exceptedAddresses[userIndex] == _account) {
-        isUserExists = true;
-        break;
-      }
+    uint256 exceptedAddressesLength = exceptedAddresses.length;
+
+    require(exceptedAddressesLength > 0, 'ERC1155NFT: CANNOT_REMOVE_FROM_EMPTY_LIST');
+
+    if (exceptedAddresses[exceptedAddressesLength - 1] == _account) {
+      // remove excepted address
+      exceptedAddresses.pop();
+      return;
     }
+
+    (bool isUserExists, uint256 userIndex) = isExceptedAddress(_account);
 
     require(isUserExists, 'ERC1155NFT: CANNOT_FIND_USER');
 
-    if (exceptedAddresses.length > 1) {
-      address temp = exceptedAddresses[exceptedAddresses.length - 1];
+    // move excepted address to last
+    if (exceptedAddressesLength > 1) {
+      address temp = exceptedAddresses[exceptedAddressesLength - 1];
       exceptedAddresses[userIndex] = temp;
-      exceptedAddresses.pop();
-    } else {
-      exceptedAddresses.pop();
     }
+
+    // remove excepted address
+    exceptedAddresses.pop();
   }
 
   /*
@@ -233,10 +242,11 @@ contract ERC1155NFT is
    * @param _user indicates the user address
    * @return isExcepted - returns true if address is allowed to have multiple tokens of same nft otherwise returns false
    */
-  function isExceptedAddress(address _user) public view returns (bool isExcepted) {
+  function isExceptedAddress(address _user) public view returns (bool isExcepted, uint256 index) {
     for (uint256 i = 0; i < exceptedAddresses.length; i++) {
       if (exceptedAddresses[i] == _user) {
         isExcepted = true;
+        index = i;
         break;
       }
     }
@@ -246,7 +256,7 @@ contract ERC1155NFT is
    * @dev Get token uri using `_tokenID`.
    */
 
-  function getIpfsHash(uint256 _tokenID) public view returns (string memory) {
+  function getIpfsHash(uint256 _tokenID) external view returns (string memory) {
     return ipfsHash[_tokenID];
   }
 
@@ -304,7 +314,9 @@ contract ERC1155NFT is
     uint256[] memory amounts,
     bytes memory data
   ) internal virtual override(ERC1155Upgradeable, ERC1155PausableUpgradeable) {
-    if (!isExceptedAddress(to) && to != address(0)) {
+    (bool isExcepted, ) = isExceptedAddress(to);
+
+    if (!isExcepted && to != address(0)) {
       for (uint256 i = 0; i < ids.length; i++) {
         require(balanceOf(to, ids[i]) == 0, 'ERC1155NFT: TOKEN_ALREADY_EXIST');
       }

@@ -405,7 +405,7 @@ contract('PrivateMarketplace', accounts => {
     it('should revert if non-seller tries to cancel the sale', async () => {
       await expectRevert(
         this.privateMarketplace.cancelSale(currentSaleId, { from: user2 }),
-        'PrivateMarketplace:  ONLY_NFT_SELLER_CAN_CANCEL',
+        'PrivateMarketplace: MINTER_ROLE_REQUIRED',
       );
 
       it('should delete sale details correctly', async () => {
@@ -542,7 +542,7 @@ contract('PrivateMarketplace', accounts => {
     it('should revert when non-seller tries to cancel the auction', async () => {
       await expectRevert(
         this.privateMarketplace.cancelAuction(currentAuctionId, { from: user2 }),
-        'PrivateMarketplace: ONLY_NFT_SELLER_CAN_CANCEL',
+        'PrivateMarketplace: MINTER_ROLE_REQUIRED',
       );
     });
 
@@ -701,6 +701,13 @@ contract('PrivateMarketplace', accounts => {
         'Market: CALLER_NOT_THE_AUCTION_CREATOR',
       );
     });
+
+    it('should revert when seller tries to move nft from auction to sale with 0 selling price', async () => {
+      await expectRevert(
+        this.privateMarketplace.moveNftInSale(currentAuctionId, ether('0'), { from: minter }),
+        'Market: INVALID_SELLING_PRICE',
+      );
+    });
   });
 
   describe('addSupportedToken()', () => {
@@ -760,44 +767,6 @@ contract('PrivateMarketplace', accounts => {
     it('should revert when non-admin tries to remove the supported token', async () => {
       await expectRevert(
         this.privateMarketplace.removeSupportedToken(ZERO_ADDRESS, { from: minter }),
-        'Market: ONLY_ADMIN_CAN_CALL',
-      );
-    });
-  });
-
-  describe('updateNftContract()', async () => {
-    let nftContractAddressBefore;
-    before('update nft contract', async () => {
-      nftContractAddressBefore = await this.privateMarketplace.nftContract();
-      // update nft contract
-      await this.privateMarketplace.updateNftContract(this.sampleToken.address, { from: owner });
-    });
-    after('update nft contract to ERC1155 contract', async () => {
-      // update nft contract to sampleToken
-      await this.privateMarketplace.updateNftContract(this.ERC1155NFT.address, { from: owner });
-    });
-
-    it('should update nft contract correctly', async () => {
-      const nftContractAddress = await this.privateMarketplace.nftContract();
-      expect(nftContractAddress).to.be.eq(this.sampleToken.address);
-    });
-
-    it('should revert when admin update nft contract address with same contract address', async () => {
-      await expectRevert(
-        this.privateMarketplace.updateNftContract(this.sampleToken.address, { from: owner }),
-        'Market: INVALID_CONTRACT_ADDRESS',
-      );
-    });
-
-    it('should revert when admin update nft contract address with zero address', async () => {
-      await expectRevert(
-        this.privateMarketplace.updateNftContract(ZERO_ADDRESS, { from: owner }),
-        'Market: INVALID_CONTRACT_ADDRESS',
-      );
-    });
-    it('should revert when non-admin tries to update nft contract address', async () => {
-      await expectRevert(
-        this.privateMarketplace.updateNftContract(this.ERC1155NFT.address, { from: user2 }),
         'Market: ONLY_ADMIN_CAN_CALL',
       );
     });

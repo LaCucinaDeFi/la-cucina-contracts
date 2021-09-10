@@ -19,4 +19,6 @@ interface INFT is IERC1155 {
   function setURI(uint256 _nftId, string memory _uri) external;
 
   function getURI(uint256 _nftId) external view returns (string memory);
+
+  function getCurrentNftId() external view returns (uint256);
 }
