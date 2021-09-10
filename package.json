@@ -19,9 +19,7 @@
     "migrate_bsc_pumapay": "npx truffle migrate --network=bsc_pumapay",
     "unify": "./scripts/unify.sh",
     "clean": "rimraf ./node_modules && rm -rf ./build",
-    "lint": "eslint . --ignore-path .eslintignore --ext ts --ext tsx --ext js --ext jsx",
-    "lint:fix": "eslint --fix . --ignore-path .eslintignore --ext ts --ext tsx --ext js --ext jsx && yarn run format",
-    "format": "prettier --write \"{contracts,test,migrations,scripts,configurations,}/**/*.{js,json,ts,tsx,jsx,sol}\" --ignore-path ../../.prettierignore"
+    "lint": "eslint . --ignore-path .eslintignore --ext ts --ext tsx --ext js --ext jsx"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
@@ -35,7 +33,6 @@
     "ganache-cli": "^6.12.2",
     "lcov2badge": "^0.1.2",
     "solidity-coverage": "^0.7.16",
-    "truffle": "^5.4.2",
     "truffle-plugin-verify": "^0.5.10",
     "web3": "^1.4.0"
   }

@@ -698,6 +698,13 @@ contract('PublicMarketplace', accounts => {
         'Market: CALLER_NOT_THE_AUCTION_CREATOR',
       );
     });
+
+    it('should revert when seller tries to move nft from auction to sale with 0 selling price', async () => {
+      await expectRevert(
+        this.publicMarketplace.moveNftInSale(currentAuctionId, ether('0'), { from: minter }),
+        'Market: INVALID_SELLING_PRICE',
+      );
+    });
   });
 
   describe('addSupportedToken()', () => {
@@ -735,16 +742,25 @@ contract('PublicMarketplace', accounts => {
     let isSupportedBefore;
     before('remove supported token', async () => {
       isSupportedBefore = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
-
+      
+      // add supported token
+      await this.publicMarketplace.addSupportedToken(this.privateMarketplace.address, { from: owner });
+      
       // remove supported token
       await this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, { from: owner });
+
+      // remove supported token
+      await this.publicMarketplace.removeSupportedToken(this.privateMarketplace.address, { from: owner });
     });
 
     it('should remove supported token correctly', async () => {
       const isSupportedAfter = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+      const isSupportedAfter1 = await this.publicMarketplace.isSupportedToken(this.privateMarketplace.address);
 
       expect(isSupportedBefore[0]).to.be.eq(true);
       expect(isSupportedAfter[0]).to.be.eq(false);
+      expect(isSupportedAfter1[0]).to.be.eq(false);
+
     });
 
     it('should revert when admin tries to remove token which does not supports already', async () => {
@@ -757,44 +773,6 @@ contract('PublicMarketplace', accounts => {
     it('should revert when non-admin tries to remove the supported token', async () => {
       await expectRevert(
         this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, { from: minter }),
-        'Market: ONLY_ADMIN_CAN_CALL',
-      );
-    });
-  });
-
-  describe('updateNftContract()', async () => {
-    let nftContractAddressBefore;
-    before('update nft contract', async () => {
-      nftContractAddressBefore = await this.publicMarketplace.nftContract();
-      // update nft contract
-      await this.publicMarketplace.updateNftContract(this.sampleToken.address, { from: owner });
-    });
-    after('update nft contract to ERC1155 contract', async () => {
-      // update nft contract to sampleToken
-      await this.publicMarketplace.updateNftContract(this.ERC1155NFT.address, { from: owner });
-    });
-
-    it('should update nft contract correctly', async () => {
-      const nftContractAddress = await this.publicMarketplace.nftContract();
-      expect(nftContractAddress).to.be.eq(this.sampleToken.address);
-    });
-
-    it('should revert when admin update nft contract address with same contract address', async () => {
-      await expectRevert(
-        this.publicMarketplace.updateNftContract(this.sampleToken.address, { from: owner }),
-        'Market: INVALID_CONTRACT_ADDRESS',
-      );
-    });
-
-    it('should revert when admin update nft contract address with zero address', async () => {
-      await expectRevert(
-        this.publicMarketplace.updateNftContract(ZERO_ADDRESS, { from: owner }),
-        'Market: INVALID_CONTRACT_ADDRESS',
-      );
-    });
-    it('should revert when non-admin tries to update nft contract address', async () => {
-      await expectRevert(
-        this.publicMarketplace.updateNftContract(this.ERC1155NFT.address, { from: user2 }),
         'Market: ONLY_ADMIN_CAN_CALL',
       );
     });

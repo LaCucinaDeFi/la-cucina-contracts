@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 
 import './Marketplace.sol';
 
-contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketplace {
+contract PublicMarketplace is Initializable, Marketplace {
   /*
    =======================================================================
    ======================== Constructor/Initializer ======================
@@ -16,7 +15,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
    * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
    * @param _nftContractAddress indicates the ERC1155 NFT contract address
    */
-  function initialize(address _nftContractAddress) external initializer {
+  function initialize(address _nftContractAddress) external virtual initializer {
     __AccessControl_init();
     __ReentrancyGuard_init();
 
@@ -46,7 +45,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
     uint256 _nftId,
     uint256 _nftPrice,
     address _tokenAddress
-  ) external virtual nonReentrant returns (uint256 saleId) {
+  ) external virtual onlyValidNftId(_nftId) nonReentrant returns (uint256 saleId) {
     require(_nftPrice > 0, 'PublicMarket: INVALID_NFT_PRICE');
 
     //get NFT tokens from seller
@@ -67,7 +66,7 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
     uint256 _initialPrice,
     address _tokenAddress,
     uint256 _duration
-  ) external virtual nonReentrant returns (uint256 auctionId) {
+  ) external virtual onlyValidNftId(_nftId) nonReentrant returns (uint256 auctionId) {
     require(_initialPrice > 0, 'PublicMarket: INVALID_INITIAL_NFT_PRICE');
 
     //get nft copy from sender and put it in auction
@@ -85,8 +84,9 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
 
     require(_sale.seller == msg.sender, 'PublicMarket: ONLY_SELLER_CAN_CANCEL');
     require(isActiveSale(_saleId), 'PublicMarket: CANNOT_CANCEL_INACTIVE_SALE');
+    require(_sale.totalCopies == _sale.remainingCopies, 'PublicMarket: CANNOT_CANCEL_SALE');
 
-    nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, _sale.remainingCopies, '');
+    nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
 
     _sale.remainingCopies = 0;
     _sale.cancelTimeStamp = block.timestamp;
@@ -105,40 +105,8 @@ contract PublicMarketplace is Initializable, ERC1155ReceiverUpgradeable, Marketp
 
     nftContract.safeTransferFrom(address(this), msg.sender, _auction.nftId, 1, '');
 
-    _auction.status = 2;
+    _auction.status = 2; // canceled
     _auction.cancelTimeStamp = block.timestamp;
   }
 
-  function onERC1155Received(
-    address,
-    address,
-    uint256,
-    uint256,
-    bytes memory
-  ) public virtual override returns (bytes4) {
-    return this.onERC1155Received.selector;
-  }
-
-  function onERC1155BatchReceived(
-    address,
-    address,
-    uint256[] memory,
-    uint256[] memory,
-    bytes memory
-  ) public virtual override returns (bytes4) {
-    return this.onERC1155BatchReceived.selector;
-  }
-
-  /**
-   * @dev See {IERC165-supportsInterface}.
-   */
-  function supportsInterface(bytes4 interfaceId)
-    public
-    view
-    virtual
-    override(ERC1155ReceiverUpgradeable, AccessControlUpgradeable)
-    returns (bool)
-  {
-    return super.supportsInterface(interfaceId);
-  }
 }
