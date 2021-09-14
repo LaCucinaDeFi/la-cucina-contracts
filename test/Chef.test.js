@@ -3,6 +3,7 @@ const {expect} = require('chai');
 const {expectRevert, BN} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {PizzaBase, pepper, tomato, mashroom} = require('./ingredientsData');
+const {sliceBase, cheese, caviar, tuna, gold, beef, truffle} = require('./svgs/pizzaIngredients');
 
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +16,7 @@ const DishesNFT = artifacts.require('DishesNFT');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
-contract('Chef', (accounts) => {
+contract.only('Chef', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -306,6 +307,293 @@ contract('Chef', (accounts) => {
 			expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
 			expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
 			expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+		});
+	});
+
+	describe('New Pizza Dish', () => {
+		before('add pizza ingredients', async () => {
+			// add pizza base ingredients
+			await this.Ingredient.addBaseIngredient('SliceBase', sliceBase);
+
+			// add ingredients
+			await this.Ingredient.addIngredient('cheese', url, '1000', cheese);
+			await this.Ingredient.addIngredient('caviar', url, '200', caviar);
+			await this.Ingredient.addIngredient('tuna', url, '300', tuna);
+			await this.Ingredient.addIngredient('gold', url, '2000', gold);
+			await this.Ingredient.addIngredient('beef', url, '1500', beef);
+			await this.Ingredient.addIngredient('truffle', url, '500', truffle);
+		});
+
+		it('should make pizza with all ingredients', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
+			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			await this.Ingredient.mint(user1, 7, 1, {from: minter});
+			await this.Ingredient.mint(user1, 8, 1, {from: minter});
+			await this.Ingredient.mint(user1, 9, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 5, 6, 7, 8, 9], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+
+		it('should prepare pizza using cheese and caviar only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 5], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using cheese and tuna only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 6], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using cheese and gold only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 7, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 7], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using cheese and beef only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 8, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 8], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using cheese and beef only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 8, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 8], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using cheese and tuna and beef only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			await this.Ingredient.mint(user1, 8, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [4, 6, 8], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using caviar, tuna, gold, beef and truffle only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
+			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			await this.Ingredient.mint(user1, 7, 1, {from: minter});
+			await this.Ingredient.mint(user1, 8, 1, {from: minter});
+			await this.Ingredient.mint(user1, 9, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [5, 6, 7, 8, 9], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+		it('should prepare pizza using caviar, gold,and truffle only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
+			await this.Ingredient.mint(user1, 7, 1, {from: minter});
+			await this.Ingredient.mint(user1, 9, 1, {from: minter});
+
+			// prepare the dish
+			await this.Chef.prepareDish(2, [5, 7, 9], {from: user1});
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
 		});
 	});
 });
