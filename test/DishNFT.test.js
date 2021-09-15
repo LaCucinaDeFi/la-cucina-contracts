@@ -32,10 +32,12 @@ contract('DishesNFT', (accounts) => {
 		// add pizza base ingredients
 		await this.Ingredient.addBaseIngredient('PizzaBase', PizzaBase);
 
+		const currentBaseIngredientID = await this.Ingredient.getCurrentBaseIngredientId();
+
 		// add ingredients
-		await this.Ingredient.addIngredient('pepper', url, '100', pepper);
-		await this.Ingredient.addIngredient('tomato', url, '200', tomato);
-		await this.Ingredient.addIngredient('mashroom', url, '300', mashroom);
+		await this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, pepper);
+		await this.Ingredient.addIngredient('tomato', url, '200', currentBaseIngredientID, tomato);
+		await this.Ingredient.addIngredient('mashroom', url, '300', currentBaseIngredientID, mashroom);
 
 		// add minter in ingredient contract
 		const minterRole = await this.Ingredient.MINTER_ROLE();

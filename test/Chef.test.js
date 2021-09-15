@@ -16,7 +16,7 @@ const DishesNFT = artifacts.require('DishesNFT');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
-contract.only('Chef', (accounts) => {
+contract('Chef', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -38,10 +38,12 @@ contract.only('Chef', (accounts) => {
 		// add pizza base ingredients
 		await this.Ingredient.addBaseIngredient('PizzaBase', PizzaBase);
 
+		const currentBaseIngredientID = await this.Ingredient.getCurrentBaseIngredientId();
+
 		// add ingredients
-		await this.Ingredient.addIngredient('pepper', url, '100', pepper);
-		await this.Ingredient.addIngredient('tomato', url, '200', tomato);
-		await this.Ingredient.addIngredient('mashroom', url, '300', mashroom);
+		await this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, pepper);
+		await this.Ingredient.addIngredient('tomato', url, '200', currentBaseIngredientID, tomato);
+		await this.Ingredient.addIngredient('mashroom', url, '300', currentBaseIngredientID, mashroom);
 
 		// add minter in ingredient contract
 		const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -110,7 +112,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.setApprovalForAll(this.Chef.address, true, {from: user1});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2, 3], {from: user1});
+			await this.Chef.prepareDish([1, 2, 3], {from: user1});
 
 			// get users ingredient balance
 			const user1PepperBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -165,23 +167,16 @@ contract.only('Chef', (accounts) => {
 			});
 		});
 
-		it('should revert when invalid baseIngredientId is used to prepare dish', async () => {
-			await expectRevert(
-				this.Chef.prepareDish(4, [1, 2, 3], {from: user1}),
-				'Chef: INVALID_BASE_INGREDIENT_ID'
-			);
-		});
-
 		it('should revert when no ingredient ids are used to prepare dish', async () => {
 			await expectRevert(
-				this.Chef.prepareDish(1, [], {from: user1}),
-				'DishesNFT: INSUFFICIENT_INGREDIENTS'
+				this.Chef.prepareDish([1], {from: user1}),
+				'Chef: INSUFFICIENT_INGREDIENTS'
 			);
 		});
 
 		it('should revert when invalid ingredient id is used to prepare dish', async () => {
 			await expectRevert(
-				this.Chef.prepareDish(1, [5, 1, 3], {from: user1}),
+				this.Chef.prepareDish([5, 1, 3], {from: user1}),
 				'Chef: INVALID_INGREDIENT_ID'
 			);
 		});
@@ -315,13 +310,15 @@ contract.only('Chef', (accounts) => {
 			// add pizza base ingredients
 			await this.Ingredient.addBaseIngredient('SliceBase', sliceBase);
 
+			const currentBaseIngredientID = await this.Ingredient.getCurrentBaseIngredientId();
+
 			// add ingredients
-			await this.Ingredient.addIngredient('cheese', url, '1000', cheese);
-			await this.Ingredient.addIngredient('caviar', url, '200', caviar);
-			await this.Ingredient.addIngredient('tuna', url, '300', tuna);
-			await this.Ingredient.addIngredient('gold', url, '2000', gold);
-			await this.Ingredient.addIngredient('beef', url, '1500', beef);
-			await this.Ingredient.addIngredient('truffle', url, '500', truffle);
+			await this.Ingredient.addIngredient('cheese', url, '1000', currentBaseIngredientID, cheese);
+			await this.Ingredient.addIngredient('caviar', url, '200', currentBaseIngredientID, caviar);
+			await this.Ingredient.addIngredient('tuna', url, '300', currentBaseIngredientID, tuna);
+			await this.Ingredient.addIngredient('gold', url, '2000', currentBaseIngredientID, gold);
+			await this.Ingredient.addIngredient('beef', url, '1500', currentBaseIngredientID, beef);
+			await this.Ingredient.addIngredient('truffle', url, '500', currentBaseIngredientID, truffle);
 		});
 
 		it('should make pizza with all ingredients', async () => {
@@ -334,7 +331,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 9, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 5, 6, 7, 8, 9], {from: user1});
+			await this.Chef.prepareDish([4, 5, 6, 7, 8, 9], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -364,7 +361,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 5], {from: user1});
+			await this.Chef.prepareDish([4, 5], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -393,7 +390,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 6, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 6], {from: user1});
+			await this.Chef.prepareDish([4, 6], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -422,7 +419,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 7, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 7], {from: user1});
+			await this.Chef.prepareDish([4, 7], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -451,7 +448,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 8, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 8], {from: user1});
+			await this.Chef.prepareDish([4, 8], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -480,7 +477,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 8, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 8], {from: user1});
+			await this.Chef.prepareDish([4, 8], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -510,7 +507,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 8, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [4, 6, 8], {from: user1});
+			await this.Chef.prepareDish([4, 6, 8], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -533,6 +530,7 @@ contract.only('Chef', (accounts) => {
 				if (err) throw err;
 			});
 		});
+
 		it('should prepare pizza using caviar, tuna, gold, beef and truffle only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
@@ -542,7 +540,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 9, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [5, 6, 7, 8, 9], {from: user1});
+			await this.Chef.prepareDish([5, 6, 7, 8, 9], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -572,7 +570,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 9, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(2, [5, 7, 9], {from: user1});
+			await this.Chef.prepareDish([5, 7, 9], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -594,6 +592,28 @@ contract.only('Chef', (accounts) => {
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
 				if (err) throw err;
 			});
+		});
+
+		it('should revert if ingredients with different base ingredients are used to prepare a dish', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 7, 1, {from: minter});
+			await this.Ingredient.mint(user1, 9, 1, {from: minter});
+
+			// prepare the dish
+			await expectRevert(
+				this.Chef.prepareDish([1, 7, 9], {from: user1}),
+				'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
+			);
+
+			await expectRevert(
+				this.Chef.prepareDish([7, 2, 9], {from: user1}),
+				'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
+			);
+
+			await expectRevert(
+				this.Chef.prepareDish([7, 9, 1], {from: user1}),
+				'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
+			);
 		});
 	});
 });

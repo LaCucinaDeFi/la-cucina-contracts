@@ -14,6 +14,7 @@ interface IIngredientNFT is INFT {
 		uint256 id;
 		string name;
 		uint256 fat;
+		uint256 baseIngredientId;
 		string svg;
 	}
 
@@ -36,6 +37,7 @@ interface IIngredientNFT is INFT {
 			uint256 id,
 			string memory name,
 			uint256 fat,
+			uint256 baseIngredientId,
 			string memory svg
 		);
 

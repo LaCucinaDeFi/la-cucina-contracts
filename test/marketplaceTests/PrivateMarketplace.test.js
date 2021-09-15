@@ -34,10 +34,26 @@ contract('PrivateMarketplace', (accounts) => {
 		const minterRole = await this.IngredientNFT.MINTER_ROLE();
 		await this.IngredientNFT.grantRole(minterRole, this.privateMarketplace.address);
 
+		// add pizza base ingredients
+		await this.IngredientNFT.addBaseIngredient('PizzaBase', PizzaBase);
+
+		const currentBaseIngredientID = await this.IngredientNFT.getCurrentBaseIngredientId();
+
 		// add ingredients
-		await this.IngredientNFT.addIngredient('pepper', url, '10', pepper, {from: owner});
-		await this.IngredientNFT.addIngredient('tomato', url, '20', tomato, {from: owner});
-		await this.IngredientNFT.addIngredient('mashroom', url, '30', mashroom, {from: owner});
+		await this.IngredientNFT.addIngredient('pepper', url, '10', currentBaseIngredientID, pepper, {
+			from: owner
+		});
+		await this.IngredientNFT.addIngredient('tomato', url, '20', currentBaseIngredientID, tomato, {
+			from: owner
+		});
+		await this.IngredientNFT.addIngredient(
+			'mashroom',
+			url,
+			'30',
+			currentBaseIngredientID,
+			mashroom,
+			{from: owner}
+		);
 
 		currentIngredientId = await this.IngredientNFT.getCurrentNftId();
 

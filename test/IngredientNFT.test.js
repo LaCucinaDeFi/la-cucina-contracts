@@ -48,59 +48,6 @@ contract('IngredientsNFT', (accounts) => {
 		expect(isMinterAfter).to.be.eq(true);
 	});
 
-	describe('addIngredient()', () => {
-		let currentIngredientId;
-		before('add ingredients', async () => {
-			await this.Ingredient.addIngredient('pepper', url, '100', pepper, {from: owner});
-			currentIngredientId = await this.Ingredient.getCurrentNftId();
-		});
-
-		it('should add ingredient details correctly', async () => {
-			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
-			const ipfsHash = await this.Ingredient.getIpfsHash(currentIngredientId);
-
-			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.name).to.be.eq('pepper');
-			expect(ingredient.fat).to.bignumber.be.eq(new BN('100'));
-			expect(ingredient.svg).to.be.eq(pepper);
-			expect(ipfsHash).to.be.eq(url);
-		});
-
-		it('should revert when non-owner tries to add the ingredients', async () => {
-			await expectRevert(
-				this.Ingredient.addIngredient('pepper', url, '100', pepper, {from: minter}),
-				'ERC1155NFT: ONLY_ADMIN_CAN_CALL'
-			);
-		});
-		it('should revert when owner tries to add ingredient without name', async () => {
-			await expectRevert(
-				this.Ingredient.addIngredient('', url, '100', pepper, {from: owner}),
-				'IngredientNFT: INVALID_INGREDIENT_NAME'
-			);
-		});
-		it('should revert when owner tries to add ingredient without ipfsHash', async () => {
-			await expectRevert(
-				this.Ingredient.addIngredient('pepper', '', '100', pepper, {from: owner}),
-				'IngredientNFT: INVALID_IPFS_HASH'
-			);
-		});
-
-		it('should revert when owner tries to add ingredient without fats', async () => {
-			await expectRevert(
-				this.Ingredient.addIngredient('pepper', url, '0', pepper, {from: owner}),
-				'IngredientNFT: INVALID_FAT'
-			);
-		});
-
-		it('should revert when owner tries to add ingredient without svg', async () => {
-			await expectRevert(
-				this.Ingredient.addIngredient('pepper', url, '100', '', {from: owner}),
-				'IngredientNFT: INVALID_SVG'
-			);
-		});
-	});
-
 	describe('addBaseIngredient()', async () => {
 		let currentBaseIngredient;
 		before('add baseIngredient', async () => {
@@ -134,6 +81,85 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to add ingredient without svg', async () => {
 			await expectRevert(
 				this.Ingredient.addBaseIngredient('PizzaBase', '', {from: owner}),
+				'IngredientNFT: INVALID_SVG'
+			);
+		});
+	});
+
+	describe('addIngredient()', () => {
+		let currentBaseIngredientID;
+		let currentIngredientId;
+		before('add ingredients', async () => {
+			currentBaseIngredientID = await this.Ingredient.getCurrentBaseIngredientId();
+
+			await this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, pepper, {
+				from: owner
+			});
+			currentIngredientId = await this.Ingredient.getCurrentNftId();
+		});
+
+		it('should add ingredient details correctly', async () => {
+			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
+			const ipfsHash = await this.Ingredient.getIpfsHash(currentIngredientId);
+
+			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
+			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
+			expect(ingredient.name).to.be.eq('pepper');
+			expect(ingredient.fat).to.bignumber.be.eq(new BN('100'));
+			expect(ingredient.baseIngredientId).to.bignumber.be.eq(new BN('1'));
+			expect(ingredient.svg).to.be.eq(pepper);
+			expect(ipfsHash).to.be.eq(url);
+		});
+
+		it('should revert when non-owner tries to add the ingredients', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, pepper, {
+					from: minter
+				}),
+				'ERC1155NFT: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+		it('should revert when owner tries to add ingredient without name', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('', url, '100', currentBaseIngredientID, pepper, {
+					from: owner
+				}),
+				'IngredientNFT: INVALID_INGREDIENT_NAME'
+			);
+		});
+		it('should revert when owner tries to add ingredient without ipfsHash', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', '', '100', currentBaseIngredientID, pepper, {
+					from: owner
+				}),
+				'IngredientNFT: INVALID_IPFS_HASH'
+			);
+		});
+
+		it('should revert when owner tries to add ingredient without fats', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', url, '0', currentBaseIngredientID, pepper, {
+					from: owner
+				}),
+				'IngredientNFT: INVALID_FAT'
+			);
+		});
+		it('should revert when owner tries to add ingredient with invalid baseIngredientID', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', url, '0', '0', pepper, {from: owner}),
+				'IngredientNFT: INVALID_BASE_INGREDIENT_ID'
+			);
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', url, '0', '5', pepper, {from: owner}),
+				'IngredientNFT: INVALID_BASE_INGREDIENT_ID'
+			);
+		});
+
+		it('should revert when owner tries to add ingredient without svg', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, '', {
+					from: owner
+				}),
 				'IngredientNFT: INVALID_SVG'
 			);
 		});

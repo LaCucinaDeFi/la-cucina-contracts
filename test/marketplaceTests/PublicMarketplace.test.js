@@ -46,10 +46,26 @@ contract('PublicMarketplace', (accounts) => {
 		// add excepted address
 		await this.IngredientsNFT.addExceptedAddress(this.publicMarketplace.address);
 
+		// add pizza base ingredients
+		await this.IngredientsNFT.addBaseIngredient('PizzaBase', PizzaBase);
+
+		const currentBaseIngredientID = await this.IngredientsNFT.getCurrentBaseIngredientId();
+
 		// add ingredients
-		await this.IngredientsNFT.addIngredient('pepper', url, '10', pepper, {from: owner});
-		await this.IngredientsNFT.addIngredient('tomato', url, '20', tomato, {from: owner});
-		await this.IngredientsNFT.addIngredient('mashroom', url, '30', mashroom, {from: owner});
+		await this.IngredientsNFT.addIngredient('pepper', url, '10', currentBaseIngredientID, pepper, {
+			from: owner
+		});
+		await this.IngredientsNFT.addIngredient('tomato', url, '20', currentBaseIngredientID, tomato, {
+			from: owner
+		});
+		await this.IngredientsNFT.addIngredient(
+			'mashroom',
+			url,
+			'30',
+			currentBaseIngredientID,
+			mashroom,
+			{from: owner}
+		);
 
 		currentIngredientId = await this.IngredientsNFT.getCurrentNftId();
 

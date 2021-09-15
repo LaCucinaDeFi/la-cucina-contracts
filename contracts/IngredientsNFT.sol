@@ -22,6 +22,7 @@ contract IngredientsNFT is ERC1155NFT {
 		uint256 id;
 		string name;
 		uint256 fat;
+		uint256 baseIngredientId;
 		string svg;
 	}
 
@@ -52,6 +53,20 @@ contract IngredientsNFT is ERC1155NFT {
 
 	function initialize(string memory url) public virtual initializer {
 		__ERC1155PresetMinterPauser_init(url);
+	}
+
+	/*
+   =======================================================================
+   ======================== Modifiers ====================================
+   =======================================================================
+ */
+
+	modifier onlyValidBaseIngredient(uint256 _baseIngredientId) {
+		require(
+			_baseIngredientId > 0 && _baseIngredientId <= baseIngredientCounter.current(),
+			'IngredientNFT: INVALID_BASE_INGREDIENT_ID'
+		);
+		_;
 	}
 
 	/*
@@ -115,6 +130,7 @@ contract IngredientsNFT is ERC1155NFT {
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _ipfsHash - indicates the ipfs hash for ingredient
 	 *  @param _fat - indicates the fats of the ingredient
+	 *  @param _baseIngredientId - indicates the baseIngredient Id to which this ingredient belogs to
 	 *  @param _svg - indicates the svg of the ingredient
 	 *  @return ingredientId - new ingredient id
 	 */
@@ -122,8 +138,9 @@ contract IngredientsNFT is ERC1155NFT {
 		string memory _name,
 		string memory _ipfsHash,
 		uint256 _fat,
+		uint256 _baseIngredientId,
 		string memory _svg
-	) external onlyAdmin returns (uint256 ingredientId) {
+	) external onlyAdmin onlyValidBaseIngredient(_baseIngredientId) returns (uint256 ingredientId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_fat > 0, 'IngredientNFT: INVALID_FAT');
@@ -134,7 +151,7 @@ contract IngredientsNFT is ERC1155NFT {
 		ingredientId = tokenCounter.current();
 
 		ipfsHash[ingredientId] = _ipfsHash;
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _svg);
+		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _baseIngredientId, _svg);
 	}
 
 	/**

@@ -59,23 +59,17 @@ contract Chef is
  */
 	/**
 	 * @notice This method allows users to prepare a dish using more than 1 ingredients.
-	 * @param _baseIngredientId - indicates the baseIngredient Id, depending on this it creates a dish.
 	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
 	 * @return dishId - indicates the new dish id
 	 */
-	function prepareDish(uint256 _baseIngredientId, uint256[] memory _ingredientIds)
-		external
-		returns (uint256 dishId)
-	{
-		require(
-			_baseIngredientId > 0 && _baseIngredientId <= ingredientNft.getCurrentBaseIngredientId(),
-			'Chef: INVALID_BASE_INGREDIENT_ID'
-		);
-		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
+	function prepareDish(uint256[] memory _ingredientIds) external returns (uint256 dishId) {
+		require(_ingredientIds.length > 1, 'Chef: INSUFFICIENT_INGREDIENTS');
 
 		uint256 fats;
 		uint256 ingredientsHash;
 		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
+
+		uint256 prevBaseIngredientId;
 
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
 			require(
@@ -87,9 +81,18 @@ contract Chef is
 
 			ingredientNft.safeTransferFrom(msg.sender, address(this), _ingredientIds[i], 1, '');
 
-			(, , uint256 fat, ) = ingredientNft.ingredients(_ingredientIds[i]);
+			(, , uint256 fat, uint256 baseIngredientId, ) = ingredientNft.ingredients(_ingredientIds[i]);
 
 			fats += fat;
+
+			if (prevBaseIngredientId != 0) {
+				require(
+					baseIngredientId == prevBaseIngredientId,
+					'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
+				);
+			}
+
+			prevBaseIngredientId = baseIngredientId;
 
 			// combine slotted ingredients into hash
 			ingredientsHash += _ingredientIds[i] * 256**i;
@@ -98,7 +101,7 @@ contract Chef is
 		// prepare the dish
 		dishId = dishesNft.prepareDish(
 			msg.sender,
-			_baseIngredientId,
+			prevBaseIngredientId,
 			fats,
 			_ingredientIds.length,
 			ingredientsHash

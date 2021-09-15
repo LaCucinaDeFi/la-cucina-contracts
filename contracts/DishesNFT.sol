@@ -180,7 +180,7 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 					'DishesNFT: INVALID_INGREDIENT_VARIATION'
 				);
 
-				(, , , ingredientSvg) = ingredientNft.ingredients(variation);
+				(, , , ,ingredientSvg) = ingredientNft.ingredients(variation);
 				accumulator = strConcat(accumulator, ingredientSvg);
 			}
 		}
