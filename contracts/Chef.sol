@@ -1,331 +1,212 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
+import '@openzeppelin/contracts/utils/Counters.sol';
+import './interfaces/IIngredientNFT.sol';
+import './interfaces/IDishesNFT.sol';
+import './interfaces/IVersionedContract.sol';
 
-contract Chef is AccessControlUpgradeable, ReentrancyGuardUpgradeable {
-    using Counters for Counters.Counter;
+contract Chef is
+	AccessControlUpgradeable,
+	ReentrancyGuardUpgradeable,
+	IVersionedContract,
+	ERC1155ReceiverUpgradeable
+{
+	using Counters for Counters.Counter;
 
-    /*
-   =======================================================================
-   ======================== Structures ===================================
-   =======================================================================
- */
-
-    struct Ingredient {
-        uint256 id;
-        string name;
-        uint256 fat;
-        string svg;
-    }
-
-    struct BaseIngredient {
-        uint256 id;
-        string name;
-        string svg;
-    }
-
-    struct Dish {
-        uint256 baseIngredientId;
-        uint256 fats;
-        uint256 totalIngredients;
-        uint256 ingredientsHash;
-    }
-
-    /*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
-    Counters.Counter private dishIdCounter;
-    Counters.Counter private ingredientCounter;
-    Counters.Counter private baseIngredientCounter;
-
-    /*
+	/*
    =======================================================================
    ======================== Public Variables ============================
    =======================================================================
  */
-    // dishID => dish
-    mapping(uint256 => Dish) public dish;
+	IIngredientNFT public ingredientNft;
+	IDishesNFT public dishesNft;
 
-    // baseIngredientId => BaseIngredient
-    mapping(uint256 => BaseIngredient) public baseIngredients;
+	uint256[] public uncookedDishIds;
 
-    // ingredientId => Ingredient
-    mapping(uint256 => Ingredient) public ingredients;
-
-    /*
+	/*
    =======================================================================
    ======================== Constructor/Initializer ======================
    =======================================================================
  */
 
-    /**
-     * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
-     */
-    function initialize() external virtual initializer {
-        __AccessControl_init();
-        __ReentrancyGuard_init();
+	/**
+	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
+	 */
+	function initialize(address _ingredientNftAddress, address _dishesNftAddress)
+		external
+		virtual
+		initializer
+	{
+		require(_ingredientNftAddress != address(0), 'Chef: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNftAddress != address(0), 'Chef: INVALID_DISHES_ADDRESS');
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-    }
+		__AccessControl_init();
+		__ReentrancyGuard_init();
 
-    /*
-   =======================================================================
-   ======================== Events =======================================
-   =======================================================================
- */
-    event DishPrepared(uint256 dishId);
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
-    /*
-   =======================================================================
-   ======================== Modifiers ====================================
-   =======================================================================
- */
-    modifier onlyAdmin() {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
-            "Market: ONLY_ADMIN_CAN_CALL"
-        );
-        _;
-    }
+		ingredientNft = IIngredientNFT(_ingredientNftAddress);
+		dishesNft = IDishesNFT(_dishesNftAddress);
+	}
 
-    /*
+	/*
    =======================================================================
    ======================== Public Methods ===============================
    =======================================================================
  */
-    /**
-			@notice This method allows users to prepare a dish using more than 1 ingredients.
-			@param _baseIngredientId - indicates the baseIngredient Id, depending on this it creates a dish.
-			@param _ingredientIds - indicates the list of ingredients that you want to include in dish
-			@return dishId - indicates the new dish id
-		 */
-    function prepareDish(
-        uint256 _baseIngredientId,
-        uint256[] memory _ingredientIds
-    ) external returns (uint256 dishId) {
-        require(
-            _baseIngredientId > 0 &&
-                _baseIngredientId <= baseIngredientCounter.current(),
-            "Chef: INVALID_BASE_INGREDIENT"
-        );
-        require(
-            _ingredientIds.length > 1,
-            "Chef: INVALID_NUMBER_OF_INGREDIENTS"
-        );
+	/**
+	 * @notice This method allows users to prepare a dish using more than 1 ingredients.
+	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
+	 * @return dishId - indicates the new dish id
+	 */
+	function prepareDish(uint256[] memory _ingredientIds) external returns (uint256 dishId) {
+		require(_ingredientIds.length > 1, 'Chef: INSUFFICIENT_INGREDIENTS');
 
-        uint256 fats;
-        uint256 ingredientsHash;
-        uint256 currentIngredientId = ingredientCounter.current();
+		uint256 fats;
+		uint256 ingredientsHash;
+		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
 
-        for (uint256 i = 0; i < _ingredientIds.length; i++) {
-            require(
-                _ingredientIds[i] > 0 &&
-                    _ingredientIds[i] <= currentIngredientId,
-                "Chef: INVALID_INGREDIENT"
-            );
+		uint256 prevBaseIngredientId;
 
-            fats += ingredients[_ingredientIds[i]].fat;
+		for (uint256 i = 0; i < _ingredientIds.length; i++) {
+			require(
+				_ingredientIds[i] > 0 && _ingredientIds[i] <= currentIngredientId,
+				'Chef: INVALID_INGREDIENT_ID'
+			);
 
-            // combine slotted ingredients into hash
-            ingredientsHash += ingredients[_ingredientIds[i]].id * 256**i;
-        }
+			// get the Ingredient NFT from user
 
-        dishIdCounter.increment();
-        dishId = dishIdCounter.current();
+			ingredientNft.safeTransferFrom(msg.sender, address(this), _ingredientIds[i], 1, '');
 
-        dish[dishId].baseIngredientId = _baseIngredientId;
-        dish[dishId].fats = fats;
-        dish[dishId].ingredientsHash = ingredientsHash;
-        dish[dishId].totalIngredients = _ingredientIds.length;
+			(, , uint256 fat, uint256 baseIngredientId, ) = ingredientNft.ingredients(_ingredientIds[i]);
 
-        emit DishPrepared(dishId);
-    }
+			fats += fat;
 
-    /**
-			@notice This method allows admin to add the ingredient details for preparing a dish.
-			@param _name - indicates the name of the ingredient
-			@param _fat - indicates the fats of the ingredient
-			@param _svg - indicates the svg of the ingredient
-			@return ingredientId - new ingredient id
-		 */
-    function addIngredient(
-        string memory _name,
-        uint256 _fat,
-        string memory _svg
-    ) public onlyAdmin returns (uint256 ingredientId) {
-        require(bytes(_name).length > 0, "Chef: INVALID_INGREDIENT_NAME");
-        require(_fat > 0, "Chef: INVALID_FAT");
-        require(bytes(_svg).length > 0, "Chef: INVALID_SVG");
+			if (prevBaseIngredientId != 0) {
+				require(
+					baseIngredientId == prevBaseIngredientId,
+					'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
+				);
+			}
 
-        // generate ingredient Id
-        ingredientCounter.increment();
-        ingredientId = ingredientCounter.current();
+			prevBaseIngredientId = baseIngredientId;
 
-        ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _svg);
-    }
+			// combine slotted ingredients into hash
+			ingredientsHash += _ingredientIds[i] * 256**i;
+		}
 
-    /**
-			@notice This method allows admin to add the base ingredient details for a dish.
-			@param _name - indicates the name of the ingredient
-			@param _svg - indicates the svg of the ingredient
-			@return baseIngredientId - new base ingredient id
-		 */
-    function addBaseIngredient(string memory _name, string memory _svg)
-        external
-        onlyAdmin
-        returns (uint256 baseIngredientId)
-    {
-        require(bytes(_name).length > 0, "Chef: INVALID_BASE_INGREDIENT_NAME");
-        require(bytes(_svg).length > 0, "Chef: INVALID_SVG");
+		// prepare the dish
+		dishId = dishesNft.prepareDish(
+			msg.sender,
+			prevBaseIngredientId,
+			fats,
+			_ingredientIds.length,
+			ingredientsHash
+		);
+	}
 
-        // generate traitId
-        baseIngredientCounter.increment();
-        baseIngredientId = baseIngredientCounter.current();
+	/**
+	 * @notice This method alloes users to uncook the dish by returning the dishNFT and claim back the ingredient nfts
+	 * @param _dishId - indicates the id of dish to be uncooked.
+	 */
+	function uncookDish(uint256 _dishId) external {
+		require(_dishId > 0 && _dishId <= dishesNft.getCurrentNftId(), 'Chef: INVALID_DISH_ID');
 
-        baseIngredients[baseIngredientId] = BaseIngredient(
-            baseIngredientId,
-            _name,
-            _svg
-        );
-    }
+		// get details of dish
+		(address dishHolder, , , , uint256 totalIngredients, uint256 ingredientsHash) = dishesNft.dish(
+			_dishId
+		);
 
-    /*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
-    /**
-		@notice This method allows users to get the svg of their dish
-		@param dishId - indicates the dishId for which you want to get the svg
-		@return svg - svg code of dish
-    */
-    function serveDish(uint256 dishId) public view returns (string memory svg) {
-        require(
-            dishId > 0 && dishId <= dishIdCounter.current(),
-            "Chef: INVALID_DISH_ID"
-        );
+		require(dishHolder == msg.sender, 'Chef: ONLY_DISH_OWNER_CAN_UNCOOK');
 
-        Dish memory dishToServe = dish[dishId];
+		// get the dish nft from user
+		dishesNft.safeTransferFrom(msg.sender, address(this), _dishId, 1, '');
 
-        string
-            memory accumulator = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" width="1000" height="1000" viewBox="0, 0, 1616, 1216">';
+		uncookedDishIds.push(_dishId);
 
-        BaseIngredient memory baseIngredient = baseIngredients[
-            dishToServe.baseIngredientId
-        ];
+		// uncook the dish
+		dishesNft.uncookDish(_dishId);
 
-        // add base ingredient
-        accumulator = strConcat(accumulator, baseIngredient.svg);
+		uint256 slotConst = 256;
+		uint256 slotMask = 255;
+		uint256 bitMask;
+		uint256 slottedValue;
+		uint256 slotMultiplier;
+		uint256 variation;
 
-        uint256 slotConst = 256;
-        uint256 slotMask = 255;
-        uint256 bitMask;
-        uint256 slottedValue;
-        uint256 slotMultiplier;
-        uint256 variation;
-        Ingredient memory ingredient;
+		// Iterate Ingredient hash by Gene and assemble SVG sandwich
+		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
+			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
+			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
+			slottedValue = ingredientsHash & bitMask; // Extract slotted value from hash
 
-        // Iterate Ingredient hash by Gene and assemble SVG sandwich
-        for (
-            uint8 slot = 0;
-            slot <= uint8(dishToServe.totalIngredients);
-            slot++
-        ) {
-            slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-            bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-            slottedValue = dishToServe.ingredientsHash & bitMask; // Extract slotted value from hash
+			if (slottedValue > 0) {
+				variation = (slot > 0) // Extract IngredientID from slotted value
+					? slottedValue / slotMultiplier
+					: slottedValue;
 
-            if (slottedValue > 0) {
-                variation = (slot > 0) // Extract IngredientID from slotted value
-                    ? slottedValue / slotMultiplier
-                    : slottedValue;
+				require(
+					variation > 0 && variation <= ingredientNft.getCurrentNftId(),
+					'Chef: INVALID_INGREDIENT_VARIATION'
+				);
 
-                require(
-                    variation > 0 && variation <= ingredientCounter.current(),
-                    "Chef: INVALID_INGREDIENT_VARIATION"
-                );
+				// transfer the ingredient nft to user
+				ingredientNft.safeTransferFrom(address(this), msg.sender, variation, 1, '');
+			}
+		}
+	}
 
-                if (variation > 0) {
-                    ingredient = ingredients[variation];
-                    accumulator = strConcat(accumulator, ingredient.svg);
-                }
-            }
-        }
+	/**
+	 * @notice Returns the storage, major, minor, and patch version of the contract.
+	 * @return The storage, major, minor, and patch version of the contract.
+	 */
+	function getVersionNumber()
+		external
+		pure
+		virtual
+		override
+		returns (
+			uint256,
+			uint256,
+			uint256
+		)
+	{
+		return (1, 0, 0);
+	}
 
-        return strConcat(accumulator, "</svg>");
-    }
+	function onERC1155Received(
+		address,
+		address,
+		uint256,
+		uint256,
+		bytes memory
+	) public virtual override returns (bytes4) {
+		return this.onERC1155Received.selector;
+	}
 
-    /**
-			@notice This method returns the current dishId
-		 */
-    function getCurrentDishId() external view returns (uint256) {
-        return dishIdCounter.current();
-    }
+	function onERC1155BatchReceived(
+		address,
+		address,
+		uint256[] memory,
+		uint256[] memory,
+		bytes memory
+	) public virtual override returns (bytes4) {
+		return this.onERC1155BatchReceived.selector;
+	}
 
-    /**
-			@notice This method returns the current ingredient Id
-		 */
-    function getCurrentIngredientId() external view returns (uint256) {
-        return ingredientCounter.current();
-    }
-
-    /**
-			@notice This method returns the current base ingredient Id
-		 */
-    function getCurrentBaseIngredientId() external view returns (uint256) {
-        return baseIngredientCounter.current();
-    }
-
-    /*
-   =======================================================================
-   ======================== Internal Methods ===============================
-   =======================================================================
- */
-    /**
-     * @notice Convert a `uint` value to a `string`
-     * via OraclizeAPI - MIT licence
-     * https://github.com/provable-things/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol#L896
-     * @param _i the `uint` value to be converted
-     * @return result the `string` representation of the given `uint` value
-     */
-    function uintToStr(uint256 _i)
-        internal
-        pure
-        returns (string memory result)
-    {
-        if (_i == 0) {
-            return "0";
-        }
-        uint256 j = _i;
-        uint256 len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint256 k = len - 1;
-        while (_i != 0) {
-            bstr[k--] = bytes1(uint8(48 + (_i % 10)));
-            _i /= 10;
-        }
-        result = string(bstr);
-    }
-
-    /**
-     * @notice Concatenate two strings
-     * @param _a the first string
-     * @param _b the second string
-     * @return result the concatenation of `_a` and `_b`
-     */
-    function strConcat(string memory _a, string memory _b)
-        internal
-        pure
-        returns (string memory result)
-    {
-        result = string(abi.encodePacked(bytes(_a), bytes(_b)));
-    }
+	/**
+	 * @dev See {IERC165-supportsInterface}.
+	 */
+	function supportsInterface(bytes4 interfaceId)
+		public
+		view
+		virtual
+		override(ERC1155ReceiverUpgradeable, AccessControlUpgradeable)
+		returns (bool)
+	{
+		return super.supportsInterface(interfaceId);
+	}
 }
