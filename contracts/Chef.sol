@@ -21,6 +21,13 @@ contract Chef is
    ======================== Public Variables ============================
    =======================================================================
  */
+	uint256 private nonce;
+
+	/*
+   =======================================================================
+   ======================== Public Variables ============================
+   =======================================================================
+ */
 	IIngredientNFT public ingredientNft;
 	IDishesNFT public dishesNft;
 
@@ -50,6 +57,7 @@ contract Chef is
 
 		ingredientNft = IIngredientNFT(_ingredientNftAddress);
 		dishesNft = IDishesNFT(_dishesNftAddress);
+		nonce = 1;
 	}
 
 	/*
@@ -62,14 +70,20 @@ contract Chef is
 	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
 	 * @return dishId - indicates the new dish id
 	 */
-	function prepareDish(uint256[] memory _ingredientIds) external returns (uint256 dishId) {
+	function prepareDish(uint256 _baseIngredientId, uint256[] memory _ingredientIds)
+		external
+		returns (uint256 dishId)
+	{
+		require(
+			_baseIngredientId > 0 && _baseIngredientId <= ingredientNft.getCurrentBaseIngredientId(),
+			'Chef: INVALID_BASE_INGREDIENT_ID'
+		);
 		require(_ingredientIds.length > 1, 'Chef: INSUFFICIENT_INGREDIENTS');
 
 		uint256 fats;
 		uint256 ingredientsHash;
+		uint256 variationsHash;
 		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
-
-		uint256 prevBaseIngredientId;
 
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
 			require(
@@ -81,30 +95,40 @@ contract Chef is
 
 			ingredientNft.safeTransferFrom(msg.sender, address(this), _ingredientIds[i], 1, '');
 
-			(, , uint256 fat, uint256 baseIngredientId, ) = ingredientNft.ingredients(_ingredientIds[i]);
+			(, , uint256 fat, uint256 totalVariations) = ingredientNft.ingredients(_ingredientIds[i]);
 
 			fats += fat;
 
-			if (prevBaseIngredientId != 0) {
-				require(
-					baseIngredientId == prevBaseIngredientId,
-					'Chef: FOUND_INGREDIENT_WITH_DIFFERENT_BASE_INGREDIENT'
-				);
-			}
-
-			prevBaseIngredientId = baseIngredientId;
+			require(totalVariations > 0, 'Chef: INSUFFICIENT_VARIATIONS');
 
 			// combine slotted ingredients into hash
 			ingredientsHash += _ingredientIds[i] * 256**i;
+			if (totalVariations > 1) {
+				variationsHash += getRandomVariation(totalVariations) * 256**i;
+			} else {
+				variationsHash += 1 * 256**i;
+			}
+		}
+
+		//get baseIngredient svgs
+		(, , string[] memory baseIngredientsSvgs) = ingredientNft.baseIngredients(_baseIngredientId);
+
+		uint256 baseIngredientVariation;
+		if (baseIngredientsSvgs.length > 1) {
+			baseIngredientVariation = getRandomVariation(baseIngredientsSvgs.length);
+		} else {
+			baseIngredientVariation = 0;
 		}
 
 		// prepare the dish
 		dishId = dishesNft.prepareDish(
 			msg.sender,
-			prevBaseIngredientId,
+			_baseIngredientId,
+			baseIngredientVariation,
 			fats,
 			_ingredientIds.length,
-			ingredientsHash
+			ingredientsHash,
+			variationsHash
 		);
 	}
 
@@ -116,9 +140,8 @@ contract Chef is
 		require(_dishId > 0 && _dishId <= dishesNft.getCurrentNftId(), 'Chef: INVALID_DISH_ID');
 
 		// get details of dish
-		(address dishHolder, , , , uint256 totalIngredients, uint256 ingredientsHash) = dishesNft.dish(
-			_dishId
-		);
+		(address dishHolder, , , , uint256 totalIngredients, uint256 ingredientsHash, ) = dishesNft
+			.dish(_dishId);
 
 		require(dishHolder == msg.sender, 'Chef: ONLY_DISH_OWNER_CAN_UNCOOK');
 
@@ -157,6 +180,21 @@ contract Chef is
 				ingredientNft.safeTransferFrom(address(this), msg.sender, variation, 1, '');
 			}
 		}
+	}
+
+	function getRandomVariation(uint256 _max) internal returns (uint256 randomVariation) {
+		randomVariation = random(_max);
+		require(randomVariation <= _max, 'Chef: INVALID_VARIATION');
+	}
+
+	function random(uint256 _max) internal returns (uint256) {
+		require(_max > 0, 'Chef: INVALID_MAX');
+		uint256 randomnumber = uint256(
+			keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))
+		) % _max;
+		randomnumber = randomnumber + 100;
+		nonce++;
+		return randomnumber;
 	}
 
 	/**

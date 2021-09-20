@@ -15,15 +15,14 @@ contract IngredientsNFT is ERC1155NFT {
 	struct BaseIngredient {
 		uint256 id;
 		string name;
-		string svg;
+		string[] svgs;
 	}
 
 	struct Ingredient {
 		uint256 id;
 		string name;
 		uint256 fat;
-		uint256 baseIngredientId;
-		string svg;
+		uint256 totalVariations;
 	}
 
 	/*
@@ -38,12 +37,19 @@ contract IngredientsNFT is ERC1155NFT {
 	// ingredientId => Ingredient
 	mapping(uint256 => Ingredient) public ingredients;
 
+	// ingredientID => variationIndex => defIndex
+	mapping(uint256 => mapping(uint256 => uint256)) public ingredientVariation;
+
+	//ingredientID => svgs
+	mapping(uint256 => string) public defs;
+
 	/*
    =======================================================================
    ======================== Private Variables ============================
    =======================================================================
  */
 	Counters.Counter private baseIngredientCounter;
+	Counters.Counter private defsCounter;
 
 	/*
    =======================================================================
@@ -60,14 +66,6 @@ contract IngredientsNFT is ERC1155NFT {
    ======================== Modifiers ====================================
    =======================================================================
  */
-
-	modifier onlyValidBaseIngredient(uint256 _baseIngredientId) {
-		require(
-			_baseIngredientId > 0 && _baseIngredientId <= baseIngredientCounter.current(),
-			'IngredientNFT: INVALID_BASE_INGREDIENT_ID'
-		);
-		_;
-	}
 
 	/*
    =======================================================================
@@ -107,22 +105,22 @@ contract IngredientsNFT is ERC1155NFT {
 	/**
 			@notice This method allows admin to add the base ingredient details for a dish.
 			@param _name - indicates the name of the ingredient
-			@param _svg - indicates the svg of the ingredient
+			@param _svgs - indicates the svg of the ingredient
 			@return baseIngredientId - new base ingredient id
 		 */
-	function addBaseIngredient(string memory _name, string memory _svg)
+	function addBaseIngredient(string memory _name, string[] memory _svgs)
 		external
 		onlyAdmin
 		returns (uint256 baseIngredientId)
 	{
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_BASE_INGREDIENT_NAME');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
+		require(_svgs.length > 0, 'IngredientNFT: INVALID_SVG');
 
 		// generate traitId
 		baseIngredientCounter.increment();
 		baseIngredientId = baseIngredientCounter.current();
 
-		baseIngredients[baseIngredientId] = BaseIngredient(baseIngredientId, _name, _svg);
+		baseIngredients[baseIngredientId] = BaseIngredient(baseIngredientId, _name, _svgs);
 	}
 
 	/**
@@ -130,28 +128,35 @@ contract IngredientsNFT is ERC1155NFT {
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _ipfsHash - indicates the ipfs hash for ingredient
 	 *  @param _fat - indicates the fats of the ingredient
-	 *  @param _baseIngredientId - indicates the baseIngredient Id to which this ingredient belogs to
-	 *  @param _svg - indicates the svg of the ingredient
+	 *  @param _svgs - indicates the svg of the ingredient
 	 *  @return ingredientId - new ingredient id
 	 */
 	function addIngredient(
 		string memory _name,
 		string memory _ipfsHash,
 		uint256 _fat,
-		uint256 _baseIngredientId,
-		string memory _svg
-	) external onlyAdmin onlyValidBaseIngredient(_baseIngredientId) returns (uint256 ingredientId) {
+		string[] memory _svgs
+	) external onlyAdmin returns (uint256 ingredientId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_fat > 0, 'IngredientNFT: INVALID_FAT');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
+		require(_svgs.length > 0, 'IngredientNFT: INVALID_SVG');
 
 		// generate ingredient Id
 		tokenCounter.increment();
 		ingredientId = tokenCounter.current();
 
 		ipfsHash[ingredientId] = _ipfsHash;
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _baseIngredientId, _svg);
+		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _svgs.length);
+
+		//add svgs to defs
+		for (uint256 i = 0; i < _svgs.length; i++) {
+			defsCounter.increment();
+
+			uint256 currentDefIndex = defsCounter.current();
+			defs[currentDefIndex] = _svgs[i];
+			ingredientVariation[ingredientId][i] = currentDefIndex;
+		}
 	}
 
 	/**
@@ -160,19 +165,16 @@ contract IngredientsNFT is ERC1155NFT {
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _ipfsHash - indicates the ipfs hash for ingredient
 	 *	@param _fat - indicates the fats of the ingredient
-	 *	@param _svg - indicates the svg of the ingredient
 	 */
 	function updateIngredient(
 		uint256 _tokenId,
 		string memory _name,
 		string memory _ipfsHash,
-		uint256 _fat,
-		string memory _svg
+		uint256 _fat
 	) external onlyAdmin onlyValidNftId(_tokenId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_fat > 0, 'IngredientNFT: INVALID_FAT');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
 		require(totalSupply[_tokenId] == 0, 'IngredientNFT: CANNOT_UPDATE_INGREDIENT');
 
@@ -180,7 +182,6 @@ contract IngredientsNFT is ERC1155NFT {
 		ingredient.name = _name;
 		ipfsHash[_tokenId] = _ipfsHash;
 		ingredient.fat = _fat;
-		ingredient.svg = _svg;
 	}
 
 	/*
@@ -194,5 +195,12 @@ contract IngredientsNFT is ERC1155NFT {
     */
 	function getCurrentBaseIngredientId() external view returns (uint256) {
 		return baseIngredientCounter.current();
+	}
+
+	/**
+    @notice This method returns the current base ingredient Id
+    */
+	function getCurrentDefs() external view returns (uint256) {
+		return defsCounter.current();
 	}
 }

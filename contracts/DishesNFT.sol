@@ -19,9 +19,11 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 		address dishOwner;
 		bool cooked;
 		uint256 baseIngredientId;
+		uint256 baseIngredientVariation;
 		uint256 fats;
 		uint256 totalIngredients;
 		uint256 ingredientsHash;
+		uint256 variationsHash;
 	}
 
 	/*
@@ -93,9 +95,11 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	function prepareDish(
 		address _user,
 		uint256 _baseIngredientId,
+		uint256 _baseIngredientVariation,
 		uint256 _fats,
 		uint256 _totalIngredients,
-		uint256 _ingredientsHash
+		uint256 _ingredientsHash,
+		uint256 _variationsHash
 	) external onlyChef returns (uint256 dishId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
 		require(_fats > 0, 'DishesNFT: INVALID_FATS');
@@ -105,7 +109,16 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 		tokenCounter.increment();
 		dishId = tokenCounter.current();
 
-		dish[dishId] = Dish(_user, true, _baseIngredientId, _fats, _totalIngredients, _ingredientsHash);
+		dish[dishId] = Dish(
+			_user,
+			true,
+			_baseIngredientId,
+			_baseIngredientVariation,
+			_fats,
+			_totalIngredients,
+			_ingredientsHash,
+			_variationsHash
+		);
 
 		_mint(_user, dishId, 1, '');
 
@@ -147,44 +160,76 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 		require(dishToServe.cooked, 'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH');
 
 		string
-			memory accumulator = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" width="1000" height="1000" viewBox="0, 0, 1616, 1216">';
-
-		(, , string memory baseIngredientsSvg) = ingredientNft.baseIngredients(
+			memory accumulator = '<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="500px" height="500px" viewBox="0 0 200 300"  style="enable-background:new 0 0 1075.2 737.4;" xml:space="preserve">';
+		(, , string[] memory baseIngredientsSvgs) = ingredientNft.baseIngredients(
 			dishToServe.baseIngredientId
 		);
 
+		//add defs
+		accumulator = strConcat(accumulator, getDefs());
+
 		// add base ingredient
-		accumulator = strConcat(accumulator, baseIngredientsSvg);
+		accumulator = strConcat(accumulator, baseIngredientsSvgs[dishToServe.baseIngredientVariation]);
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
 		uint256 slottedValue;
+		uint256 variationSlottedValue;
 		uint256 slotMultiplier;
+		uint256 ingredientId;
 		uint256 variation;
-		string memory ingredientSvg;
 
 		// Iterate Ingredient hash by Gene and assemble SVG sandwich
 		for (uint8 slot = 0; slot <= uint8(dishToServe.totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			slottedValue = dishToServe.ingredientsHash & bitMask; // Extract slotted value from hash
+			variationSlottedValue = dishToServe.variationsHash & bitMask;
 
 			if (slottedValue > 0) {
-				variation = (slot > 0) // Extract IngredientID from slotted value
+				ingredientId = (slot > 0) // Extract IngredientID from slotted value
 					? slottedValue / slotMultiplier
 					: slottedValue;
 
+				if (variation > 0) {
+					variation = (slot > 0) // Extract variation from slotted value
+						? variationSlottedValue / slotMultiplier
+						: variationSlottedValue;
+				}
+
 				require(
-					variation > 0 && variation <= ingredientNft.getCurrentNftId(),
-					'DishesNFT: INVALID_INGREDIENT_VARIATION'
+					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
+					'DishesNFT: INVALID_INGREDIENT_ID'
 				);
 
-				(, , , ,ingredientSvg) = ingredientNft.ingredients(variation);
-				accumulator = strConcat(accumulator, ingredientSvg);
+				(, string memory name, ,) = ingredientNft.ingredients(ingredientId);
+				accumulator = strConcat(accumulator, getPlaceHolder(name, variation));
 			}
 		}
 
 		return strConcat(accumulator, '</svg>');
+	}
+
+	function getPlaceHolder(string memory name, uint256 variation)
+		internal
+		pure
+		returns (string memory)
+	{
+		string
+			memory head = '<svg preserveAspectRatio="xMidYMid meet"  x="0"   y="0"  viewBox="0 0 300 300" width="100%"  height="100%"><use href="#';
+		string memory footer = '"/></svg>';
+
+		return string(abi.encode(head, name, '_', variation, footer));
+	}
+
+	function getDefs() internal view returns (string memory defs) {
+		defs = '<defs>';
+
+		for (uint256 i = 0; i < ingredientNft.getCurrentDefs(); i++) {
+			strConcat(defs, ingredientNft.defs(i));
+		}
+
+		strConcat(defs, '</defs>');
 	}
 }
