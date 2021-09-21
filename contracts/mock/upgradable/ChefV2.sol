@@ -21,22 +21,23 @@ contract ChefV2 is Chef {
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
 	 */
-	function initialize(address _ingredientNftAddress, address _dishesNftAddress)
-		external
-		virtual
-		override
-		initializer
-	{
-		require(_ingredientNftAddress != address(0), 'Chef: INVALID_INGREDIENT_ADDRESS');
-		require(_dishesNftAddress != address(0), 'Chef: INVALID_DISHES_ADDRESS');
+	function initialize(
+		address _ingredientNft,
+		address _dishesNft,
+		address _pantry
+	) external virtual override initializer {
+		require(_ingredientNft != address(0), 'Chef: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNft != address(0), 'Chef: INVALID_DISHES_ADDRESS');
+		require(_pantry != address(0), 'Chef: INVALID_PANTRY_ADDRESS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
-		ingredientNft = IIngredientNFT(_ingredientNftAddress);
-		dishesNft = IDishesNFT(_dishesNftAddress);
+		ingredientNft = IIngredientNFT(_ingredientNft);
+		dishesNft = IDishesNFT(_dishesNft);
+		pantry = IPantry(_pantry);
 	}
 
 	/*

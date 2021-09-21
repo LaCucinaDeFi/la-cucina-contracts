@@ -128,35 +128,40 @@ contract IngredientsNFT is ERC1155NFT {
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _ipfsHash - indicates the ipfs hash for ingredient
 	 *  @param _fat - indicates the fats of the ingredient
-	 *  @param _svgs - indicates the svg of the ingredient
 	 *  @return ingredientId - new ingredient id
 	 */
 	function addIngredient(
 		string memory _name,
 		string memory _ipfsHash,
-		uint256 _fat,
-		string[] memory _svgs
+		uint256 _fat
 	) external onlyAdmin returns (uint256 ingredientId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_fat > 0, 'IngredientNFT: INVALID_FAT');
-		require(_svgs.length > 0, 'IngredientNFT: INVALID_SVG');
 
 		// generate ingredient Id
 		tokenCounter.increment();
 		ingredientId = tokenCounter.current();
 
 		ipfsHash[ingredientId] = _ipfsHash;
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, _svgs.length);
+		ingredients[ingredientId] = Ingredient(ingredientId, _name, _fat, 0);
+	}
 
-		//add svgs to defs
-		for (uint256 i = 0; i < _svgs.length; i++) {
-			defsCounter.increment();
+	/**
+	 *  @notice This method allows admin to add the ingredient variation.
+	 *  @param _ingredientId - indicates the id of the ingredient
+	 *  @param _svg - indicates the svg of ingredient variation
+	 */
+	function addIngredientVariation(uint256 _ingredientId, string memory _svg)
+		external
+		onlyAdmin
+		onlyValidNftId(_ingredientId)
+	{
+		defsCounter.increment();
+		uint256 currentDefIndex = defsCounter.current();
+		defs[currentDefIndex] = _svg;
 
-			uint256 currentDefIndex = defsCounter.current();
-			defs[currentDefIndex] = _svgs[i];
-			ingredientVariation[ingredientId][i] = currentDefIndex;
-		}
+		ingredients[_ingredientId].totalVariations += 1;
 	}
 
 	/**

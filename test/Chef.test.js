@@ -2,31 +2,38 @@ require('chai').should();
 const {expect} = require('chai');
 const {expectRevert, BN} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
+
 //const {PizzaBase, pepper, tomato, mashroom} = require('./ingredientsData');
 
-const {
-	sliceBase_0,
-	sliceBase_1,
-	sliceBase_2,
-	cheese_0,
-	cheese_1,
-	cheese_2,
-	caviar_0,
-	caviar_1,
-	caviar_2,
-	tuna_0,
-	tuna_1,
-	tuna_2,
-	gold_0,
-	gold_1,
-	gold_2,
-	beef_0,
-	beef_1,
-	beef_2,
-	truffle_0,
-	truffle_1,
-	truffle_2
-} = require('./svgs/pizzaIngredients');
+// const {
+// 	sliceBase_1,
+// 	sliceBase_2,
+// 	sliceBase_3,
+// 	cheese_1,
+// 	cheese_2,
+// 	cheese_3,
+// 	caviar_1,
+// 	caviar_2,
+// 	caviar_3,
+// 	tuna_1,
+// 	tuna_2,
+// 	tuna_3,
+// 	gold_1,
+// 	gold_2,
+// 	gold_3,
+// 	beef_1,
+// 	beef_2,
+// 	beef_3,
+// 	truffle_1,
+// 	truffle_2,
+// 	truffle_3
+// } = require('./svgs/pizzaIngredients');
+
+const {slice_1, slice_2, slice_3} = require('./svgs/Slice');
+const {cheese_1, cheese_2, cheese_3} = require('./svgs/Cheese');
+const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
+const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
+const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 
 const fs = require('fs');
 const path = require('path');
@@ -37,6 +44,9 @@ const ChefV2 = artifacts.require('ChefV2');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
+const Pantry = artifacts.require('Pantry');
+
+const IngrdientABI = require('../build/contracts/IngredientsNFT.json');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
@@ -51,13 +61,21 @@ contract.only('Chef', (accounts) => {
 	before(async () => {
 		this.Ingredient = await deployProxy(IngredientNFT, [url], {initializer: 'initialize'});
 
-		this.Dish = await deployProxy(DishesNFT, [url, this.Ingredient.address], {
+		this.Pantry = await deployProxy(Pantry, [], {
 			initializer: 'initialize'
 		});
 
-		this.Chef = await deployProxy(Chef, [this.Ingredient.address, this.Dish.address], {
+		this.Dish = await deployProxy(DishesNFT, [url, this.Ingredient.address, this.Pantry.address], {
 			initializer: 'initialize'
 		});
+
+		this.Chef = await deployProxy(
+			Chef,
+			[this.Ingredient.address, this.Dish.address, this.Pantry.address],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// // add pizza base ingredients
 		// await this.Ingredient.addBaseIngredient('Slice', PizzaBase);
@@ -334,8 +352,26 @@ contract.only('Chef', (accounts) => {
 	// 	});
 	// });
 
+	it.skip('should give random number', async () => {
+		let randomNumber = await this.Chef.getRandomVariation(5); // 0-4
+		console.log('randomNumber5: ', randomNumber.toString());
+
+		randomNumber = await this.Chef.getRandomVariation(4); //0-3
+		console.log('randomNumber4: ', randomNumber.toString());
+
+		randomNumber = await this.Chef.getRandomVariation(3); // 0-2
+		console.log('randomNumber3: ', randomNumber.toString());
+
+		randomNumber = await this.Chef.getRandomVariation(2); // 0-1
+		console.log('randomNumber2: ', randomNumber.toString());
+
+		randomNumber = await this.Chef.getRandomVariation(1); // 0
+		console.log('randomNumber1: ', randomNumber.toString());
+	});
+
 	describe('New Pizza Dish', () => {
-		before('add pizza ingredients', async () => {
+		let currentDishId;
+		before('add pizza base and ingredients', async () => {
 			// grant Chef role to Chef contract in Dish contract
 			const ChefRole = await this.Dish.CHEF_ROLE();
 
@@ -344,16 +380,58 @@ contract.only('Chef', (accounts) => {
 			// approve ingredients to ChefContract
 			await this.Ingredient.setApprovalForAll(this.Chef.address, true, {from: user1});
 
-			// add pizza base ingredients
-			await this.Ingredient.addBaseIngredient('Slice', [sliceBase_0]);
+			// ****************************************************************************
+
+			// add dish in pantry
+			await this.Pantry.addDish('Pizza', {from: owner});
+			currentDishId = await this.Pantry.getCurrentDishId();
+
+			// add base Ingredients for dish
+			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Slice', {from: owner});
+			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
+
+			// add variations for base ingredients
+			// here variation name should be strictly like this. variationName = name_variationId. ex. Slice_1, Cheese_2
+			// NOTE: svg id and the name_variationId should be same. <g id= "Slice_1">, <g id = "Cheese_2">
+			await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_1, {from: owner});
+			await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_2, {from: owner});
+			await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_3, {from: owner});
+
+			await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_1, {from: owner});
+			await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_2, {from: owner});
+			await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_3, {from: owner});
 
 			// add ingredients
-			await this.Ingredient.addIngredient('Cheese', url, '1000', [cheese_0]);
-			await this.Ingredient.addIngredient('Caviar', url, '200', [caviar_0, caviar_1, caviar_2]);
-			await this.Ingredient.addIngredient('Tuna', url, '300', [tuna_0, tuna_1]);
-			await this.Ingredient.addIngredient('Gold', url, '2000', [gold_0]);
-			await this.Ingredient.addIngredient('Beef', url, '1500', [beef_0]);
-			await this.Ingredient.addIngredient('Truffle', url, '500', [truffle_0]);
+			// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
+			// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
+
+			await this.Ingredient.addIngredient('Caviar', url, '200');
+			await this.Ingredient.addIngredient('Tuna', url, '300');
+			await this.Ingredient.addIngredient('Gold', url, '2000');
+			// await this.Ingredient.addIngredient('Beef', url, '1500');
+			// await this.Ingredient.addIngredient('Truffle', url, '500');
+
+			// add ingredient variations
+
+			this.add2Tx = await this.Ingredient.addIngredientVariation(1, caviar_1);
+			await this.Ingredient.addIngredientVariation(1, caviar_2);
+			await this.Ingredient.addIngredientVariation(1, caviar_3);
+
+			await this.Ingredient.addIngredientVariation(2, tuna_1);
+			await this.Ingredient.addIngredientVariation(2, tuna_2);
+			await this.Ingredient.addIngredientVariation(2, tuna_3);
+
+			await this.Ingredient.addIngredientVariation(3, gold_1);
+			await this.Ingredient.addIngredientVariation(3, gold_2);
+			await this.Ingredient.addIngredientVariation(3, gold_3);
+
+			// await this.Ingredient.addIngredientVariation(4, beef_1);
+			// await this.Ingredient.addIngredientVariation(4, beef_2);
+			// await this.Ingredient.addIngredientVariation(4, beef_3);
+
+			// this.add3Tx = await this.Ingredient.addIngredientVariation(5, truffle_1);
+			// await this.Ingredient.addIngredientVariation(5, truffle_2);
+			// await this.Ingredient.addIngredientVariation(5, truffle_3);
 		});
 
 		it.only('should make pizza with all ingredients', async () => {
@@ -361,33 +439,32 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
 			await this.Ingredient.mint(user1, 3, 1, {from: minter});
-			await this.Ingredient.mint(user1, 4, 1, {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, {from: minter});
-			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			// await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			// await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2, 3, 4, 5, 6], {from: user1});
+			await this.Chef.prepareDish(1, [1, 2, 3], {from: user1});
 
 			//get current dish id
-			const currentDishId = await this.Dish.getCurrentNftId();
+			const preparedDishId = await this.Dish.getCurrentNftId();
 
 			//get user1`s dish balance
-			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+			const dishBalance = await this.Dish.balanceOf(user1, preparedDishId);
 
 			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
 
 			//get the svg of dish
-			const dishSvg = await this.Dish.serveDish(currentDishId);
+			const dishSvg = await this.Dish.serveDish(1);
 
-			const addresssPath = await path.join(
-				'dishes',
-				'newPizza' + currentDishId.toString() + '.svg'
-			);
-			dishId++;
+			// const addresssPath = await path.join(
+			// 	'dishes',
+			// 	'newPizza' + preparedDishId.toString() + '.svg'
+			// );
+			// dishId++;
 
-			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
-				if (err) throw err;
-			});
+			// await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+			// 	if (err) throw err;
+			// });
 		});
 
 		it('should prepare pizza using cheese and caviar only', async () => {
@@ -510,10 +587,10 @@ contract.only('Chef', (accounts) => {
 		it('should prepare pizza using cheese and Truffle only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
-			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 6], {from: user1});
+			await this.Chef.prepareDish(1, [1, 5], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -566,16 +643,15 @@ contract.only('Chef', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using caviar, tuna, gold, beef and truffle only', async () => {
+		it('should prepare pizza using tuna, gold, beef and truffle only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
 			await this.Ingredient.mint(user1, 3, 1, {from: minter});
 			await this.Ingredient.mint(user1, 4, 1, {from: minter});
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
-			await this.Ingredient.mint(user1, 6, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [2, 3, 4, 5, 6], {from: user1});
+			await this.Chef.prepareDish(1, [2, 3, 4, 5], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -602,10 +678,10 @@ contract.only('Chef', (accounts) => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
 			await this.Ingredient.mint(user1, 4, 1, {from: minter});
-			await this.Ingredient.mint(user1, 6, 1, {from: minter});
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [2, 4, 6], {from: user1});
+			await this.Chef.prepareDish(1, [2, 4, 5], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();

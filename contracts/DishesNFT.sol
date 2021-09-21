@@ -3,8 +3,9 @@
 pragma solidity ^0.8.0;
 
 import './ERC1155NFT.sol';
-import './interfaces/IIngredientNFT.sol';
 import './RecipeBase.sol';
+import './interfaces/IIngredientNFT.sol';
+import './interfaces/IPantry.sol';
 
 contract DishesNFT is ERC1155NFT, RecipeBase {
 	using Counters for Counters.Counter;
@@ -18,12 +19,13 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	struct Dish {
 		address dishOwner;
 		bool cooked;
-		uint256 baseIngredientId;
-		uint256 baseIngredientVariation;
+		uint256 dishId;
 		uint256 fats;
+		uint256 totalBaseIngredients;
 		uint256 totalIngredients;
 		uint256 ingredientsHash;
-		uint256 variationsHash;
+		uint256 ingredientVariationHash; // indicates hash of the indexes of ingredient variations
+		uint256 baseVariationHash;
 	}
 
 	/*
@@ -38,6 +40,7 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
    =======================================================================
  */
 	IIngredientNFT public ingredientNft;
+	IPantry public pantry;
 
 	// dishID => dish
 	mapping(uint256 => Dish) public dish;
@@ -48,11 +51,18 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
    =======================================================================
  */
 
-	function initialize(string memory url, address _ingredientAddress) public virtual initializer {
+	function initialize(
+		string memory url,
+		address _ingredientAddress,
+		address _pantryAddress
+	) public virtual initializer {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
+		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
+
 		__ERC1155PresetMinterPauser_init(url);
 
 		ingredientNft = IIngredientNFT(_ingredientAddress);
+		pantry = IPantry(_pantryAddress);
 	}
 
 	/*
@@ -86,7 +96,7 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	/**
 	 * @notice This method allows chef contract to prepare the dish and mint dish nft to specified user
 	 * @param _user - indicates the user address to whom dish nft to allocate
-	 * @param _baseIngredientId - indicates the id of the baseIngredient for a dish
+	 * @param _dishId - indicates the id of the  dish
 	 * @param _fats - indicates the total fats of dish
 	 * @param _totalIngredients - indicates the total ingredients included in dish
 	 * @param _ingredientsHash - indicates the ingredientHash for a dish
@@ -94,16 +104,16 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	 */
 	function prepareDish(
 		address _user,
-		uint256 _baseIngredientId,
-		uint256 _baseIngredientVariation,
+		uint256 _dishId,
 		uint256 _fats,
+		uint256 _totalBaseIngredients,
 		uint256 _totalIngredients,
 		uint256 _ingredientsHash,
-		uint256 _variationsHash
+		uint256 _ingredientVariationHash,
+		uint256 _baseVariationHash
 	) external onlyChef returns (uint256 dishId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
 		require(_fats > 0, 'DishesNFT: INVALID_FATS');
-		require(_ingredientsHash > 0, 'DishesNFT: INVALID_INGREDIENT_HASH');
 
 		// increament dishId
 		tokenCounter.increment();
@@ -112,12 +122,13 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 		dish[dishId] = Dish(
 			_user,
 			true,
-			_baseIngredientId,
-			_baseIngredientVariation,
+			_dishId,
 			_fats,
+			_totalBaseIngredients,
 			_totalIngredients,
 			_ingredientsHash,
-			_variationsHash
+			_ingredientVariationHash,
+			_baseVariationHash
 		);
 
 		_mint(_user, dishId, 1, '');
@@ -148,70 +159,112 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	/**
 		@notice This method allows users to get the svg of their dish
 		@param _dishId - indicates the dishId for which you want to get the svg
-		@return svg - svg code of dish
+		@return accumulator - svg code of dish
     */
 	function serveDish(uint256 _dishId)
-		public
+		external
 		view
 		onlyValidDishId(_dishId)
-		returns (string memory svg)
+		returns (string memory accumulator)
 	{
 		Dish memory dishToServe = dish[_dishId];
 		require(dishToServe.cooked, 'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH');
 
-		string
-			memory accumulator = '<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="500px" height="500px" viewBox="0 0 200 300"  style="enable-background:new 0 0 1075.2 737.4;" xml:space="preserve">';
-		(, , string[] memory baseIngredientsSvgs) = ingredientNft.baseIngredients(
-			dishToServe.baseIngredientId
-		);
-
-		//add defs
-		accumulator = strConcat(accumulator, getDefs());
-
-		// add base ingredient
-		accumulator = strConcat(accumulator, baseIngredientsSvgs[dishToServe.baseIngredientVariation]);
+		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
-		uint256 slottedValue;
-		uint256 variationSlottedValue;
+		uint256 ingredientSlottedValue;
+		uint256 ingredientVariationValue;
 		uint256 slotMultiplier;
 		uint256 ingredientId;
-		uint256 variation;
+		uint256 ingredientVariationIndex;
 
-		// Iterate Ingredient hash by Gene and assemble SVG sandwich
+		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot <= uint8(dishToServe.totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			slottedValue = dishToServe.ingredientsHash & bitMask; // Extract slotted value from hash
-			variationSlottedValue = dishToServe.variationsHash & bitMask;
+			ingredientSlottedValue = dishToServe.ingredientsHash & bitMask; // Extract slotted value from hash
+			ingredientVariationValue = dishToServe.ingredientVariationHash & bitMask;
 
-			if (slottedValue > 0) {
+			if (ingredientSlottedValue > 0) {
 				ingredientId = (slot > 0) // Extract IngredientID from slotted value
-					? slottedValue / slotMultiplier
-					: slottedValue;
+					? ingredientSlottedValue / slotMultiplier
+					: ingredientSlottedValue;
 
-				if (variation > 0) {
-					variation = (slot > 0) // Extract variation from slotted value
-						? variationSlottedValue / slotMultiplier
-						: variationSlottedValue;
-				}
+				ingredientVariationIndex = (slot > 0) // Extract variation from slotted value
+					? ingredientVariationValue / slotMultiplier
+					: ingredientVariationValue;
 
 				require(
 					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
 					'DishesNFT: INVALID_INGREDIENT_ID'
 				);
 
-				(, string memory name, ,) = ingredientNft.ingredients(ingredientId);
-				accumulator = strConcat(accumulator, getPlaceHolder(name, variation));
+				(, string memory name, , ) = ingredientNft.ingredients(ingredientId);
+
+				accumulator = strConcat(accumulator, _getPlaceHolder(name, ingredientVariationIndex));
 			}
 		}
-
-		return strConcat(accumulator, '</svg>');
+		accumulator = strConcat(accumulator, string('</svg>'));
+		return accumulator;
 	}
 
-	function getPlaceHolder(string memory name, uint256 variation)
+	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
+		internal
+		view
+		returns (string memory)
+	{
+		string
+			memory accumulator = '<svg xmlns="http://www.w3.org/2000/svg" width="268.5" height="184.3">';
+
+		//get base variations
+
+		//add defs
+		accumulator = strConcat(accumulator, '<defs>');
+
+		// add ingredient defs
+		accumulator = strConcat(accumulator, getDefs());
+
+		uint256 slotConst = 256;
+		uint256 slotMask = 255;
+		uint256 bitMask;
+		uint256 baseVariationValue;
+		uint256 slotMultiplier;
+		uint256 baseVariationId;
+		string memory basePlaceHolders;
+
+		for (uint8 slot = 0; slot <= uint8(_totalBaseIngredients); slot++) {
+			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
+			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
+			baseVariationValue = _baseVariationHash & bitMask; // Extract slotted value from hash
+
+			if (baseVariationValue > 0) {
+				baseVariationId = (slot > 0) // Extract baseIngredient id from slotted value
+					? baseVariationValue / slotMultiplier
+					: baseVariationValue;
+
+				require(
+					baseVariationId > 0 && baseVariationId <= pantry.getCurrentBaseVariationId(),
+					'DishesNFT: INVALID_BASE_VARIATION_ID'
+				);
+
+				(string memory name, string memory variationSvg) = pantry.baseVariation(baseVariationId);
+
+				// add base variation to defs
+				accumulator = strConcat(accumulator, variationSvg);
+
+				basePlaceHolders = strConcat(accumulator, _getPlaceHolder(name, baseVariationId));
+			}
+		}
+		accumulator = strConcat(accumulator, '</defs>');
+		accumulator = strConcat(accumulator, basePlaceHolders);
+
+		return accumulator;
+	}
+
+	function _getPlaceHolder(string memory name, uint256 variation)
 		internal
 		pure
 		returns (string memory)
@@ -224,12 +277,8 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 	}
 
 	function getDefs() internal view returns (string memory defs) {
-		defs = '<defs>';
-
-		for (uint256 i = 0; i < ingredientNft.getCurrentDefs(); i++) {
+		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
 			strConcat(defs, ingredientNft.defs(i));
 		}
-
-		strConcat(defs, '</defs>');
 	}
 }

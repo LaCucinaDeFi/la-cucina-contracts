@@ -11,6 +11,7 @@ interface IDishesNFT is INFT {
 			bool cooked,
 			uint256 baseIngredientId,
 			uint256 fats,
+			uint256 _totalBaseIngredients,
 			uint256 totalIngredients,
 			uint256 ingredientsHash,
 			uint256 variationsHash
@@ -18,12 +19,13 @@ interface IDishesNFT is INFT {
 
 	function prepareDish(
 		address _user,
-		uint256 _baseIngredientId,
-		uint256 _baseIngredientVariation,
+		uint256 _dishId,
 		uint256 _fats,
+		uint256 _totalBaseIngredients,
 		uint256 _totalIngredients,
 		uint256 _ingredientsHash,
-		uint256 variationsHash
+		uint256 _ingredientVariationHash,
+		uint256 _baseVariationHash
 	) external returns (uint256 dishId);
 
 	function serveDish(uint256 _dishId) external view returns (string memory svg);
