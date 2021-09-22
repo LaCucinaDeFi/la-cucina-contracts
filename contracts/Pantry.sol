@@ -72,7 +72,20 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
  */
 
 	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'ERC1155NFT: ONLY_ADMIN_CAN_CALL');
+		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'Pantry: ONLY_ADMIN_CAN_CALL');
+		_;
+	}
+
+	modifier onlyValidDishId(uint256 _dishId) {
+		require(_dishId > 0 && _dishId <= dishCounter.current(), 'Pantry: INVALID_DISH_ID');
+		_;
+	}
+
+	modifier onlyValidBaseIngredientId(uint256 _baseIngredientId) {
+		require(
+			_baseIngredientId > 0 && _baseIngredientId <= baseIngredientCounter.current(),
+			'Pantry: INVALID_BASE_INGREDIENT_ID'
+		);
 		_;
 	}
 
@@ -81,6 +94,11 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
    ======================== Public Methods ===============================
    =======================================================================
  */
+	/**
+	 * @notice This method allows admin to add the dish name in which baseIngredients will be added
+	 * @param _name - indicates the namce of the dish
+	 * @return dishId - indicates the generated id of the dish
+	 */
 	function addDish(string memory _name) external onlyAdmin returns (uint256 dishId) {
 		require(bytes(_name).length > 0, 'Pantry: INVALID_DISH_NAME');
 
@@ -90,13 +108,19 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 		dish[dishId].name = _name;
 	}
 
+	/**
+	 * @notice This method allows admin to add the baseIngredients for the dish.
+	 * @param _dishId - indicates the dish id for adding the base ingredient
+	 * @param _name - indicates the name of the base ingredient
+	 * @return baseIngredientId - indicates the name of the baseIngredient.
+	 */
 	function addBaseIngredientForDish(uint256 _dishId, string memory _name)
 		external
 		onlyAdmin
+		onlyValidDishId(_dishId)
 		returns (uint256 baseIngredientId)
 	{
-		require(_dishId > 0 && _dishId <= dishCounter.current(), 'Pantry: INVALID_DISH_ID');
-		require(bytes(_name).length > 0, 'Pantry: INVALID_DISH_NAME');
+		require(bytes(_name).length > 0, 'Pantry: INVALID_BASE_INGREDIENT_NAME');
 
 		baseIngredientCounter.increment();
 		baseIngredientId = baseIngredientCounter.current();
@@ -107,15 +131,23 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 		dish[_dishId].baseIngredientIds.push(baseIngredientId);
 	}
 
+	/**
+	 * @notice This method allows admin to add the different variations for the base ingredient
+	 * @param _baseIngredientId - indicates the base ingredient id
+	 * @param _variationName - indicates the variation name
+	 * @param _svg - indicates the svg string of the base ingredient svg
+	 * @param baseVariationId - indicates the newly generated variation id
+	 */
 	function addBaseIngredientVariation(
 		uint256 _baseIngredientId,
 		string memory _variationName,
 		string memory _svg
-	) external onlyAdmin returns (uint256 baseVariationId) {
-		require(
-			_baseIngredientId > 0 && _baseIngredientId <= baseIngredientCounter.current(),
-			'Pantry: INVALID_BASE_INGREDIENT_ID'
-		);
+	)
+		external
+		onlyAdmin
+		onlyValidBaseIngredientId(_baseIngredientId)
+		returns (uint256 baseVariationId)
+	{
 		require(bytes(_variationName).length > 0, 'Pantry: INVALID_VARIATION_NAME');
 		require(bytes(_svg).length > 0, 'Pantry: INVALID_SVG');
 
@@ -129,36 +161,58 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 		baseIngredient[_baseIngredientId].variationIds.push(baseVariationId);
 	}
 
-	function getBaseIngredientId(uint256 _dishId, uint256 _index) external view returns (uint256) {
+	/**
+	 * @notice This method returns the baseIngredient id from the base ingredients list of given dish at given index.
+	 * @param _dishId - indicates the dish id
+	 * @param _index - indicates the index for the base ingredient list
+	 * @return returns the base ingredient id
+	 */
+	function getBaseIngredientId(uint256 _dishId, uint256 _index)
+		external
+		view
+		onlyValidDishId(_dishId)
+		returns (uint256)
+	{
 		Dish memory _dish = dish[_dishId];
 		require(_index < _dish.baseIngredientIds.length, 'Pantry: INVALID_BASE_INDEX');
 		return _dish.baseIngredientIds[_index];
 	}
 
+	/**
+	 * @notice This method returns the variation id from the variation list of given base ingredient at given index.
+	 * @param _baseIngredientId - indicates the base ingredient id
+	 * @param _index - indicates the index for the variation list
+	 * @return returns the variation id
+	 */
 	function getBaseVariationId(uint256 _baseIngredientId, uint256 _index)
 		external
 		view
+		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256)
 	{
-		require(
-			_baseIngredientId > 0 && _baseIngredientId <= baseIngredientCounter.current(),
-			'Pantry: INVALID_BASE_INGREDIENT_ID'
-		);
-
 		BaseIngredient memory _baseIngredient = baseIngredient[_baseIngredientId];
 
-		require(_index < _baseIngredient.totalVariations, 'Pantry: INVALID_BASE_INDEX');
+		require(_index < _baseIngredient.totalVariations, 'Pantry: INVALID_VARIATION_INDEX');
 		return _baseIngredient.variationIds[_index];
 	}
 
+	/**
+	 * @notice This method returns the current dish id
+	 */
 	function getCurrentDishId() external view returns (uint256) {
 		return dishCounter.current();
 	}
 
+	/**
+	 * @notice This method returns the current base ingredient id
+	 */
 	function getCurrentBaseIngredientId() external view returns (uint256) {
 		return baseIngredientCounter.current();
 	}
 
+	/**
+	 * @notice This method returns the current base variation id
+	 */
 	function getCurrentBaseVariationId() external view returns (uint256) {
 		return baseVariationCounter.current();
 	}
