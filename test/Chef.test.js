@@ -34,10 +34,11 @@ const {cheese_1, cheese_2, cheese_3} = require('./svgs/Cheese');
 const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
 const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
+const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
+const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
 
 const fs = require('fs');
 const path = require('path');
-const {PizzaBase} = require('./ingredientsData');
 
 const Chef = artifacts.require('Chef');
 const ChefV2 = artifacts.require('ChefV2');
@@ -45,8 +46,6 @@ const ChefV2 = artifacts.require('ChefV2');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
 const Pantry = artifacts.require('Pantry');
-
-const IngrdientABI = require('../build/contracts/IngredientsNFT.json');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
@@ -408,8 +407,8 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.addIngredient('Caviar', url, '200');
 			await this.Ingredient.addIngredient('Tuna', url, '300');
 			await this.Ingredient.addIngredient('Gold', url, '2000');
-			// await this.Ingredient.addIngredient('Beef', url, '1500');
-			// await this.Ingredient.addIngredient('Truffle', url, '500');
+			await this.Ingredient.addIngredient('Beef', url, '1500');
+			await this.Ingredient.addIngredient('Truffle', url, '500');
 
 			// add ingredient variations
 
@@ -425,13 +424,13 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.addIngredientVariation(3, gold_2);
 			await this.Ingredient.addIngredientVariation(3, gold_3);
 
-			// await this.Ingredient.addIngredientVariation(4, beef_1);
-			// await this.Ingredient.addIngredientVariation(4, beef_2);
-			// await this.Ingredient.addIngredientVariation(4, beef_3);
+			await this.Ingredient.addIngredientVariation(4, beef_1);
+			await this.Ingredient.addIngredientVariation(4, beef_2);
+			await this.Ingredient.addIngredientVariation(4, beef_3);
 
-			// this.add3Tx = await this.Ingredient.addIngredientVariation(5, truffle_1);
-			// await this.Ingredient.addIngredientVariation(5, truffle_2);
-			// await this.Ingredient.addIngredientVariation(5, truffle_3);
+			this.add3Tx = await this.Ingredient.addIngredientVariation(5, truffle_1);
+			await this.Ingredient.addIngredientVariation(5, truffle_2);
+			await this.Ingredient.addIngredientVariation(5, truffle_3);
 		});
 
 		it.only('should make pizza with all ingredients', async () => {
@@ -439,11 +438,11 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
 			await this.Ingredient.mint(user1, 3, 1, {from: minter});
-			// await this.Ingredient.mint(user1, 4, 1, {from: minter});
-			// await this.Ingredient.mint(user1, 5, 1, {from: minter});
+			await this.Ingredient.mint(user1, 4, 1, {from: minter});
+			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2, 3], {from: user1});
+			await this.Chef.prepareDish(1, [1, 2, 3, 4, 5], {from: user1});
 
 			//get current dish id
 			const preparedDishId = await this.Dish.getCurrentNftId();
@@ -456,15 +455,18 @@ contract.only('Chef', (accounts) => {
 			//get the svg of dish
 			const dishSvg = await this.Dish.serveDish(1);
 
-			// const addresssPath = await path.join(
-			// 	'dishes',
-			// 	'newPizza' + preparedDishId.toString() + '.svg'
-			// );
-			// dishId++;
+			const addresssPath = await path.join('dishes', 'newPizza' + dishId.toString() + '.svg');
+			dishId++;
 
-			// await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
-			// 	if (err) throw err;
-			// });
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+
+			const placeHolder = await this.Dish._getPlaceHolder('pizza',2);
+			console.log('placeHolder: ', placeHolder);
+			console.log('***********************************************************');
+			const defs = await this.Dish.getDefs();
+			console.log('defs: ', defs);
 		});
 
 		it('should prepare pizza using cheese and caviar only', async () => {
@@ -526,6 +528,7 @@ contract.only('Chef', (accounts) => {
 				if (err) throw err;
 			});
 		});
+
 		it('should prepare pizza using cheese and gold only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});

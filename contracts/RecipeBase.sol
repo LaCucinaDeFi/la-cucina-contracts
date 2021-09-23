@@ -1,30 +1,30 @@
 pragma solidity ^0.8.0;
 
-contract RecipeBase {
+library RecipeBase {
+
 	/**
-	 * @notice Convert a `uint` value to a `string`
-	 * via OraclizeAPI - MIT licence
-	 * https://github.com/provable-things/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol#L896
-	 * @param _i the `uint` value to be converted
-	 * @return result the `string` representation of the given `uint` value
+	 * @dev Converts a `uint256` to its ASCII `string` decimal representation.
 	 */
-	function uintToStr(uint256 _i) internal pure returns (string memory result) {
-		if (_i == 0) {
+	function toString(uint256 value) internal pure returns (string memory) {
+		// Inspired by OraclizeAPI's implementation - MIT licence
+		// https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
+
+		if (value == 0) {
 			return '0';
 		}
-		uint256 j = _i;
-		uint256 len;
-		while (j != 0) {
-			len++;
-			j /= 10;
+		uint256 temp = value;
+		uint256 digits;
+		while (temp != 0) {
+			digits++;
+			temp /= 10;
 		}
-		bytes memory bstr = new bytes(len);
-		uint256 k = len - 1;
-		while (_i != 0) {
-			bstr[k--] = bytes1(uint8(48 + (_i % 10)));
-			_i /= 10;
+		bytes memory buffer = new bytes(digits);
+		while (value != 0) {
+			digits -= 1;
+			buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+			value /= 10;
 		}
-		result = string(bstr);
+		return string(buffer);
 	}
 
 	/**

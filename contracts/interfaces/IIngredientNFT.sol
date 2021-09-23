@@ -4,20 +4,6 @@ pragma solidity ^0.8.0;
 import './INFT.sol';
 
 interface IIngredientNFT is INFT {
-	struct BaseIngredient {
-		uint256 id;
-		string name;
-		string svg;
-	}
-
-	struct Ingredient {
-		uint256 id;
-		string name;
-		uint256 fat;
-		uint256 baseIngredientId;
-		string svg;
-	}
-
 	function mint(
 		address _account,
 		uint256 _nftId,
@@ -40,18 +26,7 @@ interface IIngredientNFT is INFT {
 			uint256 totalVariations
 		);
 
-	function baseIngredients(uint256 _baseIngredientId)
-		external
-		view
-		returns (
-			uint256 id,
-			string memory name,
-			string[] memory svgs
-		);
-
 	function defs(uint256 defId) external view returns (string memory);
-
-	function getCurrentBaseIngredientId() external view returns (uint256);
 
 	function getCurrentDefs() external view returns (uint256);
 

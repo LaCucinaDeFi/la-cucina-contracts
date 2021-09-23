@@ -7,7 +7,7 @@ import './RecipeBase.sol';
 import './interfaces/IIngredientNFT.sol';
 import './interfaces/IPantry.sol';
 
-contract DishesNFT is ERC1155NFT, RecipeBase {
+contract DishesNFT is ERC1155NFT {
 	using Counters for Counters.Counter;
 
 	/*
@@ -201,13 +201,17 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
 					'DishesNFT: INVALID_INGREDIENT_ID'
 				);
+				require(ingredientVariationIndex > 0, 'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX_ID');
 
 				(, string memory name, , ) = ingredientNft.ingredients(ingredientId);
 
-				accumulator = strConcat(accumulator, _getPlaceHolder(name, ingredientVariationIndex));
+				string memory placeHolder = _getPlaceHolder(name, ingredientVariationIndex);
+				
+				accumulator = string(abi.encodePacked(accumulator, placeHolder));
 			}
 		}
-		accumulator = strConcat(accumulator, string('</svg>'));
+
+		accumulator = RecipeBase.strConcat(accumulator, string('</svg>'));
 		return accumulator;
 	}
 
@@ -222,10 +226,10 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 		//get base variations
 
 		//add defs
-		accumulator = strConcat(accumulator, '<defs>');
+		accumulator = RecipeBase.strConcat(accumulator, '<defs>');
 
 		// add ingredient defs
-		accumulator = strConcat(accumulator, getDefs());
+		accumulator = RecipeBase.strConcat(accumulator, getDefs());
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -253,32 +257,40 @@ contract DishesNFT is ERC1155NFT, RecipeBase {
 				(string memory name, string memory variationSvg) = pantry.baseVariation(baseVariationId);
 
 				// add base variation to defs
-				accumulator = strConcat(accumulator, variationSvg);
+				accumulator = RecipeBase.strConcat(accumulator, variationSvg);
 
-				basePlaceHolders = strConcat(accumulator, _getPlaceHolder(name, baseVariationId));
+				basePlaceHolders = RecipeBase.strConcat(
+					basePlaceHolders,
+					_getPlaceHolder(name, baseVariationId)
+				);
 			}
 		}
-		accumulator = strConcat(accumulator, '</defs>');
-		accumulator = strConcat(accumulator, basePlaceHolders);
+		accumulator = RecipeBase.strConcat(accumulator, '</defs>');
+		accumulator = RecipeBase.strConcat(accumulator, basePlaceHolders);
 
 		return accumulator;
 	}
 
 	function _getPlaceHolder(string memory name, uint256 variation)
-		internal
+		public
 		pure
 		returns (string memory)
 	{
-		string
-			memory head = '<svg preserveAspectRatio="xMidYMid meet"  x="0"   y="0"  viewBox="0 0 300 300" width="100%"  height="100%"><use href="#';
-		string memory footer = '"/></svg>';
-
-		return string(abi.encode(head, name, '_', variation, footer));
+		return
+			string(
+				abi.encodePacked(
+					'<svg preserveAspectRatio="xMidYMid meet" x="0" y="0" viewBox="0 0 300 300" width="100%"  height="100%"><use href="#',
+					name,
+					'_',
+					RecipeBase.toString(variation),
+					'"/></svg>'
+				)
+			);
 	}
 
-	function getDefs() internal view returns (string memory defs) {
+	function getDefs() public view returns (string memory defs) {
 		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
-			strConcat(defs, ingredientNft.defs(i));
+			defs = RecipeBase.strConcat(defs, ingredientNft.defs(i));
 		}
 	}
 }

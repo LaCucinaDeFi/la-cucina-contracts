@@ -12,12 +12,6 @@ contract IngredientsNFT is ERC1155NFT {
    ======================== Structures ===================================
    =======================================================================
  */
-	struct BaseIngredient {
-		uint256 id;
-		string name;
-		string[] svgs;
-	}
-
 	struct Ingredient {
 		uint256 id;
 		string name;
@@ -30,9 +24,6 @@ contract IngredientsNFT is ERC1155NFT {
    ======================== Public Variables ============================
    =======================================================================
  */
-
-	// baseIngredientId => BaseIngredient
-	mapping(uint256 => BaseIngredient) public baseIngredients;
 
 	// ingredientId => Ingredient
 	mapping(uint256 => Ingredient) public ingredients;
@@ -48,7 +39,6 @@ contract IngredientsNFT is ERC1155NFT {
    ======================== Private Variables ============================
    =======================================================================
  */
-	Counters.Counter private baseIngredientCounter;
 	Counters.Counter private defsCounter;
 
 	/*
@@ -100,27 +90,6 @@ contract IngredientsNFT is ERC1155NFT {
 	) external virtual onlyMinter onlyValidNftId(_ingredientId) {
 		totalSupply[_ingredientId] -= _amountOfCopies;
 		_burn(_account, _ingredientId, _amountOfCopies);
-	}
-
-	/**
-			@notice This method allows admin to add the base ingredient details for a dish.
-			@param _name - indicates the name of the ingredient
-			@param _svgs - indicates the svg of the ingredient
-			@return baseIngredientId - new base ingredient id
-		 */
-	function addBaseIngredient(string memory _name, string[] memory _svgs)
-		external
-		onlyAdmin
-		returns (uint256 baseIngredientId)
-	{
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_BASE_INGREDIENT_NAME');
-		require(_svgs.length > 0, 'IngredientNFT: INVALID_SVG');
-
-		// generate traitId
-		baseIngredientCounter.increment();
-		baseIngredientId = baseIngredientCounter.current();
-
-		baseIngredients[baseIngredientId] = BaseIngredient(baseIngredientId, _name, _svgs);
 	}
 
 	/**
@@ -194,13 +163,6 @@ contract IngredientsNFT is ERC1155NFT {
    ======================== Getter Methods ===============================
    =======================================================================
  */
-
-	/**
-    @notice This method returns the current base ingredient Id
-    */
-	function getCurrentBaseIngredientId() external view returns (uint256) {
-		return baseIngredientCounter.current();
-	}
 
 	/**
     @notice This method returns the current base ingredient Id
