@@ -3,32 +3,6 @@ const {expect} = require('chai');
 const {expectRevert, BN} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
-//const {PizzaBase, pepper, tomato, mashroom} = require('./ingredientsData');
-
-// const {
-// 	sliceBase_1,
-// 	sliceBase_2,
-// 	sliceBase_3,
-// 	cheese_1,
-// 	cheese_2,
-// 	cheese_3,
-// 	caviar_1,
-// 	caviar_2,
-// 	caviar_3,
-// 	tuna_1,
-// 	tuna_2,
-// 	tuna_3,
-// 	gold_1,
-// 	gold_2,
-// 	gold_3,
-// 	beef_1,
-// 	beef_2,
-// 	beef_3,
-// 	truffle_1,
-// 	truffle_2,
-// 	truffle_3
-// } = require('./svgs/pizzaIngredients');
-
 const {slice_1, slice_2, slice_3} = require('./svgs/Slice');
 const {cheese_1, cheese_2, cheese_3} = require('./svgs/Cheese');
 const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
@@ -49,7 +23,7 @@ const Pantry = artifacts.require('Pantry');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
-contract.only('Chef', (accounts) => {
+contract('Chef', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -75,14 +49,6 @@ contract.only('Chef', (accounts) => {
 				initializer: 'initialize'
 			}
 		);
-
-		// // add pizza base ingredients
-		// await this.Ingredient.addBaseIngredient('Slice', PizzaBase);
-
-		// // add ingredients
-		// await this.Ingredient.addIngredient('pepper', url, '100', pepper);
-		// await this.Ingredient.addIngredient('tomato', url, '200', tomato);
-		// await this.Ingredient.addIngredient('mashroom', url, '300', mashroom);
 
 		// add minter in ingredient contract
 		const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -112,264 +78,20 @@ contract.only('Chef', (accounts) => {
 		});
 	});
 
-	// describe('prepareDish()', async () => {
-	// 	let user1PepperBalance;
-	// 	let user1TomatoBalance;
-	// 	let user1MashroomBalance;
-
-	// 	let chefPepperBalance;
-	// 	let chef1TomatoBalance;
-	// 	let chef1MashroomBalance;
-
-	// 	let currentDishIdBefore;
-
-	// 	before('setup contract for preparing dish', async () => {
-	// 		// grant Chef role to Chef contract in Dish contract
-	// 		const ChefRole = await this.Dish.CHEF_ROLE();
-
-	// 		await this.Dish.grantRole(ChefRole, this.Chef.address, {from: owner});
-
-	// 		// mint ingredients to the user1
-	// 		await this.Ingredient.mint(user1, 1, 1, {from: minter});
-	// 		await this.Ingredient.mint(user1, 2, 1, {from: minter});
-	// 		await this.Ingredient.mint(user1, 3, 1, {from: minter});
-
-	// 		user1PepperBalance = await this.Ingredient.balanceOf(user1, 1);
-	// 		user1TomatoBalance = await this.Ingredient.balanceOf(user1, 2);
-	// 		user1MashroomBalance = await this.Ingredient.balanceOf(user1, 3);
-
-	// 		chefPepperBalance = await this.Ingredient.balanceOf(this.Chef.address, 1);
-	// 		chef1TomatoBalance = await this.Ingredient.balanceOf(this.Chef.address, 2);
-	// 		chef1MashroomBalance = await this.Ingredient.balanceOf(this.Chef.address, 3);
-
-	// 		//get current dish id
-	// 		currentDishIdBefore = await this.Dish.getCurrentNftId();
-	// 	});
-
-	// 	it('should prepare dish correctly', async () => {
-	// 		// approve ingredients to ChefContract
-	// 		await this.Ingredient.setApprovalForAll(this.Chef.address, true, {from: user1});
-
-	// 		// prepare the dish
-	// 		await this.Chef.prepareDish(1, [1, 2, 3], {from: user1});
-
-	// 		// get users ingredient balance
-	// 		const user1PepperBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
-	// 		const user1TomatoBalanceAfter = await this.Ingredient.balanceOf(user1, 2);
-	// 		const user1MashroomBalanceAfter = await this.Ingredient.balanceOf(user1, 3);
-
-	// 		// get Chef contract`s ingredient balance
-	// 		const chefPepperBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 1);
-	// 		const chef1TomatoBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 2);
-	// 		const chef1MashroomBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 3);
-
-	// 		//get current dish id
-	// 		const currentDishIdAfter = await this.Dish.getCurrentNftId();
-
-	// 		//get user1`s dish balance
-	// 		const dishBalance = await this.Dish.balanceOf(user1, currentDishIdAfter);
-
-	// 		expect(dishBalance).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(user1PepperBalance).to.bignumber.be.eq(new BN('1'));
-	// 		expect(user1TomatoBalance).to.bignumber.be.eq(new BN('1'));
-	// 		expect(user1MashroomBalance).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(user1PepperBalanceAfter).to.bignumber.be.eq(new BN('0'));
-	// 		expect(user1TomatoBalanceAfter).to.bignumber.be.eq(new BN('0'));
-	// 		expect(user1MashroomBalanceAfter).to.bignumber.be.eq(new BN('0'));
-
-	// 		expect(chefPepperBalance).to.bignumber.be.eq(new BN('0'));
-	// 		expect(chef1TomatoBalance).to.bignumber.be.eq(new BN('0'));
-	// 		expect(chef1MashroomBalance).to.bignumber.be.eq(new BN('0'));
-
-	// 		expect(chefPepperBalanceAfter).to.bignumber.be.eq(new BN('1'));
-	// 		expect(chef1TomatoBalanceAfter).to.bignumber.be.eq(new BN('1'));
-	// 		expect(chef1MashroomBalanceAfter).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
-	// 		expect(currentDishIdAfter).to.bignumber.be.eq(new BN('1'));
-	// 	});
-
-	// 	it('should serve the prepared dish correctly', async () => {
-	// 		//get current dish id
-	// 		const currentDishId = await this.Dish.getCurrentNftId();
-
-	// 		//get the svg of dish
-	// 		const dishSvg = await this.Dish.serveDish(currentDishId);
-
-	// 		const addresssPath = await path.join('dishes', 'pizza' + currentDishId.toString() + '.svg');
-	// 		dishId++;
-
-	// 		await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
-	// 			if (err) throw err;
-	// 		});
-	// 	});
-
-	// 	it('should revert when invalid baseIngredientId is used to prepare dish', async () => {
-	// 		await expectRevert(
-	// 			this.Chef.prepareDish(4, [1, 2, 3], {from: user1}),
-	// 			'Chef: INVALID_BASE_INGREDIENT_ID'
-	// 		);
-	// 	});
-
-	// 	it('should revert when no ingredient ids are used to prepare dish', async () => {
-	// 		await expectRevert(
-	// 			this.Chef.prepareDish(1, [], {from: user1}),
-	// 			'DishesNFT: INSUFFICIENT_INGREDIENTS'
-	// 		);
-	// 	});
-
-	// 	it('should revert when invalid ingredient id is used to prepare dish', async () => {
-	// 		await expectRevert(
-	// 			this.Chef.prepareDish(1, [5, 1, 3], {from: user1}),
-	// 			'Chef: INVALID_INGREDIENT_ID'
-	// 		);
-	// 	});
-	// });
-
-	// describe('uncookDish()', async () => {
-	// 	let userDishBalBefore;
-	// 	let user1PepperBalance;
-	// 	let user1TomatoBalance;
-
-	// 	let chefPepperBalance;
-	// 	let chef1TomatoBalance;
-	// 	let chef1MashroomBalance;
-
-	// 	let user1MashroomBalance;
-	// 	let currentDishId;
-
-	// 	before(async () => {
-	// 		currentDishId = await this.Dish.getCurrentNftId();
-
-	// 		// get user1`s dish balance
-	// 		userDishBalBefore = await this.Dish.balanceOf(user1, currentDishId);
-
-	// 		// get user1`s ingredient balance
-
-	// 		user1PepperBalance = await this.Ingredient.balanceOf(user1, 1);
-	// 		user1TomatoBalance = await this.Ingredient.balanceOf(user1, 2);
-	// 		user1MashroomBalance = await this.Ingredient.balanceOf(user1, 3);
-
-	// 		// get chef contract`s ingredient balance
-	// 		chefPepperBalance = await this.Ingredient.balanceOf(this.Chef.address, 1);
-	// 		chef1TomatoBalance = await this.Ingredient.balanceOf(this.Chef.address, 2);
-	// 		chef1MashroomBalance = await this.Ingredient.balanceOf(this.Chef.address, 3);
-
-	// 		// approve dish to ChefContract
-	// 		await this.Dish.setApprovalForAll(this.Chef.address, true, {from: user1});
-
-	// 		// uncook dish
-	// 		await this.Chef.uncookDish(currentDishId, {from: user1});
-	// 	});
-
-	// 	it('should uncook dish correctly', async () => {
-	// 		// get user1`s dish balance
-	// 		const userDishBalAfter = await this.Dish.balanceOf(user1, currentDishId);
-
-	// 		// get Chef contract`s dish balance
-	// 		const ChefContractBal = await this.Dish.balanceOf(this.Chef.address, currentDishId);
-
-	// 		// get users ingredient balance
-	// 		const user1PepperBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
-	// 		const user1TomatoBalanceAfter = await this.Ingredient.balanceOf(user1, 2);
-	// 		const user1MashroomBalanceAfter = await this.Ingredient.balanceOf(user1, 3);
-
-	// 		// get Chef contract`s ingredient balance
-	// 		const chefPepperBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 1);
-	// 		const chef1TomatoBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 2);
-	// 		const chef1MashroomBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 3);
-
-	// 		expect(userDishBalBefore).to.bignumber.be.eq(new BN('1'));
-	// 		expect(userDishBalAfter).to.bignumber.be.eq(new BN('0'));
-
-	// 		expect(ChefContractBal).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(user1PepperBalance).to.bignumber.be.eq(new BN('0'));
-	// 		expect(user1TomatoBalance).to.bignumber.be.eq(new BN('0'));
-	// 		expect(user1MashroomBalance).to.bignumber.be.eq(new BN('0'));
-
-	// 		expect(user1PepperBalanceAfter).to.bignumber.be.eq(new BN('1'));
-	// 		expect(user1TomatoBalanceAfter).to.bignumber.be.eq(new BN('1'));
-	// 		expect(user1MashroomBalanceAfter).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(chefPepperBalance).to.bignumber.be.eq(new BN('1'));
-	// 		expect(chef1TomatoBalance).to.bignumber.be.eq(new BN('1'));
-	// 		expect(chef1MashroomBalance).to.bignumber.be.eq(new BN('1'));
-
-	// 		expect(chefPepperBalanceAfter).to.bignumber.be.eq(new BN('0'));
-	// 		expect(chef1TomatoBalanceAfter).to.bignumber.be.eq(new BN('0'));
-	// 		expect(chef1MashroomBalanceAfter).to.bignumber.be.eq(new BN('0'));
-	// 	});
-
-	// 	it('should add the dish id uncooked dish ids list in Chef contract', async () => {
-	// 		const uncookedDishIds = await this.Chef.uncookedDishIds(0);
-
-	// 		expect(uncookedDishIds).to.bignumber.be.eq(currentDishId);
-	// 	});
-
-	// 	it('should revert when non-dishOwner tries to uncook the dish', async () => {
-	// 		await expectRevert(
-	// 			this.Chef.uncookDish(currentDishId, {from: user2}),
-	// 			'Chef: ONLY_DISH_OWNER_CAN_UNCOOK'
-	// 		);
-	// 	});
-
-	// 	it('should revert when dishOwner tries to uncook the dish with invalid dish id', async () => {
-	// 		await expectRevert(this.Chef.uncookDish(0, {from: user1}), 'Chef: INVALID_DISH_ID');
-	// 		await expectRevert(this.Chef.uncookDish(5, {from: user1}), 'Chef: INVALID_DISH_ID');
-	// 	});
-
-	// 	it('should revert when user wants to get svg of uncooked dish', async () => {
-	// 		await expectRevert(
-	// 			this.Dish.serveDish(currentDishId, {from: user1}),
-	// 			'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH'
-	// 		);
-	// 	});
-	// });
-
-	// describe('upgradeProxy()', () => {
-	// 	let versionBeforeUpgrade;
-	// 	before('upgradeProxy', async () => {
-	// 		versionBeforeUpgrade = await this.Chef.getVersionNumber();
-
-	// 		// upgrade contract
-	// 		await upgradeProxy(this.Chef.address, ChefV2);
-	// 	});
-
-	// 	it('should upgrade contract correctly', async () => {
-	// 		const versionAfterUpgrade = await this.Chef.getVersionNumber();
-
-	// 		expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
-	// 		expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
-	// 		expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
-
-	// 		expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
-	// 		expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
-	// 		expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
-	// 	});
-	// });
-
-	it.skip('should give random number', async () => {
-		let randomNumber = await this.Chef.getRandomVariation(5); // 0-4
-		console.log('randomNumber5: ', randomNumber.toString());
-
-		randomNumber = await this.Chef.getRandomVariation(4); //0-3
-		console.log('randomNumber4: ', randomNumber.toString());
-
-		randomNumber = await this.Chef.getRandomVariation(3); // 0-2
-		console.log('randomNumber3: ', randomNumber.toString());
-
-		randomNumber = await this.Chef.getRandomVariation(2); // 0-1
-		console.log('randomNumber2: ', randomNumber.toString());
-
-		randomNumber = await this.Chef.getRandomVariation(1); // 0
-		console.log('randomNumber1: ', randomNumber.toString());
-	});
-
 	describe('New Pizza Dish', () => {
-		let currentDishId;
+		let user1CaviarBalance;
+		let user1TunaBalance;
+		let user1GoldBalance;
+		let user1BeefBalance;
+		let user1TruffleBalance;
+
+		let chefCaviarBalance;
+		let chefTunaBalance;
+		let chefGoldBalance;
+		let chefBeefBalance;
+		let chefTruffleBalance;
+
+		let currentDishIdBefore;
 		before('add pizza base and ingredients', async () => {
 			// grant Chef role to Chef contract in Dish contract
 			const ChefRole = await this.Dish.CHEF_ROLE();
@@ -433,7 +155,7 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.addIngredientVariation(5, truffle_3);
 		});
 
-		it.only('should make pizza with all ingredients', async () => {
+		it('should make pizza with all ingredients', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
@@ -441,8 +163,62 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 4, 1, {from: minter});
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
+			user1CaviarBalance = await this.Ingredient.balanceOf(user1, 1);
+			user1TunaBalance = await this.Ingredient.balanceOf(user1, 2);
+			user1GoldBalance = await this.Ingredient.balanceOf(user1, 3);
+			user1BeefBalance = await this.Ingredient.balanceOf(user1, 4);
+			user1TruffleBalance = await this.Ingredient.balanceOf(user1, 5);
+
+			chefCaviarBalance = await this.Ingredient.balanceOf(this.Chef.address, 1);
+			chefTunaBalance = await this.Ingredient.balanceOf(this.Chef.address, 2);
+			chefGoldBalance = await this.Ingredient.balanceOf(this.Chef.address, 3);
+			chefBeefBalance = await this.Ingredient.balanceOf(this.Chef.address, 4);
+			chefTruffleBalance = await this.Ingredient.balanceOf(this.Chef.address, 5);
+
+			//get current dish id
+			currentDishIdBefore = await this.Dish.getCurrentNftId();
+
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2, 3, 4, 5], {from: user1});
+			this.prepareDish1Tx = await this.Chef.prepareDish(1, [1, 2, 3, 4, 5], {from: user1});
+			//	console.log('prepareDish1: ', this.prepareDish1Tx);
+
+			// get users ingredient balance
+			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
+			const user1TunaBalanceAfter = await this.Ingredient.balanceOf(user1, 2);
+			const user1GoldBalanceAfter = await this.Ingredient.balanceOf(user1, 3);
+			const user1BeefBalanceAfter = await this.Ingredient.balanceOf(user1, 4);
+			const user1TruffleBalanceAfter = await this.Ingredient.balanceOf(user1, 5);
+
+			// get Chef contract`s ingredient balance
+			const chefCaviarBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 1);
+			const chefTunaBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 2);
+			const chefGoldBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 3);
+			const chefBeefBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 4);
+			const chefTruffleBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 5);
+
+			expect(user1CaviarBalance).to.bignumber.be.eq(new BN('1'));
+			expect(user1TunaBalance).to.bignumber.be.eq(new BN('1'));
+			expect(user1GoldBalance).to.bignumber.be.eq(new BN('1'));
+			expect(user1BeefBalance).to.bignumber.be.eq(new BN('1'));
+			expect(user1TruffleBalance).to.bignumber.be.eq(new BN('1'));
+
+			expect(user1CaviarBalanceAfter).to.bignumber.be.eq(new BN('0'));
+			expect(user1TunaBalanceAfter).to.bignumber.be.eq(new BN('0'));
+			expect(user1GoldBalanceAfter).to.bignumber.be.eq(new BN('0'));
+			expect(user1BeefBalanceAfter).to.bignumber.be.eq(new BN('0'));
+			expect(user1TruffleBalanceAfter).to.bignumber.be.eq(new BN('0'));
+
+			expect(chefCaviarBalance).to.bignumber.be.eq(new BN('0'));
+			expect(chefTunaBalance).to.bignumber.be.eq(new BN('0'));
+			expect(chefGoldBalance).to.bignumber.be.eq(new BN('0'));
+			expect(chefBeefBalance).to.bignumber.be.eq(new BN('0'));
+			expect(chefTruffleBalance).to.bignumber.be.eq(new BN('0'));
+
+			expect(chefCaviarBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(chefTunaBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(chefGoldBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(chefBeefBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(chefTruffleBalanceAfter).to.bignumber.be.eq(new BN('1'));
 
 			//get current dish id
 			const preparedDishId = await this.Dish.getCurrentNftId();
@@ -451,25 +227,57 @@ contract.only('Chef', (accounts) => {
 			const dishBalance = await this.Dish.balanceOf(user1, preparedDishId);
 
 			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
+			expect(preparedDishId).to.bignumber.be.eq(new BN('1'));
+		});
+
+		it('should serve the prepared dish correctly', async () => {
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
 
 			//get the svg of dish
-			const dishSvg = await this.Dish.serveDish(1);
+			const dishSvg = await this.Dish.serveDish(currentDishId);
 
-			const addresssPath = await path.join('dishes', 'newPizza' + dishId.toString() + '.svg');
+			const addresssPath = await path.join('dishes', 'pizza' + currentDishId.toString() + '.svg');
 			dishId++;
 
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
 				if (err) throw err;
 			});
-
-			const placeHolder = await this.Dish._getPlaceHolder('pizza',2);
-			console.log('placeHolder: ', placeHolder);
-			console.log('***********************************************************');
-			const defs = await this.Dish.getDefs();
-			console.log('defs: ', defs);
 		});
 
 		it('should prepare pizza using cheese and caviar only', async () => {
+			// mint ingredients to the user1
+			await this.Ingredient.mint(user1, 1, 1, {from: minter});
+			await this.Ingredient.mint(user1, 2, 1, {from: minter});
+
+			// prepare the dish
+			this.prepareDish2Tx = await this.Chef.prepareDish(1, [1, 2], {from: user1});
+			//	console.log('prepareDish2: ', this.prepareDish2Tx);
+
+			//get current dish id
+			const currentDishId = await this.Dish.getCurrentNftId();
+
+			//get user1`s dish balance
+			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
+
+			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
+
+			//get the svg of dish
+			const dishSvg = await this.Dish.serveDish(currentDishId);
+
+			const addresssPath = await path.join(
+				'dishes',
+				'newPizza' + currentDishId.toString() + '.svg'
+			);
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
+		});
+
+		it('should prepare pizza using caviar and tuna only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
 			await this.Ingredient.mint(user1, 2, 1, {from: minter});
@@ -498,38 +306,7 @@ contract.only('Chef', (accounts) => {
 				if (err) throw err;
 			});
 		});
-
-		it('should prepare pizza using cheese and tuna only', async () => {
-			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, {from: minter});
-			await this.Ingredient.mint(user1, 3, 1, {from: minter});
-
-			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2], {from: user1});
-
-			//get current dish id
-			const currentDishId = await this.Dish.getCurrentNftId();
-
-			//get user1`s dish balance
-			const dishBalance = await this.Dish.balanceOf(user1, currentDishId);
-
-			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
-
-			//get the svg of dish
-			const dishSvg = await this.Dish.serveDish(currentDishId);
-
-			const addresssPath = await path.join(
-				'dishes',
-				'newPizza' + currentDishId.toString() + '.svg'
-			);
-			dishId++;
-
-			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
-				if (err) throw err;
-			});
-		});
-
-		it('should prepare pizza using cheese and gold only', async () => {
+		it('should prepare pizza using caviar and beef only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, {from: minter});
 			await this.Ingredient.mint(user1, 4, 1, {from: minter});
@@ -623,7 +400,8 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [1, 2, 5], {from: user1});
+			this.prepareDish3Tx = await this.Chef.prepareDish(1, [1, 2, 5], {from: user1});
+			//	console.log('prepareDish3: ', this.prepareDish3Tx);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -654,7 +432,8 @@ contract.only('Chef', (accounts) => {
 			await this.Ingredient.mint(user1, 5, 1, {from: minter});
 
 			// prepare the dish
-			await this.Chef.prepareDish(1, [2, 3, 4, 5], {from: user1});
+			this.prepareDish4Tx = await this.Chef.prepareDish(1, [2, 3, 4, 5], {from: user1});
+			//	console.log('prepareDish4: ', this.prepareDish4Tx);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentNftId();
@@ -706,6 +485,170 @@ contract.only('Chef', (accounts) => {
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
 				if (err) throw err;
 			});
+		});
+
+		it('should revert when invalid baseIngredientId is used to prepare dish', async () => {
+			await expectRevert(
+				this.Chef.prepareDish(4, [1, 2, 3], {from: user1}),
+				'Chef: INVALID_DISH_ID'
+			);
+		});
+
+		it('should revert when no ingredient ids are used to prepare dish', async () => {
+			await expectRevert(
+				this.Chef.prepareDish(1, [], {from: user1}),
+				'Chef: INSUFFICIENT_INGREDIENTS'
+			);
+		});
+
+		it('should revert when invalid ingredient id is used to prepare dish', async () => {
+			await expectRevert(
+				this.Chef.prepareDish(1, [7, 1, 3], {from: user1}),
+				'Chef: INVALID_INGREDIENT_ID'
+			);
+		});
+	});
+
+	describe('uncookDish()', async () => {
+		let user1CaviarBalance;
+		let user1TunaBalance;
+		let user1GoldBalance;
+		let user1BeefBalance;
+		let user1TruffleBalance;
+
+		let chefCaviarBalance;
+		let chefTunaBalance;
+		let chefGoldBalance;
+		let chefBeefBalance;
+		let chefTruffleBalance;
+
+		let currentDishId;
+
+		before(async () => {
+			currentDishId = await this.Dish.getCurrentNftId();
+
+			// get user1`s dish balance
+			userDishBalBefore = await this.Dish.balanceOf(user1, 1);
+
+			// get user1`s ingredient balance
+
+			user1CaviarBalance = await this.Ingredient.balanceOf(user1, 1);
+			user1TunaBalance = await this.Ingredient.balanceOf(user1, 2);
+			user1GoldBalance = await this.Ingredient.balanceOf(user1, 3);
+			user1BeefBalance = await this.Ingredient.balanceOf(user1, 4);
+			user1TruffleBalance = await this.Ingredient.balanceOf(user1, 5);
+
+			// get chef contract`s ingredient balance
+			chefCaviarBalance = await this.Ingredient.balanceOf(this.Chef.address, 1);
+			chefTunaBalance = await this.Ingredient.balanceOf(this.Chef.address, 2);
+			chefGoldBalance = await this.Ingredient.balanceOf(this.Chef.address, 3);
+			chefBeefBalance = await this.Ingredient.balanceOf(this.Chef.address, 4);
+			chefTruffleBalance = await this.Ingredient.balanceOf(this.Chef.address, 5);
+
+			// approve dish to ChefContract
+			await this.Dish.setApprovalForAll(this.Chef.address, true, {from: user1});
+
+			// uncook dish
+			this.uncookTx = await this.Chef.uncookDish(1, {from: user1});
+			//console.log('uncookDish: ', this.uncookTx);
+		});
+
+		it('should uncook dish correctly', async () => {
+			// get user1`s dish balance
+			const userDishBalAfter = await this.Dish.balanceOf(user1, 1);
+
+			// get Chef contract`s dish balance
+			const ChefContractBal = await this.Dish.balanceOf(this.Chef.address, 1);
+
+			// get users ingredient balance
+			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
+			const user1TunaBalanceAfter = await this.Ingredient.balanceOf(user1, 2);
+			const user1GoldBalanceAfter = await this.Ingredient.balanceOf(user1, 3);
+			const user1BeefBalanceAfter = await this.Ingredient.balanceOf(user1, 4);
+			const user1TruffleBalanceAfter = await this.Ingredient.balanceOf(user1, 5);
+
+			// get Chef contract`s ingredient balance
+			const chefCaviarBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 1);
+			const chefTunaBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 2);
+			const chefGoldBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 3);
+			const chefBeefBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 4);
+			const chefTruffleBalanceAfter = await this.Ingredient.balanceOf(this.Chef.address, 5);
+
+			expect(userDishBalBefore).to.bignumber.be.eq(new BN('1'));
+			expect(userDishBalAfter).to.bignumber.be.eq(new BN('0'));
+
+			expect(ChefContractBal).to.bignumber.be.eq(new BN('1'));
+
+			expect(user1CaviarBalance).to.bignumber.be.eq(new BN('0'));
+			expect(user1TunaBalance).to.bignumber.be.eq(new BN('0'));
+			expect(user1GoldBalance).to.bignumber.be.eq(new BN('0'));
+			expect(user1BeefBalance).to.bignumber.be.eq(new BN('0'));
+			expect(user1TruffleBalance).to.bignumber.be.eq(new BN('0'));
+
+			expect(user1CaviarBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(user1TunaBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(user1GoldBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(user1BeefBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(user1TruffleBalanceAfter).to.bignumber.be.eq(new BN('1'));
+
+			expect(chefCaviarBalance).to.bignumber.be.eq(new BN('7'));
+			expect(chefTunaBalance).to.bignumber.be.eq(new BN('6'));
+			expect(chefGoldBalance).to.bignumber.be.eq(new BN('2'));
+			expect(chefBeefBalance).to.bignumber.be.eq(new BN('4'));
+			expect(chefTruffleBalance).to.bignumber.be.eq(new BN('6'));
+
+			expect(chefCaviarBalanceAfter).to.bignumber.be.eq(new BN('6'));
+			expect(chefTunaBalanceAfter).to.bignumber.be.eq(new BN('5'));
+			expect(chefGoldBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(chefBeefBalanceAfter).to.bignumber.be.eq(new BN('3'));
+			expect(chefTruffleBalanceAfter).to.bignumber.be.eq(new BN('5'));
+		});
+
+		it('should add the dish id uncooked dish ids list in Chef contract', async () => {
+			const uncookedDishIds = await this.Chef.uncookedDishIds(0);
+
+			expect(uncookedDishIds).to.bignumber.be.eq(new BN('1'));
+		});
+
+		it('should revert when non-dishOwner tries to uncook the dish', async () => {
+			await expectRevert(
+				this.Chef.uncookDish(currentDishId, {from: user2}),
+				'Chef: ONLY_DISH_OWNER_CAN_UNCOOK'
+			);
+		});
+
+		it('should revert when dishOwner tries to uncook the dish with invalid dish id', async () => {
+			await expectRevert(this.Chef.uncookDish(0, {from: user1}), 'Chef: INVALID_DISH_ID');
+			await expectRevert(this.Chef.uncookDish(11, {from: user1}), 'Chef: INVALID_DISH_ID');
+		});
+
+		it('should revert when user wants to get svg of uncooked dish', async () => {
+			await expectRevert(
+				this.Dish.serveDish(1, {from: user1}),
+				'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH'
+			);
+		});
+	});
+
+	describe('upgradeProxy()', () => {
+		let versionBeforeUpgrade;
+		before('upgradeProxy', async () => {
+			versionBeforeUpgrade = await this.Chef.getVersionNumber();
+
+			// upgrade contract
+			await upgradeProxy(this.Chef.address, ChefV2);
+		});
+
+		it('should upgrade contract correctly', async () => {
+			const versionAfterUpgrade = await this.Chef.getVersionNumber();
+
+			expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
+			expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+			expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+
+			expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
+			expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+			expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
 		});
 	});
 });

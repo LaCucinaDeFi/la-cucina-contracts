@@ -35,7 +35,8 @@ contract('DishesNFT', (accounts) => {
 			currentDishId = await this.Pantry.getCurrentDishId();
 
 			// add the dish
-			await this.Pantry.addDish('Pizza', {from: owner});
+			this.addDishTx = await this.Pantry.addDish('Pizza', {from: owner});
+			//  console.log('addDishTx: ',this.addDishTx);
 		});
 
 		it('should add the dish correctly', async () => {
@@ -76,7 +77,12 @@ contract('DishesNFT', (accounts) => {
 			currentBaseIngredientId = await this.Pantry.getCurrentBaseIngredientId();
 
 			// add baseIngredient for dish
-			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
+			this.addBaseIngredientTx = await this.Pantry.addBaseIngredientForDish(
+				currentDishId,
+				'Cheese',
+				{from: owner}
+			);
+			//  console.log('baseIngredientTx: ',this.addBaseIngredientTx);
 		});
 
 		it('should add the baseIngredient for dish correctly', async () => {
@@ -135,9 +141,15 @@ contract('DishesNFT', (accounts) => {
 			currentVariationId = await this.Pantry.getCurrentBaseVariationId();
 
 			// add base variation
-			await this.Pantry.addBaseIngredientVariation(currentBaseIngredientId, 'Golden', cheese_1, {
-				from: owner
-			});
+			this.addVariationTx = await this.Pantry.addBaseIngredientVariation(
+				currentBaseIngredientId,
+				'Golden',
+				cheese_1,
+				{
+					from: owner
+				}
+			);
+			//  console.log('variationTx: ',this.addVariationTx);
 		});
 
 		it('should add the variation for base ingredient correctly', async () => {

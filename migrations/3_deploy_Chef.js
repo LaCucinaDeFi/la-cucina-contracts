@@ -19,7 +19,8 @@ module.exports = async function (deployer) {
 		Chef,
 		[
 			addresses[deployer.network_id.toString()]['IngredientsNFT'],
-			addresses[deployer.network_id.toString()]['DishesNFT']
+			addresses[deployer.network_id.toString()]['DishesNFT'],
+			addresses[deployer.network_id.toString()]['Pantry']
 		],
 		{
 			initializer: 'initialize'

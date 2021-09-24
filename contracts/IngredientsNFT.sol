@@ -126,6 +126,7 @@ contract IngredientsNFT is ERC1155NFT {
 		onlyAdmin
 		onlyValidNftId(_ingredientId)
 	{
+		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_VARIATION');
 		defsCounter.increment();
 		uint256 currentDefIndex = defsCounter.current();
 		defs[currentDefIndex] = _svg;

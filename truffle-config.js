@@ -111,7 +111,7 @@
  
    // Set default mocha options here, use special reporters etc.
    mocha: {
-     timeout: 100000,
+     timeout: 10000000,
      useColors: true,
      slow: 30000,
      bail: true,

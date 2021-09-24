@@ -3,7 +3,10 @@ const {expect} = require('chai');
 const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test-helpers');
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
-const {PizzaBase, pepper, tomato, mashroom} = require('../ingredientsData');
+
+const {caviar_1, caviar_2, caviar_3} = require('../svgs/Caviar');
+const {tuna_1, tuna_2, tuna_3} = require('../svgs/Tuna');
+const {gold_1, gold_2, gold_3} = require('../svgs/Gold');
 
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
@@ -34,26 +37,26 @@ contract('PrivateMarketplace', (accounts) => {
 		const minterRole = await this.IngredientNFT.MINTER_ROLE();
 		await this.IngredientNFT.grantRole(minterRole, this.privateMarketplace.address);
 
-		// add pizza base ingredients
-		await this.IngredientNFT.addBaseIngredient('PizzaBase', PizzaBase);
-
-		const currentBaseIngredientID = await this.IngredientNFT.getCurrentBaseIngredientId();
-
 		// add ingredients
-		await this.IngredientNFT.addIngredient('pepper', url, '10', currentBaseIngredientID, pepper, {
-			from: owner
-		});
-		await this.IngredientNFT.addIngredient('tomato', url, '20', currentBaseIngredientID, tomato, {
-			from: owner
-		});
-		await this.IngredientNFT.addIngredient(
-			'mashroom',
-			url,
-			'30',
-			currentBaseIngredientID,
-			mashroom,
-			{from: owner}
-		);
+		// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
+		// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
+
+		await this.IngredientNFT.addIngredient('Caviar', url, '200');
+		await this.IngredientNFT.addIngredient('Tuna', url, '300');
+		await this.IngredientNFT.addIngredient('Gold', url, '2000');
+
+		// add ingredient variations
+		this.add2Tx = await this.IngredientNFT.addIngredientVariation(1, caviar_1);
+		await this.IngredientNFT.addIngredientVariation(1, caviar_2);
+		await this.IngredientNFT.addIngredientVariation(1, caviar_3);
+
+		await this.IngredientNFT.addIngredientVariation(2, tuna_1);
+		await this.IngredientNFT.addIngredientVariation(2, tuna_2);
+		await this.IngredientNFT.addIngredientVariation(2, tuna_3);
+
+		await this.IngredientNFT.addIngredientVariation(3, gold_1);
+		await this.IngredientNFT.addIngredientVariation(3, gold_2);
+		await this.IngredientNFT.addIngredientVariation(3, gold_3);
 
 		currentIngredientId = await this.IngredientNFT.getCurrentNftId();
 

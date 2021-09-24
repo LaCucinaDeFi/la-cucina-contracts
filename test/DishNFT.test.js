@@ -3,7 +3,14 @@ const {expect} = require('chai');
 const {expectRevert, BN, expectEvent} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
-const {PizzaBase, pepper, tomato, mashroom} = require('./ingredientsData');
+
+const {slice_1, slice_2, slice_3} = require('./svgs/Slice');
+const {cheese_1, cheese_2, cheese_3} = require('./svgs/Cheese');
+const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
+const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
+const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
+const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
+const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
 
 const fs = require('fs');
 const path = require('path');
@@ -11,6 +18,7 @@ const path = require('path');
 const DishesNFT = artifacts.require('DishesNFT');
 const DishesNFTV2 = artifacts.require('DishesNFTV2');
 const IngredientNFT = artifacts.require('IngredientsNFT');
+const Pantry = artifacts.require('Pantry');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
@@ -21,23 +29,69 @@ contract('DishesNFT', (accounts) => {
 	const user2 = accounts[3];
 	const user3 = accounts[4];
 	let dishId = 1;
+	let currentDishId;
 
 	before(async () => {
 		this.Ingredient = await deployProxy(IngredientNFT, [url], {initializer: 'initialize'});
 
-		this.Dish = await deployProxy(DishesNFT, [url, this.Ingredient.address], {
+		this.Pantry = await deployProxy(Pantry, [], {
 			initializer: 'initialize'
 		});
 
-		// add pizza base ingredients
-		await this.Ingredient.addBaseIngredient('PizzaBase', PizzaBase);
+		this.Dish = await deployProxy(DishesNFT, [url, this.Ingredient.address, this.Pantry.address], {
+			initializer: 'initialize'
+		});
 
-		const currentBaseIngredientID = await this.Ingredient.getCurrentBaseIngredientId();
+		// add dish in pantry
+		await this.Pantry.addDish('Pizza', {from: owner});
+		currentDishId = await this.Pantry.getCurrentDishId();
+
+		// add base Ingredients for dish
+		await this.Pantry.addBaseIngredientForDish(currentDishId, 'Slice', {from: owner});
+		await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
+
+		// add variations for base ingredients
+		// here variation name should be strictly like this. variationName = name_variationId. ex. Slice_1, Cheese_2
+		// NOTE: svg id and the name_variationId should be same. <g id= "Slice_1">, <g id = "Cheese_2">
+		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_1, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_2, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_3, {from: owner});
+
+		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_1, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_2, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_3, {from: owner});
 
 		// add ingredients
-		await this.Ingredient.addIngredient('pepper', url, '100', currentBaseIngredientID, pepper);
-		await this.Ingredient.addIngredient('tomato', url, '200', currentBaseIngredientID, tomato);
-		await this.Ingredient.addIngredient('mashroom', url, '300', currentBaseIngredientID, mashroom);
+		// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
+		// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
+
+		await this.Ingredient.addIngredient('Caviar', url, '200');
+		await this.Ingredient.addIngredient('Tuna', url, '300');
+		await this.Ingredient.addIngredient('Gold', url, '2000');
+		await this.Ingredient.addIngredient('Beef', url, '1500');
+		await this.Ingredient.addIngredient('Truffle', url, '500');
+
+		// add ingredient variations
+
+		this.add2Tx = await this.Ingredient.addIngredientVariation(1, caviar_1);
+		await this.Ingredient.addIngredientVariation(1, caviar_2);
+		await this.Ingredient.addIngredientVariation(1, caviar_3);
+
+		await this.Ingredient.addIngredientVariation(2, tuna_1);
+		await this.Ingredient.addIngredientVariation(2, tuna_2);
+		await this.Ingredient.addIngredientVariation(2, tuna_3);
+
+		await this.Ingredient.addIngredientVariation(3, gold_1);
+		await this.Ingredient.addIngredientVariation(3, gold_2);
+		await this.Ingredient.addIngredientVariation(3, gold_3);
+
+		await this.Ingredient.addIngredientVariation(4, beef_1);
+		await this.Ingredient.addIngredientVariation(4, beef_2);
+		await this.Ingredient.addIngredientVariation(4, beef_3);
+
+		this.add3Tx = await this.Ingredient.addIngredientVariation(5, truffle_1);
+		await this.Ingredient.addIngredientVariation(5, truffle_2);
+		await this.Ingredient.addIngredientVariation(5, truffle_3);
 
 		// add minter in ingredient contract
 		const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -47,8 +101,10 @@ contract('DishesNFT', (accounts) => {
 	describe('initialize()', () => {
 		it('should initialize contracts correctly', async () => {
 			const ingredientAddress = await this.Dish.ingredientNft();
+			const pantryAddress = await this.Dish.pantry();
 
 			expect(ingredientAddress).to.be.eq(this.Ingredient.address);
+			expect(pantryAddress).to.be.eq(this.Pantry.address);
 		});
 
 		it('should grant the admin role to deployer', async () => {
@@ -77,7 +133,17 @@ contract('DishesNFT', (accounts) => {
 			currentDishIdBefore = await this.Dish.getCurrentNftId();
 
 			// prepare the dish
-			this.prepareDishTx = await this.Dish.prepareDish(user1, 1, 1000, 3, 197121, {from: minter});
+			this.prepareDishTx = await this.Dish.prepareDish(
+				user1,
+				1,
+				1000,
+				2,
+				3,
+				197121,
+				33620225,
+				1537,
+				{from: minter}
+			);
 		});
 
 		it('should prepare dish correctly', async () => {
@@ -93,10 +159,13 @@ contract('DishesNFT', (accounts) => {
 
 			expect(dishDetails.dishOwner).to.bignumber.be.eq(user1);
 			expect(dishDetails.cooked).to.be.eq(true);
-			expect(dishDetails.baseIngredientId).to.bignumber.be.eq(new BN('1'));
+			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.fats).to.bignumber.be.eq(new BN('1000'));
 			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.ingredientsHash).to.bignumber.be.eq(new BN('197121'));
+			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('2'));
+			expect(dishDetails.ingredientVariationHash).to.bignumber.be.eq(new BN('33620225'));
+			expect(dishDetails.baseVariationHash).to.bignumber.be.eq(new BN('1537'));
 
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(currentDishIdAfter).to.bignumber.be.eq(new BN('1'));
@@ -104,29 +173,22 @@ contract('DishesNFT', (accounts) => {
 
 		it('should rever when non-Chef tries to prepare a dish', async () => {
 			await expectRevert(
-				this.Dish.prepareDish(user1, 1, 1000, 3, 197121, {from: user1}),
+				this.Dish.prepareDish(user1, 1, 1000, 2, 3, 197121, 33620225, 1537, {from: user1}),
 				'DishesNFT: ONLY_CHEF_CAN_CALL'
 			);
 		});
 
 		it('should rever when chef wants to prepare a dish for invalid user', async () => {
 			await expectRevert(
-				this.Dish.prepareDish(ZERO_ADDRESS, 1, 1000, 3, 197121, {from: minter}),
+				this.Dish.prepareDish(ZERO_ADDRESS, 1, 1000, 2, 3, 197121, 33620225, 1537, {from: minter}),
 				'DishesNFT: INVALID_USER_ADDRESS'
 			);
 		});
 
 		it('should rever when chef wants to prepare a dish with invalid fats', async () => {
 			await expectRevert(
-				this.Dish.prepareDish(user1, 1, 0, 3, 197121, {from: minter}),
+				this.Dish.prepareDish(user1, 1, 0, 2, 3, 197121, 33620225, 1537, {from: minter}),
 				'DishesNFT: INVALID_FATS'
-			);
-		});
-
-		it('should rever when chef wants to prepare a dish with invalid ingredient hash', async () => {
-			await expectRevert(
-				this.Dish.prepareDish(user1, 1, 1000, 3, 0, {from: minter}),
-				'DishesNFT: INVALID_INGREDIENT_HASH'
 			);
 		});
 
@@ -170,12 +232,8 @@ contract('DishesNFT', (accounts) => {
 		});
 
 		it('should uncook dish correctly', async () => {
-			// get user1`s dish balance
-			const userDishBalAfter = await this.Dish.balanceOf(user1, currentDishId);
+			const dish = await this.Dish.dish(currentDishId);
 
-			const dish = await this.Dish.dish(userDishBalAfter);
-
-			expect(userDishBalBefore).to.bignumber.be.eq(new BN('1'));
 			expect(dish.cooked).to.be.eq(false);
 		});
 

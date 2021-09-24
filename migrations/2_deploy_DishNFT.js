@@ -17,7 +17,11 @@ module.exports = async function (deployer) {
 	console.log('deploying DishesNFT contract............');
 	const instance = await deployProxy(
 		DishesNFT,
-		[uri, addresses[deployer.network_id.toString()]['IngredientsNFT']],
+		[
+			uri,
+			addresses[deployer.network_id.toString()]['IngredientsNFT'],
+			addresses[deployer.network_id.toString()]['Pantry']
+		],
 		{
 			initializer: 'initialize'
 		}

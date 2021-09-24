@@ -172,6 +172,9 @@ contract DishesNFT is ERC1155NFT {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
+		// // add ingredient defs
+		// accumulator = RecipeBase.strConcat(accumulator, getDefs());
+
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
@@ -206,12 +209,13 @@ contract DishesNFT is ERC1155NFT {
 				(, string memory name, , ) = ingredientNft.ingredients(ingredientId);
 
 				string memory placeHolder = _getPlaceHolder(name, ingredientVariationIndex);
-				
+
 				accumulator = string(abi.encodePacked(accumulator, placeHolder));
 			}
 		}
 
 		accumulator = RecipeBase.strConcat(accumulator, string('</svg>'));
+
 		return accumulator;
 	}
 
@@ -226,10 +230,7 @@ contract DishesNFT is ERC1155NFT {
 		//get base variations
 
 		//add defs
-		accumulator = RecipeBase.strConcat(accumulator, '<defs>');
-
-		// add ingredient defs
-		accumulator = RecipeBase.strConcat(accumulator, getDefs());
+		accumulator = RecipeBase.strConcat(accumulator, string('<defs>'));
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -265,7 +266,7 @@ contract DishesNFT is ERC1155NFT {
 				);
 			}
 		}
-		accumulator = RecipeBase.strConcat(accumulator, '</defs>');
+		accumulator = RecipeBase.strConcat(accumulator, string('</defs>'));
 		accumulator = RecipeBase.strConcat(accumulator, basePlaceHolders);
 
 		return accumulator;
@@ -282,15 +283,17 @@ contract DishesNFT is ERC1155NFT {
 					'<svg preserveAspectRatio="xMidYMid meet" x="0" y="0" viewBox="0 0 300 300" width="100%"  height="100%"><use href="#',
 					name,
 					'_',
-					RecipeBase.toString(variation),
 					'"/></svg>'
 				)
 			);
 	}
 
 	function getDefs() public view returns (string memory defs) {
+		defs = RecipeBase.strConcat(defs, string('<defs>'));
+
 		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
 			defs = RecipeBase.strConcat(defs, ingredientNft.defs(i));
 		}
+		defs = RecipeBase.strConcat(defs, string('</defs>'));
 	}
 }

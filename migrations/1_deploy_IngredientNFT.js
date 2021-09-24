@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
+const Pantry = artifacts.require('Pantry');
+
 const uri = 'https://token-cdn-domain/{id}.json';
 
 module.exports = async function (deployer) {
@@ -12,12 +14,19 @@ module.exports = async function (deployer) {
    =======================================================================
  */
 	console.log('deploying IngredientNFT contract............');
-	const instance = await deployProxy(IngredientNFT, [uri], {initializer: 'initialize'});
+	let instance = await deployProxy(IngredientNFT, [uri], {initializer: 'initialize'});
 	const fileData = {};
 
 	const data = {};
 
 	data['IngredientsNFT'] = instance.address.toString();
+	fileData[deployer.network_id.toString()] = data;
+
+	// ************************ Deploy Pantry *********************************
+	console.log('deploying Pantry contract............');
+	instance = await deployProxy(Pantry, [], {initializer: 'initialize'});
+
+	data['Pantry'] = instance.address.toString();
 	fileData[deployer.network_id.toString()] = data;
 
 	const addresssPath = await path.join('configurations', 'Addresses.json');
