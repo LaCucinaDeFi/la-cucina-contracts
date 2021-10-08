@@ -19,7 +19,7 @@ contract IngredientsNFTV2 is IngredientsNFT {
  */
 
 	function initialize(string memory url) public virtual override initializer {
-		__ERC1155PresetMinterPauser_init(url);
+		__BaseERC1155_init(url);
 	}
 
 	/*
