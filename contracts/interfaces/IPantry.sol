@@ -8,12 +8,17 @@ interface IPantry {
 
 	function baseIngredient(uint256 _baseIngredientId)
 		external
+		view
 		returns (string memory name, uint256 totalVariations);
 
 	function baseVariation(uint256 _variationId)
 		external
 		view
-		returns (string memory variationName, string memory variationSvg);
+		returns (
+			uint256 baseId,
+			string memory variationName,
+			string memory variationSvg
+		);
 
 	function addDish(string memory _name) external returns (uint256 dishId);
 

@@ -144,4 +144,25 @@ library RecipeBase {
 			}
 		}
 	}
+
+	function getRandomVariation(uint256 _seed, uint256 _max)
+		internal
+		view
+		returns (uint256 randomVariation)
+	{
+		randomVariation = random(_seed, _max);
+		require(randomVariation < _max, 'ProfilePictures: INVALID_VARIATION');
+	}
+
+	function random(uint256 _seed, uint256 _max) internal view returns (uint256) {
+		require(_max > 0, 'ProfilePictures: INVALID_MAX');
+		uint256 randomnumber = uint256(
+			keccak256(
+				abi.encodePacked(block.timestamp, block.difficulty, block.number, msg.sender, _seed)
+			)
+		) % _max;
+
+		_seed++;
+		return randomnumber;
+	}
 }

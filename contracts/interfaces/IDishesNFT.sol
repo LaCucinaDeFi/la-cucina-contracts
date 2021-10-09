@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './INFT.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
-interface IDishesNFT is INFT {
-	function dish(uint256 dishId)
+interface IDishesNFT is IERC721Upgradeable {
+
+	function getCurrentTokenId() external view returns (uint256);
+
+	function dish(uint256 _dishId)
 		external
 		returns (
 			address dishOwner,
 			bool cooked,
-			uint256 baseIngredientId,
-			uint256 fats,
-			uint256 _totalBaseIngredients,
+			uint256 dishId,
 			uint256 totalIngredients,
-			uint256 ingredientsHash,
-			uint256 variationsHash
+			uint256 ingredientVariationHash, // indicates hash of the indexes of ingredient variations
+			uint256 totalBaseIngredients,
+			uint256 baseVariationHash,
+			uint256 creationTime,
+			uint256 completionTime
 		);
 
 	function prepareDish(
 		address _user,
 		uint256 _dishId,
-		uint256 _fats,
-		uint256 _totalBaseIngredients,
-		uint256 _totalIngredients,
-		uint256 _ingredientsHash,
-		uint256 _ingredientVariationHash,
-		uint256 _baseVariationHash
+		uint256 preparationTime,
+		uint256[] memory ingredientIds
 	) external returns (uint256 dishId);
 
 	function serveDish(uint256 _dishId) external view returns (string memory svg);

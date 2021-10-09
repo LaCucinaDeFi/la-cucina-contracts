@@ -18,8 +18,20 @@ contract DishesNFTV2 is DishesNFT {
    =======================================================================
  */
 
-	function initialize(string memory url) public virtual initializer {
-		__ERC1155PresetMinterPauser_init(url);
+	function initialize(
+		string memory _name,
+		string memory _symbol,
+		string memory baseTokenURI,
+		address _ingredientAddress,
+		address _pantryAddress
+	) public virtual override initializer {
+		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
+		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
+
+		initialize_BaseERC721(_name, _symbol, baseTokenURI);
+
+		ingredientNft = IIngredientNFT(_ingredientAddress);
+		pantry = IPantry(_pantryAddress);
 	}
 
 	/*

@@ -15,6 +15,7 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 	}
 
 	struct BaseVariation {
+		uint256 baseId;
 		string name;
 		string svg;
 	}
@@ -155,7 +156,7 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 		baseVariationCounter.increment();
 		baseVariationId = baseVariationCounter.current();
 
-		baseVariation[baseVariationId] = BaseVariation(_variationName, _svg);
+		baseVariation[baseVariationId] = BaseVariation(_baseIngredientId, _variationName, _svg);
 
 		baseIngredient[_baseIngredientId].totalVariations += 1;
 		baseIngredient[_baseIngredientId].variationIds.push(baseVariationId);

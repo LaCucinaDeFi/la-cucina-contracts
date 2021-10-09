@@ -22,16 +22,22 @@ interface IIngredientNFT is INFT {
 		returns (
 			uint256 id,
 			string memory name,
-			uint256 fat,
 			uint256 totalVariations
 		);
 
-	function defs(uint256 defId) external view returns (string memory);
-
-	function getCurrentDefs() external view returns (uint256);
-
-	function ingredientVariation(uint256 ingredinetId, uint256 variationIndex)
+	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
 		external
 		view
-		returns (uint256);
+		returns (uint256 _defId);
+
+	function defs(uint256 defId)
+		external
+		view
+		returns (
+			uint256 ingredientId,
+			string memory name,
+			string memory svg
+		);
+
+	function getCurrentDefs() external view returns (uint256);
 }

@@ -2,14 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import './ERC1155NFT.sol';
-import './RecipeBase.sol';
+import './BaseERC721.sol';
+import './library/RecipeBase.sol';
 import './interfaces/IIngredientNFT.sol';
 import './interfaces/IPantry.sol';
 
-contract DishesNFT is ERC1155NFT {
-	using Counters for Counters.Counter;
-
+contract DishesNFT is BaseERC721 {
 	/*
    =======================================================================
    ======================== Structures ===================================
@@ -20,12 +18,12 @@ contract DishesNFT is ERC1155NFT {
 		address dishOwner;
 		bool cooked;
 		uint256 dishId;
-		uint256 fats;
-		uint256 totalBaseIngredients;
 		uint256 totalIngredients;
-		uint256 ingredientsHash;
-		uint256 ingredientVariationHash; // indicates hash of the indexes of ingredient variations
+		uint256 variationIdHash; // indicates hash of the indexes of ingredient variations
+		uint256 totalBaseIngredients;
 		uint256 baseVariationHash;
+		uint256 creationTime;
+		uint256 completionTime;
 	}
 
 	/*
@@ -33,12 +31,15 @@ contract DishesNFT is ERC1155NFT {
    ======================== Constants ====================================
    =======================================================================
  */
-	bytes32 public constant CHEF_ROLE = keccak256('CHEF_ROLE');
+	bytes32 public constant OVEN_ROLE = keccak256('OVEN_ROLE');
+
 	/*
    =======================================================================
    ======================== Public Variables ============================
    =======================================================================
  */
+	uint256 private nonce;
+
 	IIngredientNFT public ingredientNft;
 	IPantry public pantry;
 
@@ -52,17 +53,20 @@ contract DishesNFT is ERC1155NFT {
  */
 
 	function initialize(
-		string memory url,
+		string memory _name,
+		string memory _symbol,
+		string memory baseTokenURI,
 		address _ingredientAddress,
 		address _pantryAddress
 	) public virtual initializer {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
 		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
 
-		__ERC1155PresetMinterPauser_init(url);
+		initialize_BaseERC721(_name, _symbol, baseTokenURI);
 
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		pantry = IPantry(_pantryAddress);
+		nonce = 1;
 	}
 
 	/*
@@ -78,13 +82,13 @@ contract DishesNFT is ERC1155NFT {
    ======================== Modifiers ====================================
    =======================================================================
  */
-	modifier onlyChef() {
-		require(hasRole(CHEF_ROLE, msg.sender), 'DishesNFT: ONLY_CHEF_CAN_CALL');
+	modifier OnlyOven() {
+		require(hasRole(OVEN_ROLE, msg.sender), 'DishesNFT: ONLY_OVEN_CAN_CALL');
 		_;
 	}
 
 	modifier onlyValidDishId(uint256 _dishId) {
-		require(_dishId > 0 && _dishId <= tokenCounter.current(), 'DishesNFT: INVALID_DISH_ID');
+		require(_dishId > 0 && _dishId <= getCurrentTokenId(), 'DishesNFT: INVALID_DISH_ID');
 		_;
 	}
 
@@ -97,50 +101,52 @@ contract DishesNFT is ERC1155NFT {
 	 * @notice This method allows chef contract to prepare the dish and mint dish nft to specified user
 	 * @param _user - indicates the user address to whom dish nft to allocate
 	 * @param _dishId - indicates the id of the  dish
-	 * @param _fats - indicates the total fats of dish
-	 * @param _totalIngredients - indicates the total ingredients included in dish
-	 * @param _ingredientsHash - indicates the ingredientHash for a dish
-	 * @return dishId - indicates the new dish id
+	 * @param _preparationTime - indicates the preparation time for dish after which dish will be ready use
+	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
+	 * @return dishNFTId - indicates the new dish id
 	 */
 	function prepareDish(
 		address _user,
 		uint256 _dishId,
-		uint256 _fats,
-		uint256 _totalBaseIngredients,
-		uint256 _totalIngredients,
-		uint256 _ingredientsHash,
-		uint256 _ingredientVariationHash,
-		uint256 _baseVariationHash
-	) external onlyChef returns (uint256 dishId) {
+		uint256 _preparationTime,
+		uint256[] memory _ingredientIds
+	) external OnlyOven returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
-		require(_fats > 0, 'DishesNFT: INVALID_FATS');
+		require(_dishId > 0 && _dishId <= pantry.getCurrentDishId(), 'Oven: INVALID_DISH_ID');
+		require(_ingredientIds.length > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
-		// increament dishId
-		tokenCounter.increment();
-		dishId = tokenCounter.current();
+		(, uint256 totalBaseIngredients) = pantry.dish(_dishId);
+		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
-		dish[dishId] = Dish(
+		(uint256 ingrediendVariaionHash, uint256 baseVariationHash) = _getHash(
+			_dishId,
+			totalBaseIngredients,
+			_ingredientIds
+		);
+
+		// mint dish nft to user
+		dishNFTId = mint(_user);
+
+		dish[dishNFTId] = Dish(
 			_user,
 			true,
 			_dishId,
-			_fats,
-			_totalBaseIngredients,
-			_totalIngredients,
-			_ingredientsHash,
-			_ingredientVariationHash,
-			_baseVariationHash
+			_ingredientIds.length,
+			ingrediendVariaionHash,
+			totalBaseIngredients,
+			baseVariationHash,
+			block.timestamp,
+			block.timestamp + _preparationTime
 		);
 
-		_mint(_user, dishId, 1, '');
-
-		emit DishPrepared(dishId);
+		emit DishPrepared(dishNFTId);
 	}
 
 	/**
 	 * @notice This method alloes chef contract to uncook the dish.
 	 * @param _dishId - indicates the dishId to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external onlyChef onlyValidDishId(_dishId) {
+	function uncookDish(uint256 _dishId) external OnlyOven onlyValidDishId(_dishId) {
 		Dish storage dishToUncook = dish[_dishId];
 		require(dishToUncook.cooked, 'DishesNFT: ALREADY_UNCOOKED_DISH');
 
@@ -173,42 +179,36 @@ contract DishesNFT is ERC1155NFT {
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
 		// // add ingredient defs
-		// accumulator = RecipeBase.strConcat(accumulator, getDefs());
+		accumulator = RecipeBase.strConcat(accumulator, getDefs());
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
-		uint256 ingredientSlottedValue;
-		uint256 ingredientVariationValue;
 		uint256 slotMultiplier;
-		uint256 ingredientId;
-		uint256 ingredientVariationIndex;
+		uint256 variationIdValue;
+		uint256 variationId;
 
 		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 0; slot <= uint8(dishToServe.totalIngredients); slot++) {
+		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			ingredientSlottedValue = dishToServe.ingredientsHash & bitMask; // Extract slotted value from hash
-			ingredientVariationValue = dishToServe.ingredientVariationHash & bitMask;
+			variationIdValue = dishToServe.variationIdHash & bitMask;
 
-			if (ingredientSlottedValue > 0) {
-				ingredientId = (slot > 0) // Extract IngredientID from slotted value
-					? ingredientSlottedValue / slotMultiplier
-					: ingredientSlottedValue;
-
-				ingredientVariationIndex = (slot > 0) // Extract variation from slotted value
-					? ingredientVariationValue / slotMultiplier
-					: ingredientVariationValue;
+			if (variationIdValue > 0) {
+				variationId = (slot > 0) // Extract IngredientID from slotted value
+					? variationIdValue / slotMultiplier
+					: variationIdValue;
 
 				require(
-					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
-					'DishesNFT: INVALID_INGREDIENT_ID'
+					variationId > 0 && variationId <= ingredientNft.getCurrentDefs(),
+					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 				);
-				require(ingredientVariationIndex > 0, 'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX_ID');
 
-				(, string memory name, , ) = ingredientNft.ingredients(ingredientId);
+				(uint256 ingredientId, string memory variationName, ) = ingredientNft.defs(variationId);
 
-				string memory placeHolder = _getPlaceHolder(name, ingredientVariationIndex);
+				(, string memory ingredientName, ) = ingredientNft.ingredients(ingredientId);
+
+				string memory placeHolder = _getPlaceHolder(ingredientName, variationName);
 
 				accumulator = string(abi.encodePacked(accumulator, placeHolder));
 			}
@@ -240,7 +240,7 @@ contract DishesNFT is ERC1155NFT {
 		uint256 baseVariationId;
 		string memory basePlaceHolders;
 
-		for (uint8 slot = 0; slot <= uint8(_totalBaseIngredients); slot++) {
+		for (uint8 slot = 0; slot < uint8(_totalBaseIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			baseVariationValue = _baseVariationHash & bitMask; // Extract slotted value from hash
@@ -255,14 +255,17 @@ contract DishesNFT is ERC1155NFT {
 					'DishesNFT: INVALID_BASE_VARIATION_ID'
 				);
 
-				(string memory name, string memory variationSvg) = pantry.baseVariation(baseVariationId);
+				(uint256 baseId, string memory baseVariationName, string memory variationSvg) = pantry
+					.baseVariation(baseVariationId);
+
+				(string memory baseName, ) = pantry.baseIngredient(baseId);
 
 				// add base variation to defs
 				accumulator = RecipeBase.strConcat(accumulator, variationSvg);
 
 				basePlaceHolders = RecipeBase.strConcat(
 					basePlaceHolders,
-					_getPlaceHolder(name, baseVariationId)
+					_getPlaceHolder(baseName, baseVariationName)
 				);
 			}
 		}
@@ -272,7 +275,39 @@ contract DishesNFT is ERC1155NFT {
 		return accumulator;
 	}
 
-	function _getPlaceHolder(string memory name, uint256 variation)
+	function _getHash(
+		uint256 _dishId,
+		uint256 _totalBaseIngredients,
+		uint256[] memory _ingredientIds
+	) internal view returns (uint256 variationIdHash, uint256 baseVariationHash) {
+		// get base Variation Hash
+		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
+			uint256 baseIngredientId = pantry.getBaseIngredientId(_dishId, baseIndex);
+			(, uint256 baseVariationCount) = pantry.baseIngredient(baseIngredientId);
+
+			require(baseVariationCount > 0, 'Oven: NO_BASE_VARIATIONS');
+
+			uint256 randomVarionIndex = RecipeBase.getRandomVariation(nonce, baseVariationCount);
+
+			uint256 baseVariationId = pantry.getBaseVariationId(baseIngredientId, randomVarionIndex);
+
+			baseVariationHash += baseVariationId * 256**baseIndex;
+		}
+
+		// get variationIdHash
+		for (uint256 i = 0; i < _ingredientIds.length; i++) {
+			(, , uint256 totalVariations) = ingredientNft.ingredients(_ingredientIds[i]);
+			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
+
+			// add plus one to avoid the 0 as random variation id
+			uint256 variationIndex = RecipeBase.getRandomVariation(nonce, totalVariations);
+			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
+
+			variationIdHash += variationId * 256**i;
+		}
+	}
+
+	function _getPlaceHolder(string memory _IngredientName, string memory _variationName)
 		public
 		pure
 		returns (string memory)
@@ -281,8 +316,9 @@ contract DishesNFT is ERC1155NFT {
 			string(
 				abi.encodePacked(
 					'<svg preserveAspectRatio="xMidYMid meet" x="0" y="0" viewBox="0 0 300 300" width="100%"  height="100%"><use href="#',
-					name,
+					_IngredientName,
 					'_',
+					_variationName,
 					'"/></svg>'
 				)
 			);
@@ -292,8 +328,12 @@ contract DishesNFT is ERC1155NFT {
 		defs = RecipeBase.strConcat(defs, string('<defs>'));
 
 		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
-			defs = RecipeBase.strConcat(defs, ingredientNft.defs(i));
+			(, , string memory svg) = ingredientNft.defs(i);
+			defs = RecipeBase.strConcat(defs, svg);
 		}
+
 		defs = RecipeBase.strConcat(defs, string('</defs>'));
 	}
+
+	uint256[50] private __gap;
 }

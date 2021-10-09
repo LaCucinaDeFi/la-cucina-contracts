@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import './BaseERC1155.sol';
 import './library/RecipeBase.sol';
+import './BaseERC1155WithRoyalties.sol';
 
-contract IngredientsNFT is BaseERC1155 {
+contract IngredientsNFT is BaseERC1155WithRoyalties {
 	using Counters for Counters.Counter;
 
 	/*
@@ -54,8 +54,12 @@ contract IngredientsNFT is BaseERC1155 {
    =======================================================================
  */
 
-	function initialize(string memory uri) public virtual initializer {
-		__BaseERC1155_init(uri);
+	function initialize(
+		string memory baseTokenURI,
+		address _royaltyReceiver,
+		uint8 _royaltyFee
+	) public virtual initializer {
+		initialize_BaseERC1155WithRoyalties(baseTokenURI, _royaltyReceiver, _royaltyFee);
 	}
 
 	/*
@@ -67,6 +71,16 @@ contract IngredientsNFT is BaseERC1155 {
 	event IngredientVariationAdded(uint256 ingredientId, uint256 variationId);
 	event IngredientUpdated(uint256 ingredientId);
 	event IngredientVariationUpdated(uint256 defId);
+
+	/*
+   =======================================================================
+   ======================== Modifiers ====================================
+   =======================================================================
+ */
+	modifier onlyValidDefId(uint256 _defId) {
+		require(_defId > 0 && _defId <= defsCounter.current(), 'IngredientsNFT: INVALID_DEF_ID');
+		_;
+	}
 
 	/*
    =======================================================================
@@ -145,7 +159,7 @@ contract IngredientsNFT is BaseERC1155 {
 	function updateIngredientSvg(uint256 _defId, string memory _svg)
 		external
 		onlyAdmin
-		onlyValidNftId(_defId)
+		onlyValidDefId(_defId)
 	{
 		require(_defId > 0, 'IngredientNFT: INVALID_DEF_ID');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
@@ -194,6 +208,19 @@ contract IngredientsNFT is BaseERC1155 {
    ======================== Getter Methods ===============================
    =======================================================================
  */
+	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
+		external
+		view
+		onlyValidNftId(_ingredientId)
+		returns (uint256 _defId)
+	{
+		Ingredient memory ingredient = ingredients[_ingredientId];
+
+		require(ingredient.totalVariations > 0, 'IngredientsNFT: INSUFFICIENT_VARIATIONS');
+		require(_index < ingredient.totalVariations, 'IngredientsNFT: INVALID_INDEX');
+
+		return ingredient.defIds[_index];
+	}
 
 	/**
     @notice This method returns the current base ingredient Id
