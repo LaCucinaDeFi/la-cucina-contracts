@@ -2,7 +2,6 @@ const {deployProxy, admin} = require('@openzeppelin/truffle-upgrades');
 const fs = require('fs');
 const path = require('path');
 
-const IngredientsNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
 const addresses = require('../configurations/Addresses.json');
 
@@ -18,6 +17,8 @@ module.exports = async function (deployer) {
 	const instance = await deployProxy(
 		DishesNFT,
 		[
+			'DishesNFT',
+			'DISH',
 			uri,
 			addresses[deployer.network_id.toString()]['IngredientsNFT'],
 			addresses[deployer.network_id.toString()]['Pantry']

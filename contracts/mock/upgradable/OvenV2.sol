@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../Chef.sol';
+import '../../Oven.sol';
 
-contract ChefV2 is Chef {
+contract OvenV2 is Oven {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -18,17 +18,17 @@ contract ChefV2 is Chef {
    =======================================================================
  */
 
-	/**
+		/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
 	 */
 	function initialize(
 		address _ingredientNft,
 		address _dishesNft,
-		address _pantry
+		address _lacToken
 	) external virtual override initializer {
-		require(_ingredientNft != address(0), 'Chef: INVALID_INGREDIENT_ADDRESS');
-		require(_dishesNft != address(0), 'Chef: INVALID_DISHES_ADDRESS');
-		require(_pantry != address(0), 'Chef: INVALID_PANTRY_ADDRESS');
+		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
+		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
@@ -37,7 +37,7 @@ contract ChefV2 is Chef {
 
 		ingredientNft = IIngredientNFT(_ingredientNft);
 		dishesNft = IDishesNFT(_dishesNft);
-		pantry = IPantry(_pantry);
+		lacToken = IBEP20(_lacToken);
 	}
 
 	/*
