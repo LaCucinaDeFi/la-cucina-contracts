@@ -23,6 +23,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 id;
 		string name;
 		uint256 totalVariations;
+		uint256 nutritionsHash;
 		uint256[] defIds;
 	}
 
@@ -91,9 +92,14 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	/**
 	 *  @notice This method allows admin to add the ingredient details for preparing a dish.
 	 *  @param _name - indicates the name of the ingredient
+	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @return ingredientId - new ingredient id
 	 */
-	function addIngredient(string memory _name) external onlyAdmin returns (uint256 ingredientId) {
+	function addIngredient(string memory _name, uint256 _nutritionsHash)
+		external
+		onlyAdmin
+		returns (uint256 ingredientId)
+	{
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 
 		// generate ingredient Id
@@ -102,7 +108,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256[] memory defIds;
 
 		// store ingredient details
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, 0, defIds);
+		ingredients[ingredientId] = Ingredient(ingredientId, _name, 0, _nutritionsHash, defIds);
 
 		emit IngredientAdded(ingredientId);
 	}
@@ -208,6 +214,52 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    ======================== Getter Methods ===============================
    =======================================================================
  */
+ 
+	/**
+	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
+	 * @param _ingredientId - indicates the ingredient id
+	 * @return multiplier - indicates the multiplier calculated using nutritions
+	 */
+	function getMultiplier(uint256 _ingredientId)
+		public
+		view
+		onlyValidNftId(_ingredientId)
+		returns (uint256 multiplier)
+	{
+		uint256 nutritionsHash = ingredients[_ingredientId].nutritionsHash;
+
+		uint256[] memory nutritionsList = new uint256[](8);
+
+		uint256 slotConst = 256;
+		uint256 slotMask = 255;
+		uint256 bitMask;
+		uint256 slotMultiplier;
+		uint256 nutritionsValue;
+		uint256 nutrition;
+
+		// Iterate Ingredient hash and assemble SVGs
+		for (uint8 slot = 0; slot < uint8(8); slot++) {
+			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
+			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
+			nutritionsValue = nutritionsHash & bitMask;
+
+			if (nutritionsValue > 0) {
+				nutrition = (slot > 0) // Extract nutrition from slotted value
+					? nutritionsValue / slotMultiplier
+					: nutritionsValue;
+
+				// store nutrition
+				nutritionsList[slot] = nutrition;
+			}
+		}
+
+		// multiply first two nutritions
+		multiplier = nutritionsList[0] * nutritionsList[1];
+
+		// divide multiplier by next two nutritions
+		multiplier /= nutritionsList[2] * nutritionsList[3];
+	}
+
 	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
 		external
 		view

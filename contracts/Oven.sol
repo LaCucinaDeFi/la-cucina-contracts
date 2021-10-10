@@ -136,6 +136,7 @@ contract Oven is
 		dishId = dishesNft.prepareDish(
 			msg.sender,
 			_dishId,
+			_flameId,
 			flames[_flameId].preparationDuration,
 			_ingredientIds
 		);
@@ -146,11 +147,12 @@ contract Oven is
 	 * @param _dishId - indicates the id of dish to be uncooked.
 	 */
 	function uncookDish(uint256 _dishId) external {
-		require(_dishId > 0 && _dishId <= dishesNft.getCurrentTokenId(), 'Oven: INVALID_DISH_ID');
+		require(isDishReadyToUncook(_dishId), 'Oven: CANNOT_UNCOOK_WHILE_PREPARING');
 
 		// get details of dish
 		(
 			address dishOwner,
+			,
 			,
 			,
 			uint256 totalIngredients,
@@ -201,6 +203,13 @@ contract Oven is
 		}
 	}
 
+	/**
+	 * @notice This method allows admin to add the flames for preparing the dish.
+	 * @param _flameType - indicates the flame type name. i.e Normal, High, Radiation, Blaser
+	 * @param _preparationTime - indicates the preparation time in seconds for the dish. after the preparation time dish is ready to uncook.
+	 * @param _lacCharge - indicates the LAC tokens to charge for the flame
+	 * @return flameId - indicates the flame id which is used while preparing a dish
+	 */
 	function addFlame(
 		string memory _flameType,
 		uint256 _preparationTime,
@@ -215,6 +224,13 @@ contract Oven is
 		flames[flameId] = FlameDetail(_flameType, _preparationTime, _lacCharge);
 	}
 
+	/**
+	 * @notice This method allows admin to update the flame details.
+	 * @param _flameId - indicates the flame id to update
+	 * @param _flameType - indicates the flame type name. i.e Normal, High, Radiation, Blaser
+	 * @param _preparationTime - indicates the preparation time in seconds for the dish. after the preparation time dish is ready to uncook.
+	 * @param _lacCharge - indicates the LAC tokens to charge for the flame
+	 */
 	function updateFlameDetail(
 		uint256 _flameId,
 		string memory _flameType,
@@ -224,6 +240,59 @@ contract Oven is
 		require(bytes(_flameType).length > 0, 'Oven: INVALID_FLAME_TYPE');
 
 		flames[_flameId] = FlameDetail(_flameType, _preparationTime, _lacCharge);
+	}
+
+	/**
+	 * @notice This method allows dish holder to update the flame for preparing a dish to increase or decrease the dish preparation time.
+	 * When user wants to increase the flame, he needs to pay extra LAC tokens.
+	 * When user wants to decrease the flame, he receives the extra LAC tokens that he paid.
+	 * User cannot update flame for the prepared dish
+	 * @param _dishId - indicates the dishId for which flame to udpate
+	 * @param _flameId - indicates the new flame for preparing a dish
+	 */
+	function updateFlame(uint256 _dishId, uint256 _flameId) external onlyValidFlameId(_flameId) {
+		require(!isDishReadyToUncook(_dishId), 'Oven: CANNOT_UPDATE_FLAME');
+
+		// get details of dish
+		(address dishOwner, , , uint256 oldFlameId, , , , , , ) = dishesNft.dish(_dishId);
+
+		require(msg.sender == dishOwner, 'Oven: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
+		require(_flameId != oldFlameId, 'Oven: FLAME_ALREADY_SET');
+
+		FlameDetail memory oldFlame = flames[oldFlameId];
+		FlameDetail memory newFlame = flames[_flameId];
+
+		// faster flame
+		if (newFlame.preparationDuration < oldFlame.preparationDuration) {
+			// get the LAC tokens from user
+			if (newFlame.lacCharge > 0) {
+				require(
+					lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge)
+				);
+			}
+		} else if (newFlame.preparationDuration > oldFlame.preparationDuration) {
+			// slower flame
+			// return the extra LAC tokens to user
+			require(lacToken.transfer(msg.sender, oldFlame.lacCharge - newFlame.lacCharge));
+		}
+
+		dishesNft.updatePrepartionTime(_dishId, newFlame.preparationDuration);
+	}
+
+	/**
+	 * @notice This method tells whether dish is ready to uncook or not.
+	 * @param _dishId - indicates the dish id
+	 * @return true if dish is ready to uncook otherwise returns false.
+	 */
+	function isDishReadyToUncook(uint256 _dishId) public returns (bool) {
+		require(_dishId > 0 && _dishId <= dishesNft.getCurrentTokenId(), 'Oven: INVALID_DISH_ID');
+
+		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishId);
+
+		if (block.timestamp > completionTime) {
+			return true;
+		}
+		return false;
 	}
 
 	/**

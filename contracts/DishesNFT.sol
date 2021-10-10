@@ -22,6 +22,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 variationIdHash; // indicates hash of the indexes of ingredient variations
 		uint256 totalBaseIngredients;
 		uint256 baseVariationHash;
+		uint256 flameType;
 		uint256 creationTime;
 		uint256 completionTime;
 	}
@@ -42,6 +43,8 @@ contract DishesNFT is BaseERC721 {
 
 	IIngredientNFT public ingredientNft;
 	IPantry public pantry;
+
+	address[] public exceptedAddresses;
 
 	// dishID => dish
 	mapping(uint256 => Dish) public dish;
@@ -108,6 +111,7 @@ contract DishesNFT is BaseERC721 {
 	function prepareDish(
 		address _user,
 		uint256 _dishId,
+		uint256 _flameId,
 		uint256 _preparationTime,
 		uint256[] memory _ingredientIds
 	) external OnlyOven returns (uint256 dishNFTId) {
@@ -135,6 +139,7 @@ contract DishesNFT is BaseERC721 {
 			ingrediendVariaionHash,
 			totalBaseIngredients,
 			baseVariationHash,
+			_flameId,
 			block.timestamp,
 			block.timestamp + _preparationTime
 		);
@@ -154,6 +159,34 @@ contract DishesNFT is BaseERC721 {
 		dishToUncook.cooked = false;
 
 		emit DishUncooked(_dishId);
+	}
+
+	/**
+	 * @notice This method update the preparation time for given dish. only oven can call this method
+	 */
+	function updatePrepartionTime(uint256 _dishId, uint256 _preparationTime)
+		external
+		OnlyOven
+		onlyValidDishId(_dishId)
+	{
+		// update dish preparationTime
+		dish[_dishId].completionTime = dish[_dishId].creationTime + _preparationTime;
+	}
+
+	/**
+	 * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
+	 * @param _account indicates the address to add.
+	 */
+	function addExceptedAddress(address _account) external virtual onlyAdmin {
+		RecipeBase.addAddressInList(exceptedAddresses, _account);
+	}
+
+	/**
+	 * @notice This method allows admin to remove the excepted addresses from having multiple tokens of same NFT.
+	 * @param _account indicates the address to remove.
+	 */
+	function removeExceptedAddress(address _account) external virtual onlyAdmin {
+		RecipeBase.removeAddressFromList(exceptedAddresses, _account);
 	}
 
 	/*
@@ -179,7 +212,7 @@ contract DishesNFT is BaseERC721 {
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
 		// // add ingredient defs
-		accumulator = RecipeBase.strConcat(accumulator, getDefs());
+		accumulator = RecipeBase.strConcat(accumulator, _getDefs());
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -206,7 +239,7 @@ contract DishesNFT is BaseERC721 {
 
 				(uint256 ingredientId, string memory variationName, ) = ingredientNft.defs(variationId);
 
-				(, string memory ingredientName, ) = ingredientNft.ingredients(ingredientId);
+				(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
 
 				string memory placeHolder = _getPlaceHolder(ingredientName, variationName);
 
@@ -219,6 +252,11 @@ contract DishesNFT is BaseERC721 {
 		return accumulator;
 	}
 
+	/*
+   =======================================================================
+   ======================== Internal Methods =============================
+   =======================================================================
+ */
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
@@ -296,7 +334,7 @@ contract DishesNFT is BaseERC721 {
 
 		// get variationIdHash
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
-			(, , uint256 totalVariations) = ingredientNft.ingredients(_ingredientIds[i]);
+			(, , uint256 totalVariations, ) = ingredientNft.ingredients(_ingredientIds[i]);
 			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			// add plus one to avoid the 0 as random variation id
@@ -324,7 +362,7 @@ contract DishesNFT is BaseERC721 {
 			);
 	}
 
-	function getDefs() public view returns (string memory defs) {
+	function _getDefs() internal view returns (string memory defs) {
 		defs = RecipeBase.strConcat(defs, string('<defs>'));
 
 		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
@@ -333,6 +371,21 @@ contract DishesNFT is BaseERC721 {
 		}
 
 		defs = RecipeBase.strConcat(defs, string('</defs>'));
+	}
+
+	function _beforeTokenTransfer(
+		address from,
+		address to,
+		uint256 tokenId
+	) internal virtual override(BaseERC721) {
+		// ensure dish is not transferable
+		if (from != address(0) && to != address(0)) {
+			(bool isToExcepted, ) = RecipeBase.isAddressExists(exceptedAddresses, to);
+
+			require(isToExcepted, 'DishesNFT: CANNOT_TRANSFER_DISH');
+		}
+
+		super._beforeTokenTransfer(from, to, tokenId);
 	}
 
 	uint256[50] private __gap;

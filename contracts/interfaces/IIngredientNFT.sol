@@ -22,7 +22,8 @@ interface IIngredientNFT is INFT {
 		returns (
 			uint256 id,
 			string memory name,
-			uint256 totalVariations
+			uint256 totalVariations,
+			uint256 nutritionsHash
 		);
 
 	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
