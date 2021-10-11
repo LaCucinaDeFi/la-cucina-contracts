@@ -41,4 +41,6 @@ interface IIngredientNFT is INFT {
 		);
 
 	function getCurrentDefs() external view returns (uint256);
+
+	function royaltyInfo(uint256, uint256 _salePrice) external view returns (address, uint256);
 }

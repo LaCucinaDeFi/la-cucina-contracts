@@ -233,9 +233,23 @@ contract Marketplace is
 		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
 		SaleInfo storage _sale = sale[_saleId];
 
+		// check the royalty amount
+		(address royaltyReceiver, uint256 royaltyAmount) = nftContract.royaltyInfo(
+			_sale.nftId,
+			_sale.sellingPrice
+		);
+
+		uint256 sellerAmount = _sale.sellingPrice - royaltyAmount;
+
 		//transfer tokens to the seller
 		require(
-			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, sellerAmount),
+			'Market: TRANSFER_FROM_FAILED'
+		);
+
+		//transfer royaly amount to royalty receiver
+		require(
+			IBEP20(_sale.currency).transferFrom(msg.sender, royaltyReceiver, royaltyAmount),
 			'Market: TRANSFER_FROM_FAILED'
 		);
 
@@ -331,12 +345,24 @@ contract Marketplace is
 			'Market: CANNOT_RESOLVE_AUCTION_WITH_NO_BIDS'
 		);
 
+		// check the royalty amount
+		(address royaltyReceiver, uint256 royaltyAmount) = nftContract.royaltyInfo(
+			_auction.nftId,
+			bid[_auction.winningBidId].bidAmount
+		);
+
+		uint256 sellerAmount = bid[_auction.winningBidId].bidAmount - royaltyAmount;
+
+		// transfer the tokens to the auction creator
 		require(
-			IBEP20(_auction.currency).transfer(
-				_auction.sellerAddress,
-				bid[_auction.winningBidId].bidAmount
-			),
-			'Market: TRANSFER__FAILED'
+			IBEP20(_auction.currency).transfer(_auction.sellerAddress, sellerAmount),
+			'Market: TRANSFER_FAILED'
+		);
+
+		// transfer the royalty amount to the royaltyReceiver
+		require(
+			IBEP20(_auction.currency).transfer(royaltyReceiver, royaltyAmount),
+			'Market: TRANSFER_FAILED'
 		);
 
 		nftContract.safeTransferFrom(
