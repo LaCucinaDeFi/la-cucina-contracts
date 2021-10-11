@@ -112,10 +112,11 @@ contract Marketplace is
 	event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint256 saleId);
 	event BuyAuctionNFT(address indexed buyer, uint256 indexed nftId, uint256 auctionId);
 	event PlaceBid(
-		uint256 auctionId,
+		uint256 indexed auctionId,
 		uint256 indexed bidId,
 		address indexed bidderAddress,
-		uint256 bidAmount
+		uint256 bidAmount,
+		uint256 time
 	);
 
 	/*
@@ -306,7 +307,7 @@ contract Marketplace is
 
 		userBidIds[msg.sender].push(bidId);
 
-		emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount);
+		emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount, block.timestamp);
 	}
 
 	/**

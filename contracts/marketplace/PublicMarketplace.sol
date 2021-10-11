@@ -51,7 +51,6 @@ contract PublicMarketplace is Initializable, Marketplace, IVersionedContract {
 
 		//get NFT tokens from seller
 		nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
-
 		saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, 1);
 	}
 

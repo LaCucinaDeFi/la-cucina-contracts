@@ -2,11 +2,12 @@ require('chai').should();
 const { expect } = require('chai');
 const { expectRevert, ether, BN, time, expectEvent } = require('@openzeppelin/test-helpers');
 const { ZERO_ADDRESS, MAX_UINT256 } = require('@openzeppelin/test-helpers/src/constants');
-const { deployProxy } = require('@openzeppelin/truffle-upgrades');
+const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
 
 const ERC1155NFT = artifacts.require('ERC1155NFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
+const PublicMarketplaceV2 = artifacts.require('PublicMarketplaceV2');
 
 const SampleToken = artifacts.require('SampleToken');
 
@@ -372,7 +373,7 @@ contract('PublicMarketplace', accounts => {
       await this.sampleToken.approve(this.publicMarketplace.address, MAX_UINT256, { from: user2 });
 
       // place bid
-      await this.publicMarketplace.placeBid(currentAuctionId, ether('2'), { from: user2 });
+      this.bidTx = await this.publicMarketplace.placeBid(currentAuctionId, ether('2'), { from: user2 });
 
       await expectRevert(
         this.publicMarketplace.updateAuction(currentAuctionId, ether('3'), String(time.duration.days('1')), {
@@ -381,6 +382,11 @@ contract('PublicMarketplace', accounts => {
         'Market: CANNOT_UPDATE_AUCTION_WITH_NON_ZERO_BIDS',
       );
     });
+
+    it('should emit PlaceBid event when user places bid', async () => {
+      await expectEvent(this.bidTx, 'PlaceBid');
+    });
+
     it('should revert when seller tries to update the inactive auction', async () => {
       // advance time
       await time.increase(String(time.duration.days('3')));
@@ -579,7 +585,7 @@ contract('PublicMarketplace', accounts => {
       publicMarketNFTBalBefore = await this.ERC1155NFT.balanceOf(this.publicMarketplace.address, currentNftId);
 
       // buy nft from sale
-      await this.publicMarketplace.buyNFT(currentSaleId, { from: user2 });
+      this.buyNFTTx = await this.publicMarketplace.buyNFT(currentSaleId, { from: user2 });
     });
 
     it('should reflect nft in user wallet and close the sale correctly', async () => {
@@ -591,6 +597,10 @@ contract('PublicMarketplace', accounts => {
       expect(user2NFTBalAfter).to.bignumber.be.eq(new BN('1'));
       expect(publicMarketNFTBalBefore).to.bignumber.be.eq(new BN('1'));
       expect(publicMarketNFTBalAfter).to.bignumber.be.eq(new BN('0'));
+    });
+
+    it('should emit BuySaleNFT event when user buys NFT from sale', async () => {
+      await expectEvent(this.buyNFTTx, 'BuySaleNFT');
     });
 
     it('should revert when user tries to buy from invalid sale', async () => {
@@ -1006,7 +1016,7 @@ contract('PublicMarketplace', accounts => {
       await time.increase(String(time.duration.days('3')));
 
       // resolve auction
-      await this.publicMarketplace.resolveAuction(currentAuctionId);
+      this.resolveTx = await this.publicMarketplace.resolveAuction(currentAuctionId);
 
       const auction = await this.publicMarketplace.auction(currentAuctionId);
 
@@ -1020,6 +1030,10 @@ contract('PublicMarketplace', accounts => {
       expect(user2NFTBalanceAfter).to.bignumber.be.eq(new BN('1'));
       expect(contractNFTBalanceAfter).to.bignumber.be.eq(new BN('0'));
       expect(contractBalanceBefore).to.bignumber.be.gt(contractBalanceAfter);
+    });
+
+    it('should emit BuyAuctionNFT event when user resolves the auction', async () => {
+      await expectEvent(this.resolveTx, 'BuyAuctionNFT');
     });
 
     it('should revert when anyone tries to resolve auction which already resolved', async () => {
@@ -1208,6 +1222,30 @@ contract('PublicMarketplace', accounts => {
 
       isSupported = await this.publicMarketplace.isSupportedToken(this.sampleToken.address);
       expect(isSupported[0]).to.be.eq(false);
+    });
+  });
+
+  describe('upgradeProxy()', () => {
+    let versionBeforeUpgrade;
+    before('upgradeProxy', async () => {
+      versionBeforeUpgrade = await this.publicMarketplace.getVersionNumber();
+      // upgrade contract
+      await upgradeProxy(this.publicMarketplace.address, PublicMarketplaceV2);
+    });
+
+    it('should upgrade contract correctly', async () => {
+      const versionAfterUpgrade = await this.publicMarketplace.getVersionNumber();
+
+      console.log('versionBeforeUpgrade: ', versionBeforeUpgrade);
+      console.log('versionAfterUpgrade: ', versionAfterUpgrade);
+
+      expect(versionBeforeUpgrade['0']).to.bignumber.be.eq(new BN('1'));
+      expect(versionBeforeUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionBeforeUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+
+      expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
+      expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
+      expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
     });
   });
 });
