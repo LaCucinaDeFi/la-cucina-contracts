@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../IngredientsNFT.sol';
+import '../../Oven.sol';
 
-contract IngredientsNFTV2 is IngredientsNFT {
+contract OvenV2 is Oven {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -18,8 +18,26 @@ contract IngredientsNFTV2 is IngredientsNFT {
    =======================================================================
  */
 
-	function initialize(string memory url) public virtual initializer {
-		__BaseERC1155_init(url);
+		/**
+	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
+	 */
+	function initialize(
+		address _ingredientNft,
+		address _dishesNft,
+		address _lacToken
+	) external virtual override initializer {
+		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
+		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
+
+		__AccessControl_init();
+		__ReentrancyGuard_init();
+
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+		ingredientNft = IIngredientNFT(_ingredientNft);
+		dishesNft = IDishesNFT(_dishesNft);
+		lacToken = IBEP20(_lacToken);
 	}
 
 	/*
@@ -28,8 +46,8 @@ contract IngredientsNFTV2 is IngredientsNFT {
    =======================================================================
  */
 
-	function addBurner(address _burner) public virtual onlyAdmin {
-		require(_burner != address(0), 'ERC1155: ZERO_ADDRESS_FOUND');
+	function addBurner(address _burner) public virtual {
+		require(_burner != address(0), 'ChefV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}
 

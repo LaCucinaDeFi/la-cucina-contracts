@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../Chef.sol';
+import '../../Pantry.sol';
 
-contract ChefV2 is Chef {
+contract PantryV2 is Pantry {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -21,22 +21,11 @@ contract ChefV2 is Chef {
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
 	 */
-	function initialize(address _ingredientNftAddress, address _dishesNftAddress)
-		external
-		virtual
-		override
-		initializer
-	{
-		require(_ingredientNftAddress != address(0), 'Chef: INVALID_INGREDIENT_ADDRESS');
-		require(_dishesNftAddress != address(0), 'Chef: INVALID_DISHES_ADDRESS');
-
+	function initialize() external virtual override initializer {
 		__AccessControl_init();
 		__ReentrancyGuard_init();
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-
-		ingredientNft = IIngredientNFT(_ingredientNftAddress);
-		dishesNft = IDishesNFT(_dishesNftAddress);
 	}
 
 	/*
@@ -46,7 +35,7 @@ contract ChefV2 is Chef {
  */
 
 	function addBurner(address _burner) public virtual {
-		require(_burner != address(0), 'ChefV2: ZERO_ADDRESS_FOUND');
+		require(_burner != address(0), 'PantryV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}
 

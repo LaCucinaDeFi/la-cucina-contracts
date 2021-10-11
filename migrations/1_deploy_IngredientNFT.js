@@ -3,7 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
+
 const uri = 'https://token-cdn-domain/{id}.json';
+const royaltyReciever = '0x1593B3d9955bB76B96C7bb9238496f933e2e46Ff';
+const royaltyFee = '100'; //10%
 
 module.exports = async function (deployer) {
 	/*
@@ -12,7 +15,9 @@ module.exports = async function (deployer) {
    =======================================================================
  */
 	console.log('deploying IngredientNFT contract............');
-	const instance = await deployProxy(IngredientNFT, [uri], {initializer: 'initialize'});
+	let instance = await deployProxy(IngredientNFT, [uri, royaltyReciever, royaltyFee], {
+		initializer: 'initialize'
+	});
 	const fileData = {};
 
 	const data = {};
