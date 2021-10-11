@@ -1,6 +1,7 @@
 {
   "name": "@la-cucina/la-cucina-contracts",
   "version": "0.0.1",
+  "main": "index.js",
   "private": "true",
   "license": "MIT",
   "scripts": {
@@ -32,6 +33,7 @@
     "fs": "^0.0.1-security",
     "ganache-cli": "^6.12.2",
     "lcov2badge": "^0.1.2",
+    "path": "^0.12.7",
     "solidity-coverage": "^0.7.16",
     "truffle-plugin-verify": "^0.5.10",
     "web3": "^1.4.0"
