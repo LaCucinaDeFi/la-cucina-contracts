@@ -89,7 +89,9 @@ We have 2 main contracts:
     - This method allows users to buy the nft for the fixed price set by the nft owner from the market.
     - it performs the following operations:
       - Check the owner allowance of nft
-      - TransferFrom the required amount of selling(ex. DAI) tokens to the owner.
+      - gets the royalty info which returns the royalty receiver and the royalty amount for the trading price.
+      - TransferFrom the sale price - royalty amount of tokens to the nft seller
+      - TransferFrom the royalty amount of tokens to the royaltyReceiver
       - TransferFrom the nft to the buyer.
     - Required parameters:
       - saleId
@@ -141,6 +143,10 @@ We have 2 main contracts:
     - Check that the buyer has the required amount of selling tokens,
       - if yes then we will transferFrom selling tokens from the buyer and transfer the NFT to the buyer
       - if not, we need to find the next highest bid that has the required amount of selling tokens and then transferFrom tokens from the buyer and transfer the NFT to the buyer - in this case, we need to also update the WinningBidId as well.
+    - gets the royalty info which returns the royalty receiver and the royalty amount for the trading price.
+    - TransferFrom the sale price - royalty amount of tokens to the nft seller
+    - TransferFrom the royalty amount of tokens to the royaltyReceiver
+  
     - Required parameters:
       - AuctionId
 
@@ -202,28 +208,81 @@ We have 2 main contracts:
     - required parameters:
       - AuctionID
 
-### 2. NFT contract
+# Recipe Contracts
+Their are four main contracts in recipe which are listed below-
+* IngredientsNFT Contract
+* Pantry Contract
+* DishesNFT Contract
+* Oven Contract 
 
-- It will extend the ERC1155 contract from OZ Library.
-- This contract allows Market contract to create new nfts.
-- This contracts inherits the access control contract of openzeppeling to add the different roles.
-- This contract will check before each transfer to ensure that only transfers to addresses that do not own that specific NFT type
+## IngredientsNFT Contract
 
-- Required setup:
+ * IngredientsNFT contract extends the BaseERC1155 contract and the BaseERC1155WithRoyalties contracts. 
+ * The BaseERC1155 contract is basic ERC1155 NFT token contract which allows us to mint the new nfts.
+ * The BaseERC1155WithRoyalties contract supports the ERC2981 standard to get the royalties on nfts. The marketplace contracts which supports the royaltyPayments can call the royaltyInfo() method of this contract to get the royalty amount and the royalty receiver`s address.
+ * This contract allows admins to manage different ingredients and their variations. It stores the svgs for the cooked version of the ingredients and the metadata for the ingredients.
+ * It allows users` to get the multiplier for the Ingredients which are caluclated using the nutirtions hash.
+ * This contract also ensures that each user will have only one NFT except the excepted addressses which are allowed to hold multiple nfts. these excepted addresses are mostly the contracts` addresses.
+ * This contract allows Market contract to create new nfts.
+  
+## Pantry Contract
 
-  - Transfer the ownership of nft contract to Market contract.
-  - Add Marketplace contract as a minter.
+* Pantry contract allows admin to store and manage all the data related with the dishes. It stores the baseIngredients information and the svgs for the different variations of the base ingredients.
+* The Pantry contract is mainly used in the Dishes NFT contract for preparing and serving the dish.
+* All supported dishes are added in the pantry contract. 
 
-- Methods:
+## DishesNFT Contract
 
-  - **mint()**
+* DishesNFT contract is ERC721 NFT token contract which contains the logic for preparing and serving a dish.
+* This contract mints the Dish NFT to the user when user prepares the dish using disfferent ingredeints.
+* This contract stores all the data related with the dish.
+* It also ensures that the dishes are non-transferable. only the excepted addresses can transfer the dishNFT.
+* This contract is mainly used by the Oven contract for preparing and uncooking the dish. 
 
-    - This method allows minter to mint the new nfts.
-    - This method store the ipfs hash for the token ids.
-    - Required parameters:
-      - account
-      - amount of copies
-      - tokenURI/ipfs hash
+## Oven Contract
+
+* Oven Contract allows users to prepare and uncook the dish using the differnt Ingredients.
+* This contract uses the Dishes NFT contract for preparing a dish and minting the dishNFT to the user.
+* Users must have at least two ingredient NFTs to prepare the dish. 
+* When user wants to prepare the dish, The Oven contracts gets the ingredient NFT from the user and mints the unique dishNFT to the user. User needs to select the flame type to prepare a dish. 
+* The flame allows user to speed up or slow down the dish preparation time. If user wants to minimize the preparation time, user needs to pay the fees in LAC token depending on the flame type.If user wants to increase the preparation time, the oven contract returns the extra LAC tokens that he paid for higher flame and only charge the fees for selected flame type.
+* User can also uncook the dish and get the ingredient NFTS. User needs to return the dishNft to the oven contract in this case. user can uncook the dish only after the dish preparation time. 
+
+# Contract Deployment
+
+## Deploy and setup IngredientsNFT Contract
+* First admin deploy the IngredientsNFT contract. We initialize the contract with the following parameters-
+
+  * _baseTokenURI: Indicates the uri for the ERC1155 nft tokens.
+  * _royaltyReceiver: Indicates the address of the royalty receiver who will receive the royalty payment.
+  * _royaltyFee: Indicates the royalty fee percentage which is charged on the trading of NFT in marketplace. maximum royalty fee is 25% i.e 250;
+* Admin needs to add the ingredient using the **addIngredient()** method which requires the ingredient name and nutrisions hash parameters.
+* Then, admin adds the different variations for the ingredient using the **addIngredientVariation()** method which requires the ingredientId, variation name and the svg for the variation.
+
+
+## Deploy Pantry contract 
+* After deploying the IngredientsNFT contract, admin deploy the Pantry contract.
+* Then admin adds the dish in the pantry using the **addDish()** method which requires the name of the dish as a parameter.
+* After adding a dish, admin need to add the baseIngredient for the dish using the **addBaseIngredientForDish()** method which requires the dishID and the name of the baseIngredient as a parameter.
+* Then admin adds the different variations of the baseIngredient using the **addBaseIngredientVariation()** method which requires the baseIngredientId, variation name and the svg for the variation.
+
+## Deploy DishesNFT contract
+* Admin deploys the DishesNFT contract and initializes it with the following parameters-
+  * _name: Indicates the name of the ERC721 token contract.
+  * _symbol: Indicates the symbol of the dish contract.
+  * _baseTokenUri: Indicates the uri for the ERC721 tokens.
+  * _ingredientNFTAddress: Indicates the address of the ingredient contract.
+  * _pantryAddress: Indicates the address of the pantry contract.
+
+## Deploy Oven contract
+* After deploying the above contracts, admin need to deploy the oven contract with following parameters-
+  * _ingredientAddress: Indicates the address of the ingredient contract.
+  * _dishNFTAddress: Indicates the dishNFT contracts address.
+  * _lacTokenAddress: Indicates the lacToken address.
+* Add the Oven contract`s address as excepted contract address in IngredientsNFT contract using the **addExceptedAddress()** method which requires the oven contract address as a parameter.
+* Add the Oven contract`s address as excepted contract address in DishesNFT contract using the **addExceptedAddress()** method which requires the oven contract address as a parameter.
+* Grant the OVEN_ROLE to the oven contract in DishesNFT contract using the **grantRole()** method.
+* Add the different types of flames usingthe **addFlame()** method which requires flame type name, preparation duration in seconds and the lac charge for selecting the flame.
 
 # Development
 
