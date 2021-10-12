@@ -56,11 +56,11 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
  */
 
 	function initialize(
-		string memory baseTokenURI,
+		string memory _baseTokenURI,
 		address _royaltyReceiver,
 		uint8 _royaltyFee
 	) public virtual initializer {
-		initialize_BaseERC1155WithRoyalties(baseTokenURI, _royaltyReceiver, _royaltyFee);
+		initialize_BaseERC1155WithRoyalties(_baseTokenURI, _royaltyReceiver, _royaltyFee);
 	}
 
 	/*

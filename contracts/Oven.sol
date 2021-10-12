@@ -294,6 +294,10 @@ contract Oven is
 		}
 		return false;
 	}
+	
+	function getCurrentFlameId() public view returns (uint256) {
+		return flamesCounter.current();
+	}
 
 	/**
 	 * @notice Returns the storage, major, minor, and patch version of the contract.
