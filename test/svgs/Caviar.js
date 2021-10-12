@@ -1,5 +1,5 @@
 const caviar_1 =
-	'<g id="Caviar_1">' +
+	'<g id="Caviar_One">' +
 	'    <g class="w v">' +
 	'      <ellipse cx="181.2" cy="84.9" rx="4.3" ry="1.2" opacity=".2" />' +
 	'      <ellipse cx="193.4" cy="81.1" rx="4.3" ry="1.2" opacity=".2" />' +
@@ -23,7 +23,7 @@ const caviar_1 =
 	'  </g>';
 
 const caviar_2 =
-	'<g id="Caviar_2">' +
+	'<g id="Caviar_Two">' +
 	'    <g class="w v">' +
 	'      <ellipse cx="181.2" cy="84.9" rx="4.3" ry="1.2" opacity=".2" />' +
 	'      <ellipse cx="193.4" cy="81.1" rx="4.3" ry="1.2" opacity=".2" />' +
@@ -47,7 +47,7 @@ const caviar_2 =
 	'  </g>';
 
 const caviar_3 =
-	'<g id="Caviar_3">' +
+	'<g id="Caviar_Three">' +
 	'    <g class="w v">' +
 	'      <ellipse cx="181.2" cy="84.9" rx="4.3" ry="1.2" opacity=".2" />' +
 	'      <ellipse cx="193.4" cy="81.1" rx="4.3" ry="1.2" opacity=".2" />' +
