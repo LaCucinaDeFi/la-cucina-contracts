@@ -96,6 +96,11 @@ contract Oven is
 		_;
 	}
 
+	modifier onlyValidDishNFTId(uint256 _dishNFTId) {
+		require(_dishNFTId > 0 && _dishNFTId <= dishesNft.getCurrentTokenId(), 'Oven: INVALID_DISH_ID');
+		_;
+	}
+
 	/*
    =======================================================================
    ======================== Public Methods ===============================
@@ -281,20 +286,43 @@ contract Oven is
 
 	/**
 	 * @notice This method tells whether dish is ready to uncook or not.
-	 * @param _dishId - indicates the dish id
+	 * @param _dishNFTId - indicates the dish id
 	 * @return true if dish is ready to uncook otherwise returns false.
 	 */
-	function isDishReadyToUncook(uint256 _dishId) public returns (bool) {
-		require(_dishId > 0 && _dishId <= dishesNft.getCurrentTokenId(), 'Oven: INVALID_DISH_ID');
-
-		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishId);
+	function isDishReadyToUncook(uint256 _dishNFTId)
+		public
+		onlyValidDishNFTId(_dishNFTId)
+		returns (bool)
+	{
+		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
 
 		if (block.timestamp > completionTime) {
 			return true;
 		}
 		return false;
 	}
-	
+
+	/**
+	 * @notice This method tells the time after which dish is ready to uncook.
+	 * @param _dishNFTId - indicates the dish id
+	 * @return remaining time in seconds otherwise returns 0.
+	 */
+	function getRemainingTime(uint256 _dishNFTId)
+		external
+		onlyValidDishNFTId(_dishNFTId)
+		returns (uint256)
+	{
+		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
+
+		if (completionTime > block.timestamp) {
+			return completionTime - block.timestamp;
+		}
+		return 0;
+	}
+
+	/**
+	 * @notice This method returns the current flame id
+	 */
 	function getCurrentFlameId() public view returns (uint256) {
 		return flamesCounter.current();
 	}
