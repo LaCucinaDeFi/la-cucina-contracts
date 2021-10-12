@@ -26,6 +26,9 @@ module.exports = async function (deployer) {
 		}
 	);
 
+	const deployedInstance = await PrivateMarketplace.deployed();
+	console.log('deployed PrivateMarketplace: ', deployedInstance.address);
+
 	// store proxy address in file
 	const data = addresses[deployer.network_id.toString()];
 

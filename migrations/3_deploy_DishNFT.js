@@ -27,6 +27,8 @@ module.exports = async function (deployer) {
 			initializer: 'initialize'
 		}
 	);
+	const deployedInstance = await DishesNFT.deployed();
+	console.log('deployed Dish: ', deployedInstance.address);
 
 	// store proxy address in file
 	const data = addresses[deployer.network_id.toString()];

@@ -15,6 +15,8 @@ module.exports = async function (deployer) {
 	// ************************ Deploy Pantry *********************************
 	console.log('deploying Pantry contract............');
 	instance = await deployProxy(Pantry, [], {initializer: 'initialize'});
+	const deployedInstance = await Pantry.deployed();
+	console.log('deployed Pantry: ', deployedInstance.address);
 
 	// store proxy address in file
 	const data = addresses[deployer.network_id.toString()];

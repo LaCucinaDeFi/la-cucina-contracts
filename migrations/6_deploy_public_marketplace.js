@@ -25,6 +25,8 @@ module.exports = async function (deployer) {
 			initializer: 'initialize'
 		}
 	);
+	const deployedInstance = await PublicMarketplace.deployed();
+	console.log('deployed PublicMarketplace: ', deployedInstance.address);
 
 	// store proxy address in file
 	const data = addresses[deployer.network_id.toString()];

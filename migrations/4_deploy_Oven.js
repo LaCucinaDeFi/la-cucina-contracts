@@ -30,7 +30,7 @@ module.exports = async function (deployer) {
 			[
 				addresses[deployer.network_id.toString()]['IngredientsNFT'],
 				addresses[deployer.network_id.toString()]['DishesNFT'],
-				supportedTokens[deployer.network_id][i]
+				supportedTokens[deployer.network_id][0]
 			],
 			{
 				initializer: 'initialize'
@@ -52,6 +52,8 @@ module.exports = async function (deployer) {
 			}
 		);
 	}
+	const deployedInstance = await Oven.deployed();
+	console.log('deployed Oven: ', deployedInstance.address);
 
 	data['Oven'] = instance.address.toString();
 	addresses[deployer.network_id.toString()] = data;

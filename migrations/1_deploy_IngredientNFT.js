@@ -18,6 +18,10 @@ module.exports = async function (deployer) {
 	let instance = await deployProxy(IngredientNFT, [uri, royaltyReciever, royaltyFee], {
 		initializer: 'initialize'
 	});
+
+	const deployedInstance = await IngredientNFT.deployed();
+	console.log('deployed Ingredient: ',deployedInstance.address);
+	
 	const fileData = {};
 
 	const data = {};
