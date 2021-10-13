@@ -10,6 +10,7 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
+const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const fs = require('fs');
 const path = require('path');
@@ -24,21 +25,7 @@ const Pantry = artifacts.require('Pantry');
 const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
-
-function getNutritionsHash(nutritionsList) {
-	let nutrisionHash = 0;
-	if (nutritionsList.length == 8) {
-		// get base Variation Hash
-		for (let i = 0; i < 8; i++) {
-			let temp = 255 ** i;
-
-			nutrisionHash = BigInt(BigInt(nutrisionHash) + BigInt(nutritionsList[i]) * BigInt(temp));
-		}
-	} else {
-		throw console.error('Insufficient nutrisions');
-	}
-	return nutrisionHash;
-}
+const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
 contract.only('Oven', (accounts) => {
 	const owner = accounts[0];
@@ -126,7 +113,7 @@ contract.only('Oven', (accounts) => {
 			await this.Oven.addFlame('Radiation', time.duration.minutes('1'), ether('10'), {from: owner});
 
 			// add Laser flame
-			await this.Oven.addFlame('laser', time.duration.seconds('3'), ether('50'), {from: owner});
+			await this.Oven.addFlame('laser', time.duration.seconds('3'), ether('60'), {from: owner});
 		});
 
 		it('should get the the flame id correctly', async () => {
@@ -141,15 +128,10 @@ contract.only('Oven', (accounts) => {
 			expect(flame.lacCharge).to.bignumber.be.eq(ether('60'));
 		});
 
-		it('should revert when invalid flame id is given', async () => {
+		it('should revert when invalid flame type name is given', async () => {
 			await expectRevert(
-				this.Oven.addFlame(
-					'',
-					time.duration.seconds('3'),
-					ether('50'),
-					'Oven: INVALID_FLAME_TYPE',
-					{from: owner}
-				)
+				this.Oven.addFlame('', time.duration.seconds('3'), ether('50'), {from: owner}),
+				'Oven: INVALID_FLAME_TYPE'
 			);
 		});
 
@@ -159,9 +141,10 @@ contract.only('Oven', (accounts) => {
 					'laser',
 					time.duration.seconds('3'),
 					ether('50'),
-					'Oven: ONLY_ADMIN_CAN_CALL',
+
 					{from: minter}
-				)
+				),
+				'Oven: ONLY_ADMIN_CAN_CALL'
 			);
 		});
 	});
@@ -212,7 +195,7 @@ contract.only('Oven', (accounts) => {
 			);
 		});
 
-		it('should revert when non-admin tries to update the fkame detail', async () => {
+		it('should revert when non-admin tries to update the flame detail', async () => {
 			await expectRevert(
 				this.Oven.updateFlameDetail(
 					currentFlameId,
@@ -262,8 +245,8 @@ contract.only('Oven', (accounts) => {
 			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
 
 			// add variations for base ingredients
-			// here variation name should be strictly like this. variationName = name_variationId. ex. Slice_1, Cheese_2
-			// NOTE: svg id and the name_variationId should be same. <g id= "Slice_1">, <g id = "Cheese_2">
+			// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
+			// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
 			await this.Pantry.addBaseIngredientVariation(1, 'One', slice_1, {from: owner});
 			await this.Pantry.addBaseIngredientVariation(1, 'Two', slice_2, {from: owner});
 			await this.Pantry.addBaseIngredientVariation(1, 'Three', slice_3, {from: owner});
@@ -279,11 +262,11 @@ contract.only('Oven', (accounts) => {
 			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
 			console.log('CaviarNutrisionHash: ', CaviarNutrisionHash.toString());
 
-			await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash);
-			await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash);
-			await this.Ingredient.addIngredient('Gold', CaviarNutrisionHash);
-			await this.Ingredient.addIngredient('Beef', CaviarNutrisionHash);
-			await this.Ingredient.addIngredient('Truffle', CaviarNutrisionHash);
+			await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, ipfsHash);
+			await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash, ipfsHash);
+			await this.Ingredient.addIngredient('Gold', CaviarNutrisionHash, ipfsHash);
+			await this.Ingredient.addIngredient('Beef', CaviarNutrisionHash, ipfsHash);
+			await this.Ingredient.addIngredient('Truffle', CaviarNutrisionHash, ipfsHash);
 
 			// add ingredient variations
 
@@ -616,7 +599,7 @@ contract.only('Oven', (accounts) => {
 			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
 
 			await expectRevert(
-				this.Oven.prepareDish(4, 1, [1, 2, 3], {from: user1}),
+				this.Oven.prepareDish(4, 1, [2, 4, 5], {from: user1}),
 				'Oven: INVALID_DISH_ID'
 			);
 
@@ -664,22 +647,45 @@ contract.only('Oven', (accounts) => {
 		let currentDishId;
 		let isDishReadyToUncookBefore;
 		before('update flame', async () => {
-			currentDishId = await this.dish.getCurrentTokenId();
+			currentDishId = await this.Dish.getCurrentTokenId();
 
 			// approve sample tokens to the oven contract
-			await this.SampleToken.approve(this.Oven.address, MAX_UINT256);
-
-			isDishReadyToUncookBefore = await this.Oven.isDishReadyToUncook();
+			await this.SampleToken.approve(this.Oven.address, MAX_UINT256, {from: user1});
 		});
-		it('should update the flame for the dish correctly', async () => {
-			await this.Oven.updateFlame({from: user1});
 
-			const dish = await this.Dish.dish(currentDishId);
-			expect(dish.completionTime).to.bignumber.be.eq(new BN(time.duration.minutes('15')));
+		it('should update the flame for the dish correctly', async () => {
+			await this.Oven.updateFlame(1, 2, {from: user1});
+
+			const dish = await this.Dish.dish(1);
+			expect(dish.completionTime).to.bignumber.be.eq(
+				dish.creationTime.add(new BN(time.duration.minutes('5')))
+			);
+			expect(dish.flameType).to.bignumber.be.eq(new BN('2'));
+			isDishReadyToUncookBefore = await this.Oven.isDishReadyToUncook(1);
+
+			expect(isDishReadyToUncookBefore).to.be.eq(false);
+		});
+
+		it('should revert when other user tries to update the flame for the dish', async () => {
+			await expectRevert(
+				this.Oven.updateFlame(1, 4, {from: user2}),
+				'Oven: ONLY_DISH_OWNER_CAN_UPDATE_FLAME'
+			);
+		});
+		it('should revert when invalid flame id is specified', async () => {
+			await expectRevert(this.Oven.updateFlame(1, 0, {from: user1}), 'Oven: INVALID_FLAME');
+			await expectRevert(this.Oven.updateFlame(1, 7, {from: user1}), 'Oven: INVALID_FLAME');
+		});
+		it('should revert when user tries to update the flame with same flameid', async () => {
+			await expectRevert(this.Oven.updateFlame(1, 2, {from: user1}), 'Oven: FLAME_ALREADY_SET');
+		});
+		it('should revert when invalid dish id is specified', async () => {
+			await expectRevert(this.Oven.updateFlame(0, 4, {from: user1}), 'Oven: INVALID_DISH_ID');
+			await expectRevert(this.Oven.updateFlame(10, 4, {from: user1}), 'Oven: INVALID_DISH_ID');
 		});
 	});
 
-	describe.skip('uncookDish()', async () => {
+	describe('uncookDish()', async () => {
 		let user1CaviarBalance;
 		let user1TunaBalance;
 		let user1GoldBalance;
@@ -716,25 +722,34 @@ contract.only('Oven', (accounts) => {
 			ovenBeefBalance = await this.Ingredient.balanceOf(this.Oven.address, 4);
 			ovenTruffleBalance = await this.Ingredient.balanceOf(this.Oven.address, 5);
 
-			// add Oven contract as excepted address in ingredient
-			await this.Dish.addExceptedAddress(this.Oven.address, {from: owner});
-
-			// approve dish to OvenContract
+			// // approve dish to OvenContract
 			await this.Dish.setApprovalForAll(this.Oven.address, true, {from: user1});
+		});
 
-			// uncook dish
-			this.uncookTx = await this.Oven.uncookDish(1, {from: user1});
-			//console.log('uncookDish: ', this.uncookTx);
+		it('should revert when user tries to uncook the dish while its preparing', async () => {
+			await expectRevert(
+				this.Oven.uncookDish(1, {from: user1}),
+				'Oven: CANNOT_UNCOOK_WHILE_PREPARING'
+			);
+		});
+
+		it('should revert when user tries to uncook the dish oven contract is not added in excepted address list', async () => {
+			//increase time
+			await time.increase(time.duration.minutes('6'));
+
+			await expectRevert(this.Oven.uncookDish(1, {from: user1}), 'DishesNFT: CANNOT_TRANSFER_DISH');
 		});
 
 		it('should uncook dish correctly', async () => {
+			// // add Oven contract as excepted address in ingredient
+			await this.Dish.addExceptedAddress(this.Oven.address, {from: owner});
+
+			// uncook dish
+			this.uncookTx = await this.Oven.uncookDish('1', {from: user1});
+
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(1);
-			expect(dishOwner).to.be.eq(user1);
-
-			// get Oven contract`s dish balance
-			const OvenContractBal = await this.Dish.ownerOf(t1);
-			expect(OvenContractBal).to.be.eq(this.Oven.address);
+			expect(dishOwner).to.be.eq(this.Oven.address);
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -777,7 +792,7 @@ contract.only('Oven', (accounts) => {
 			expect(ovenTruffleBalanceAfter).to.bignumber.be.eq(new BN('5'));
 		});
 
-		it('should add the dish id uncooked dish ids list in Oven contract', async () => {
+		it('should add the dish id in uncooked dish ids list in Oven contract', async () => {
 			const uncookedDishIds = await this.Oven.uncookedDishIds(0);
 
 			expect(uncookedDishIds).to.bignumber.be.eq(new BN('1'));
@@ -785,7 +800,7 @@ contract.only('Oven', (accounts) => {
 
 		it('should revert when non-dishOwner tries to uncook the dish', async () => {
 			await expectRevert(
-				this.Oven.uncookDish(currentDishId, {from: user2}),
+				this.Oven.uncookDish('1', {from: user2}),
 				'Oven: ONLY_DISH_OWNER_CAN_UNCOOK'
 			);
 		});
@@ -803,7 +818,7 @@ contract.only('Oven', (accounts) => {
 		});
 	});
 
-	describe.skip('upgradeProxy()', () => {
+	describe('upgradeProxy()', () => {
 		let versionBeforeUpgrade;
 		before('upgradeProxy', async () => {
 			versionBeforeUpgrade = await this.Oven.getVersionNumber();
