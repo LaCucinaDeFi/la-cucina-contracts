@@ -39,6 +39,9 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	// ingredientId => Ingredient details
 	mapping(uint256 => Ingredient) public ingredients;
 
+	// ingredientId => ipfs hash details
+	mapping(uint256 => string) public ipfsHash;
+
 	//defId => Defs details
 	mapping(uint256 => Defs) public defs;
 
@@ -93,14 +96,16 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 *  @notice This method allows admin to add the ingredient details for preparing a dish.
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _nutritionsHash - indicates the nutritions
+	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
 	 *  @return ingredientId - new ingredient id
 	 */
-	function addIngredient(string memory _name, uint256 _nutritionsHash)
-		external
-		onlyAdmin
-		returns (uint256 ingredientId)
-	{
+	function addIngredient(
+		string memory _name,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash
+	) external virtual onlyAdmin returns (uint256 ingredientId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
+		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 
 		// generate ingredient Id
 		tokenCounter.increment();
@@ -109,6 +114,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 
 		// store ingredient details
 		ingredients[ingredientId] = Ingredient(ingredientId, _name, 0, _nutritionsHash, defIds);
+		ipfsHash[ingredientId] = _ipfsHash;
 
 		emit IngredientAdded(ingredientId);
 	}
@@ -124,7 +130,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 _ingredientId,
 		string memory _name,
 		string memory _svg
-	) external onlyAdmin onlyValidNftId(_ingredientId) returns (uint256 defsId) {
+	) external virtual onlyAdmin onlyValidNftId(_ingredientId) returns (uint256 defsId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
@@ -148,6 +154,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 */
 	function updateIngredientName(uint256 _tokenId, string memory _name)
 		external
+		virtual
 		onlyAdmin
 		onlyValidNftId(_tokenId)
 	{
@@ -160,21 +167,39 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	/**
 	 *	@notice This method allows admin to update the ingredient svg only if no ingredients have minted.
 	 *	@param _defId - indicates the def id of ingredient variation
+	 *	@param _name - indicates the name of the ingredient
 	 *	@param _svg - indicates the svg of the ingredient
 	 */
-	function updateIngredientSvg(uint256 _defId, string memory _svg)
-		external
-		onlyAdmin
-		onlyValidDefId(_defId)
-	{
-		require(_defId > 0, 'IngredientNFT: INVALID_DEF_ID');
+	function updateIngredientVariation(
+		uint256 _defId,
+		string memory _name,
+		string memory _svg
+	) external virtual onlyAdmin onlyValidDefId(_defId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
 		Defs storage ingrediendVariaion = defs[_defId];
-		require(totalSupply(ingrediendVariaion.ingredientId) == 0, 'IngredientNFT: CANNOT_UPDATE_SVG');
 
+		ingrediendVariaion.name = _name;
 		ingrediendVariaion.svg = _svg;
+
 		emit IngredientVariationUpdated(_defId);
+	}
+
+	/**
+	 *	@notice This method allows admin to update the ingredient name.
+	 *	@param _tokenId - indicates the token id of ingredient
+	 *  @param _ipfsHash - indicates the new ipfs hash
+	 */
+	function updateIpfsHash(uint256 _tokenId, string memory _ipfsHash)
+		external
+		virtual
+		onlyAdmin
+		onlyValidNftId(_tokenId)
+	{
+		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
+
+		ipfsHash[_tokenId] = _ipfsHash;
 	}
 
 	/**
@@ -214,7 +239,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    ======================== Getter Methods ===============================
    =======================================================================
  */
- 
+
 	/**
 	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
 	 * @param _ingredientId - indicates the ingredient id
@@ -223,6 +248,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function getMultiplier(uint256 _ingredientId)
 		public
 		view
+		virtual
 		onlyValidNftId(_ingredientId)
 		returns (uint256 multiplier)
 	{
@@ -260,9 +286,15 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		multiplier /= nutritionsList[2] * nutritionsList[3];
 	}
 
+	/**
+	 * @notice This method allows us to get the ingredient variation id from the list of variations.
+	 * @param _ingredientId - indicates ingredient id
+	 * @param _index - indicates the variation index
+	 */
 	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidNftId(_ingredientId)
 		returns (uint256 _defId)
 	{
@@ -275,10 +307,43 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	}
 
 	/**
+	 * @notice This method returns the token uri based on the chain id
+	 * @param _tokenId - indicates the token id
+	 */
+	function getTokenUri(uint256 _tokenId) public view virtual returns (string memory tokenUri) {
+		tokenUri = string(
+			abi.encodePacked(
+				uri(_tokenId),
+				ipfsHash[_tokenId],
+				'.ipfs.infura-ipfs.io/lacucina_secret_ingredients/',
+				RecipeBase.toString(block.chainid),
+				'/',
+				RecipeBase.toString(_tokenId)
+			)
+		);
+	}
+
+	/**
     @notice This method returns the current base ingredient Id
     */
-	function getCurrentDefs() external view returns (uint256) {
+	function getCurrentDefs() external view virtual returns (uint256) {
 		return defsCounter.current();
+	}
+
+	/**
+	 * @notice This method tells whether the given address is allowed to hold multiple nfts or not.
+	 */
+	function isExceptedAddress(address _account) external view virtual returns (bool) {
+		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedAddresses, _account);
+		return isExcepted;
+	}
+
+	/**
+	 * @notice This method tells whether the given address is allowed to hold multiple nfts from excepted address or not.
+	 */
+	function isExceptedFromAddress(address _account) external view virtual returns (bool) {
+		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedFromAddresses, _account);
+		return isExcepted;
 	}
 
 	/*

@@ -8,6 +8,7 @@ interface IDishesNFT is IERC721Upgradeable {
 
 	function dish(uint256 _dishId)
 		external
+		view
 		returns (
 			address dishOwner,
 			bool cooked,
@@ -33,5 +34,9 @@ interface IDishesNFT is IERC721Upgradeable {
 
 	function uncookDish(uint256 _dishId) external;
 
-	function updatePrepartionTime(uint256 _dishId, uint256 _preparationTime) external;
+	function updatePrepartionTime(
+		uint256 _dishId,
+		uint256 _flameId,
+		uint256 _preparationTime
+	) external;
 }

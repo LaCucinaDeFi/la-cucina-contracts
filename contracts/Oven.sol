@@ -252,36 +252,44 @@ contract Oven is
 	 * When user wants to increase the flame, he needs to pay extra LAC tokens.
 	 * When user wants to decrease the flame, he receives the extra LAC tokens that he paid.
 	 * User cannot update flame for the prepared dish
-	 * @param _dishId - indicates the dishId for which flame to udpate
+	 * @param _dishNFTId - indicates the dishId for which flame to udpate
 	 * @param _flameId - indicates the new flame for preparing a dish
 	 */
-	function updateFlame(uint256 _dishId, uint256 _flameId) external onlyValidFlameId(_flameId) {
-		require(!isDishReadyToUncook(_dishId), 'Oven: CANNOT_UPDATE_FLAME');
+	function updateFlame(uint256 _dishNFTId, uint256 _flameId)
+		external
+		onlyValidDishNFTId(_dishNFTId)
+		onlyValidFlameId(_flameId)
+	{
+		require(!isDishReadyToUncook(_dishNFTId), 'Oven: CANNOT_UPDATE_FLAME');
 
 		// get details of dish
-		(address dishOwner, , , uint256 oldFlameId, , , , , , ) = dishesNft.dish(_dishId);
+		(address dishOwner, , , uint256 oldFlameId, , , , , , ) = dishesNft.dish(_dishNFTId);
 
 		require(msg.sender == dishOwner, 'Oven: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
 		require(_flameId != oldFlameId, 'Oven: FLAME_ALREADY_SET');
 
-		FlameDetail memory oldFlame = flames[oldFlameId];
-		FlameDetail memory newFlame = flames[_flameId];
+		FlameDetail storage oldFlame = flames[oldFlameId];
+		FlameDetail storage newFlame = flames[_flameId];
 
 		// faster flame
-		if (newFlame.preparationDuration < oldFlame.preparationDuration) {
+		if (newFlame.lacCharge > oldFlame.lacCharge) {
 			// get the LAC tokens from user
 			if (newFlame.lacCharge > 0) {
 				require(
-					lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge)
+					lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge),
+					'Oven: TRANSFER_FAILED'
 				);
 			}
-		} else if (newFlame.preparationDuration > oldFlame.preparationDuration) {
+		} else if (newFlame.lacCharge < oldFlame.lacCharge) {
 			// slower flame
 			// return the extra LAC tokens to user
-			require(lacToken.transfer(msg.sender, oldFlame.lacCharge - newFlame.lacCharge));
+			require(
+				lacToken.transfer(msg.sender, oldFlame.lacCharge - newFlame.lacCharge),
+				'Oven: TRANSFER_FAILED'
+			);
 		}
 
-		dishesNft.updatePrepartionTime(_dishId, newFlame.preparationDuration);
+		dishesNft.updatePrepartionTime(_dishNFTId, _flameId, newFlame.preparationDuration);
 	}
 
 	/**
@@ -291,6 +299,7 @@ contract Oven is
 	 */
 	function isDishReadyToUncook(uint256 _dishNFTId)
 		public
+		view
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
@@ -309,6 +318,7 @@ contract Oven is
 	 */
 	function getRemainingTime(uint256 _dishNFTId)
 		external
+		view
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{

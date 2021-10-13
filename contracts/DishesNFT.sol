@@ -164,11 +164,13 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method update the preparation time for given dish. only oven can call this method
 	 */
-	function updatePrepartionTime(uint256 _dishId, uint256 _preparationTime)
-		external
-		OnlyOven
-		onlyValidDishId(_dishId)
-	{
+	function updatePrepartionTime(
+		uint256 _dishId,
+		uint256 _flameId,
+		uint256 _preparationTime
+	) external OnlyOven {
+		// update flame type
+		dish[_dishId].flameType = _flameId;
 		// update dish preparationTime
 		dish[_dishId].completionTime = dish[_dishId].creationTime + _preparationTime;
 	}
@@ -211,8 +213,9 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
-		// // add ingredient defs
-		accumulator = RecipeBase.strConcat(accumulator, _getDefs());
+		string memory ingredientPlaceholders;
+		string memory defs;
+		defs = RecipeBase.strConcat(defs, string('<defs>'));
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -237,16 +240,25 @@ contract DishesNFT is BaseERC721 {
 					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 				);
 
+				(, , string memory svg) = ingredientNft.defs(variationId);
+				defs = RecipeBase.strConcat(defs, svg);
+
 				(uint256 ingredientId, string memory variationName, ) = ingredientNft.defs(variationId);
 
 				(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
 
 				string memory placeHolder = _getPlaceHolder(ingredientName, variationName);
 
-				accumulator = string(abi.encodePacked(accumulator, placeHolder));
+				ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
 			}
 		}
 
+		defs = RecipeBase.strConcat(defs, string('</defs>'));
+
+		// get ingredient variation defs
+		accumulator = RecipeBase.strConcat(accumulator, defs);
+		// get the placeholders for ingredients
+		accumulator = RecipeBase.strConcat(accumulator, ingredientPlaceholders);
 		accumulator = RecipeBase.strConcat(accumulator, string('</svg>'));
 
 		return accumulator;
@@ -360,17 +372,6 @@ contract DishesNFT is BaseERC721 {
 					'"/></svg>'
 				)
 			);
-	}
-
-	function _getDefs() internal view returns (string memory defs) {
-		defs = RecipeBase.strConcat(defs, string('<defs>'));
-
-		for (uint256 i = 1; i <= ingredientNft.getCurrentDefs(); i++) {
-			(, , string memory svg) = ingredientNft.defs(i);
-			defs = RecipeBase.strConcat(defs, svg);
-		}
-
-		defs = RecipeBase.strConcat(defs, string('</defs>'));
 	}
 
 	function _beforeTokenTransfer(
