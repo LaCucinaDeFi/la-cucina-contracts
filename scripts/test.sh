@@ -29,14 +29,14 @@ start_ganache() {
   local mnemonic="coin town lawn where smart cancel rebel syrup pass useful fox body"
   local balance=10000
   local gasPrice=1000000000
-  local gasLimit=100000000000
+  local gasLimit=100000000000000
   local chain_id=999
   local network_id=1111
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" --chainId "$chain_id" -a 20 -i "$network_id" > /dev/null &
+    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" --chainId "$chain_id" -g "$gasPrice" -l "$gasLimit" -a 20 -i "$network_id" > /dev/null &
   else
-    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" --chainId "$chain_id" -a 20 -i "$network_id" > /dev/null &
+    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" --chainId "$chain_id" -g "$gasPrice" -l "$gasLimit" -a 20 -i "$network_id" > /dev/null &
   fi
 
   ganache_pid=$!

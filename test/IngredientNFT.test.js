@@ -13,6 +13,7 @@ const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
 const url = 'https://';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+
 contract('IngredientsNFT', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];

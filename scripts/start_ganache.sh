@@ -27,7 +27,7 @@ start_ganache() {
   local mnemonic="coin town lawn where smart cancel rebel syrup pass useful fox body"
   local balance=1000
   local gasPrice=1000000000
-  local gasLimit=100000000000
+  local gasLimit=85000000
   local chain_id=999
   local network_id=1111
   local fork=""
