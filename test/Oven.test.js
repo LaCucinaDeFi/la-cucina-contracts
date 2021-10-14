@@ -27,7 +27,7 @@ const SampleToken = artifacts.require('SampleToken');
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract.only('Oven', (accounts) => {
+contract('Oven', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -260,7 +260,6 @@ contract.only('Oven', (accounts) => {
 			// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
 
 			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
-			console.log('CaviarNutrisionHash: ', CaviarNutrisionHash.toString());
 
 			await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, ipfsHash);
 			await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash, ipfsHash);
@@ -316,7 +315,6 @@ contract.only('Oven', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish1Tx = await this.Oven.prepareDish(1, 1, [1, 2, 3, 4, 5], {from: user1});
-			//	console.log('prepareDish1: ', this.prepareDish1Tx);
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -389,7 +387,6 @@ contract.only('Oven', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish2Tx = await this.Oven.prepareDish(1, 1, [1, 2], {from: user1});
-			//	console.log('prepareDish2: ', this.prepareDish2Tx);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -537,7 +534,6 @@ contract.only('Oven', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish3Tx = await this.Oven.prepareDish(1, 1, [1, 2, 5], {from: user1});
-			//	console.log('prepareDish3: ', this.prepareDish3Tx);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -569,7 +565,6 @@ contract.only('Oven', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish4Tx = await this.Oven.prepareDish(1, 1, [2, 3, 4, 5], {from: user1});
-			//	console.log('prepareDish4: ', this.prepareDish4Tx);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -702,7 +697,7 @@ contract.only('Oven', (accounts) => {
 		let currentDishId;
 
 		before(async () => {
-			currentDishId = await this.Dish.getCurrentTokenId();
+			// currentDishId = await this.Dish.getCurrentTokenId();
 
 			// get user1`s dish balance
 			dish1Owner = await this.Dish.ownerOf(1);
@@ -745,7 +740,7 @@ contract.only('Oven', (accounts) => {
 			await this.Dish.addExceptedAddress(this.Oven.address, {from: owner});
 
 			// uncook dish
-			this.uncookTx = await this.Oven.uncookDish('1', {from: user1});
+			this.uncookTx = await this.Oven.uncookDish(1, {from: user1});
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(1);

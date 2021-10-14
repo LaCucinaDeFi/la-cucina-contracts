@@ -159,9 +159,9 @@ contract Oven is
 			address dishOwner,
 			,
 			,
-			,
 			uint256 totalIngredients,
 			uint256 ingredientVariationHash,
+			,
 			,
 			,
 			,
@@ -190,7 +190,6 @@ contract Oven is
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			slottedValue = ingredientVariationHash & bitMask; // Extract slotted value from hash
-
 			if (slottedValue > 0) {
 				variation = (slot > 0) // Extract IngredientID from slotted value
 					? slottedValue / slotMultiplier
@@ -200,8 +199,12 @@ contract Oven is
 					variation > 0 && variation <= ingredientNft.getCurrentDefs(),
 					'Oven: INVALID_INGREDIENT_VARIATION'
 				);
-				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
 
+				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
+				require(
+					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
+					'Oven: INVALID_INGREDIENT_ID'
+				);
 				// transfer the ingredient nft to user
 				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
 			}
@@ -263,7 +266,18 @@ contract Oven is
 		require(!isDishReadyToUncook(_dishNFTId), 'Oven: CANNOT_UPDATE_FLAME');
 
 		// get details of dish
-		(address dishOwner, , , uint256 oldFlameId, , , , , , ) = dishesNft.dish(_dishNFTId);
+		(
+			address dishOwner, // indicates hash of the indexes of ingredient variations
+			,
+			,
+			,
+			,
+			,
+			,
+			uint256 oldFlameId,
+			,
+
+		) = dishesNft.dish(_dishNFTId);
 
 		require(msg.sender == dishOwner, 'Oven: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
 		require(_flameId != oldFlameId, 'Oven: FLAME_ALREADY_SET');

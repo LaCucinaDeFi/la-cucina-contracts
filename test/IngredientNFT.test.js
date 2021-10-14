@@ -61,7 +61,6 @@ contract('IngredientsNFT', (accounts) => {
 		before('add ingredients', async () => {
 			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
 			CaviarNutrisionHash = hash;
-			console.log('CaviarNutrisionHash: ', CaviarNutrisionHash.toString());
 
 			this.addIngredientTX = await this.Ingredient.addIngredient(
 				'pepper',
@@ -71,7 +70,6 @@ contract('IngredientsNFT', (accounts) => {
 					from: owner
 				}
 			);
-			//console.log('add ingredient: ', this.addIngredientTX);
 
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 		});
@@ -79,21 +77,11 @@ contract('IngredientsNFT', (accounts) => {
 		it('should add ingredient details correctly', async () => {
 			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
 
-			console.log('failed1');
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
-			console.log('failed2');
-
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			console.log('failed3');
-
 			expect(ingredient.name).to.be.eq('pepper');
-			console.log('failed4');
-
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('0'));
-			console.log('failed5');
-
 			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(CaviarNutrisionHash));
-			console.log('failed6');
 		});
 
 		it('should revert when non-owner tries to add the ingredients', async () => {

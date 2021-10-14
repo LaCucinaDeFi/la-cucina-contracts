@@ -7,7 +7,8 @@ interface IIngredientNFT is INFT {
 	function mint(
 		address _account,
 		uint256 _nftId,
-		uint256 _amountOfCopies
+		uint256 _amountOfCopies,
+		bytes memory data
 	) external;
 
 	function burn(

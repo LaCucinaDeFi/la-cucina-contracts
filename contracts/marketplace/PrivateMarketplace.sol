@@ -67,7 +67,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 		require(_amountOfCopies > 0, 'PrivateMarketplace: INVALID_NUMBER_OF_COPIES');
 
 		//mint nfts
-		nftContract.mint(address(this), _nftId, _amountOfCopies);
+		nftContract.mint(address(this), _nftId, _amountOfCopies, '');
 
 		//create sale
 		saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, _amountOfCopies);
@@ -94,7 +94,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 		);
 
 		//mint nfts
-		nftContract.mint(address(this), _nftId, 1);
+		nftContract.mint(address(this), _nftId, 1, '');
 
 		//creating auction for one copy of nft.
 		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration);
