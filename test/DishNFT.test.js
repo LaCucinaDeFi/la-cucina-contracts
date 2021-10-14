@@ -11,6 +11,7 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
+const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const fs = require('fs');
 const path = require('path');
@@ -21,26 +22,37 @@ const IngredientNFT = artifacts.require('IngredientsNFT');
 const Pantry = artifacts.require('Pantry');
 
 const url = 'https://token-cdn-domain/{id}.json';
+const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract('DishesNFT', (accounts) => {
+contract.skip('DishesNFT', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
+	const royaltyReceiver = accounts[8];
+	const royaltyFee = '100';
+
 	let dishId = 1;
 	let currentDishId;
 
 	before(async () => {
-		this.Ingredient = await deployProxy(IngredientNFT, [url], {initializer: 'initialize'});
+		// deploy NFT token
+		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
+			initializer: 'initialize'
+		});
 
 		this.Pantry = await deployProxy(Pantry, [], {
 			initializer: 'initialize'
 		});
 
-		this.Dish = await deployProxy(DishesNFT, [url, this.Ingredient.address, this.Pantry.address], {
-			initializer: 'initialize'
-		});
+		this.Dish = await deployProxy(
+			DishesNFT,
+			['DishesNFT', 'Dish', url, this.Ingredient.address, this.Pantry.address],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// add dish in pantry
 		await this.Pantry.addDish('Pizza', {from: owner});
@@ -51,47 +63,49 @@ contract('DishesNFT', (accounts) => {
 		await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
 
 		// add variations for base ingredients
-		// here variation name should be strictly like this. variationName = name_variationId. ex. Slice_1, Cheese_2
-		// NOTE: svg id and the name_variationId should be same. <g id= "Slice_1">, <g id = "Cheese_2">
-		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_1, {from: owner});
-		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_2, {from: owner});
-		await this.Pantry.addBaseIngredientVariation(1, 'Slice', slice_3, {from: owner});
+		// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
+		// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
+		await this.Pantry.addBaseIngredientVariation(1, 'One', slice_1, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(1, 'Two', slice_2, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(1, 'Three', slice_3, {from: owner});
 
-		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_1, {from: owner});
-		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_2, {from: owner});
-		await this.Pantry.addBaseIngredientVariation(2, 'Cheese', cheese_3, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(2, 'One', cheese_1, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(2, 'Two', cheese_2, {from: owner});
+		await this.Pantry.addBaseIngredientVariation(2, 'Three', cheese_3, {from: owner});
 
 		// add ingredients
 		// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
 		// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
 
-		await this.Ingredient.addIngredient('Caviar', url, '200');
-		await this.Ingredient.addIngredient('Tuna', url, '300');
-		await this.Ingredient.addIngredient('Gold', url, '2000');
-		await this.Ingredient.addIngredient('Beef', url, '1500');
-		await this.Ingredient.addIngredient('Truffle', url, '500');
+		const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
+
+		await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, ipfsHash);
+		await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash, ipfsHash);
+		await this.Ingredient.addIngredient('Gold', CaviarNutrisionHash, ipfsHash);
+		await this.Ingredient.addIngredient('Beef', CaviarNutrisionHash, ipfsHash);
+		await this.Ingredient.addIngredient('Truffle', CaviarNutrisionHash, ipfsHash);
 
 		// add ingredient variations
 
-		this.add2Tx = await this.Ingredient.addIngredientVariation(1, caviar_1);
-		await this.Ingredient.addIngredientVariation(1, caviar_2);
-		await this.Ingredient.addIngredientVariation(1, caviar_3);
+		this.add2Tx = await this.Ingredient.addIngredientVariation(1, 'One', caviar_1);
+		await this.Ingredient.addIngredientVariation(1, 'Two', caviar_2);
+		await this.Ingredient.addIngredientVariation(1, 'Three', caviar_3);
 
-		await this.Ingredient.addIngredientVariation(2, tuna_1);
-		await this.Ingredient.addIngredientVariation(2, tuna_2);
-		await this.Ingredient.addIngredientVariation(2, tuna_3);
+		await this.Ingredient.addIngredientVariation(2, 'One', tuna_1);
+		await this.Ingredient.addIngredientVariation(2, 'Two', tuna_2);
+		await this.Ingredient.addIngredientVariation(2, 'Three', tuna_3);
 
-		await this.Ingredient.addIngredientVariation(3, gold_1);
-		await this.Ingredient.addIngredientVariation(3, gold_2);
-		await this.Ingredient.addIngredientVariation(3, gold_3);
+		await this.Ingredient.addIngredientVariation(3, 'One', gold_1);
+		await this.Ingredient.addIngredientVariation(3, 'Two', gold_2);
+		await this.Ingredient.addIngredientVariation(3, 'Three', gold_3);
 
-		await this.Ingredient.addIngredientVariation(4, beef_1);
-		await this.Ingredient.addIngredientVariation(4, beef_2);
-		await this.Ingredient.addIngredientVariation(4, beef_3);
+		await this.Ingredient.addIngredientVariation(4, 'One', beef_1);
+		await this.Ingredient.addIngredientVariation(4, 'Two', beef_2);
+		await this.Ingredient.addIngredientVariation(4, 'Three', beef_3);
 
-		this.add3Tx = await this.Ingredient.addIngredientVariation(5, truffle_1);
-		await this.Ingredient.addIngredientVariation(5, truffle_2);
-		await this.Ingredient.addIngredientVariation(5, truffle_3);
+		this.add3Tx = await this.Ingredient.addIngredientVariation(5, 'One', truffle_1);
+		await this.Ingredient.addIngredientVariation(5, 'Two', truffle_2);
+		await this.Ingredient.addIngredientVariation(5, 'Three', truffle_3);
 
 		// add minter in ingredient contract
 		const minterRole = await this.Ingredient.MINTER_ROLE();

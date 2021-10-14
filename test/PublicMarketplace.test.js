@@ -27,14 +27,14 @@ contract('PublicMarketplace', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
-	const royaltyReciever = accounts[8];
+	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
 		// deploy NFT token
-		this.Ingredient = await deployProxy(IngredientsNFT, [url, royaltyReciever, royaltyFee], {
+		this.Ingredient = await deployProxy(IngredientsNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
@@ -646,7 +646,7 @@ contract('PublicMarketplace', (accounts) => {
 
 	describe('buyNFT()', () => {
 		let currentPrivateSaleId;
-
+		let royaltyReceiverBalBefore;
 		let currentSaleId;
 		let publicMarketNFTBalBefore;
 		let publicMarketNFTBalAfter;
@@ -658,13 +658,16 @@ contract('PublicMarketplace', (accounts) => {
 			await this.privateMarketplace.buyNFT(currentPrivateSaleId, {from: user1});
 
 			// create sale for the nft
-			await this.publicMarketplace.sellNFT(currentNftId, ether('2'), this.sampleToken.address, {
+			await this.publicMarketplace.sellNFT(currentNftId, ether('10'), this.sampleToken.address, {
 				from: user1
 			});
 			// stash tokens
 			await this.Ingredient.safeTransferFrom(user2, stash, currentNftId, 1, '0x384', {from: user2});
 
 			currentSaleId = await this.publicMarketplace.getCurrentSaleId();
+
+			royaltyReceiverBalBefore = await this.sampleToken.balanceOf(royaltyReceiver);
+
 			user2NFTBalBefore = await this.Ingredient.balanceOf(user2, currentNftId);
 			publicMarketNFTBalBefore = await this.Ingredient.balanceOf(
 				this.publicMarketplace.address,
@@ -687,6 +690,18 @@ contract('PublicMarketplace', (accounts) => {
 			expect(user2NFTBalAfter).to.bignumber.be.eq(new BN('1'));
 			expect(publicMarketNFTBalBefore).to.bignumber.be.eq(new BN('2'));
 			expect(publicMarketNFTBalAfter).to.bignumber.be.eq(new BN('1'));
+		});
+
+		it('should transfer the royalty amount to royalty receiver correctly', async () => {
+			const royalty = await this.Ingredient.royaltyInfo(currentNftId, ether('10'));
+
+			// get balance of royalty receiver
+			const royaltyReceiverBalAfter = await this.sampleToken.balanceOf(royaltyReceiver);
+
+			// royalty receiver should get the 10% of total saleprice
+			expect(royaltyReceiverBalAfter.sub(royaltyReceiverBalBefore)).to.bignumber.be.eq(ether('1'));
+
+			expect(new BN(royalty[1])).to.bignumber.be.eq(ether('1'));
 		});
 
 		it('should emit BuySaleNFT event when user buys NFT from sale', async () => {
@@ -1073,7 +1088,7 @@ contract('PublicMarketplace', (accounts) => {
 	describe('resolveAuction()', () => {
 		let currentPrivateSaleId;
 		let currentAuctionId;
-
+		let royaltyReceiverBalBefore;
 		let contractBalanceBefore;
 		let currentBidId;
 		let user2NFTBalanceBefore;
@@ -1091,6 +1106,7 @@ contract('PublicMarketplace', (accounts) => {
 			);
 
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
+			royaltyReceiverBalBefore = await this.sampleToken.balanceOf(royaltyReceiver);
 
 			// buy nft from sale
 			await this.privateMarketplace.buyNFT(currentPrivateSaleId, {from: user1});
@@ -1153,7 +1169,19 @@ contract('PublicMarketplace', (accounts) => {
 			expect(contractNFTBalanceAfter).to.bignumber.be.eq(new BN('3'));
 			expect(contractBalanceBefore).to.bignumber.be.gt(contractBalanceAfter);
 		});
+		it('should transfer the royalty amount to royalty receiver correctly', async () => {
+			const royalty = await this.Ingredient.royaltyInfo(currentNftId, ether('10'));
 
+			// get balance of royalty receiver
+			const royaltyReceiverBalAfter = await this.sampleToken.balanceOf(royaltyReceiver);
+
+			// royalty receiver should get the 10% of total saleprice
+			expect(royaltyReceiverBalAfter.sub(royaltyReceiverBalBefore)).to.bignumber.be.eq(
+				ether('0.2')
+			);
+
+			expect(new BN(royalty[1])).to.bignumber.be.eq(ether('1'));
+		});
 		it('should emit BuyAuctionNFT event when user resolves the auction', async () => {
 			await expectEvent(this.resolveTx, 'BuyAuctionNFT');
 		});

@@ -16,16 +16,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 	 * @param _nftContractAddress indicates the ERC1155 NFT contract address
 	 */
 	function initialize(address _nftContractAddress) external virtual initializer {
-		__AccessControl_init();
-		__ReentrancyGuard_init();
-
-		require(_nftContractAddress != address(0), 'PrivateMarketplace: INVALID_NFT_CONTRACT');
-
-		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-		_setupRole(MINTER_ROLE, _msgSender());
-
-		nftContract = IIngredientNFT(_nftContractAddress);
-		minDuration = 1 days;
+		__Marketplace_init(_nftContractAddress);
 	}
 
 	/*
