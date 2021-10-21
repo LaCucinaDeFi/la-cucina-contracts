@@ -7,6 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721Enume
 interface ITalien is IERC721Upgradeable, IERC721EnumerableUpgradeable {
 	function taliens(uint256 talienId)
 		external
+		view
 		returns (
 			uint256 tokenId,
 			uint256 generation,

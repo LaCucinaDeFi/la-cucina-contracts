@@ -37,6 +37,7 @@ contract Marketplace is
 
 	struct AuctionInfo {
 		uint256 nftId;
+		bool isVipAuction;
 		address sellerAddress;
 		uint256 initialPrice; //base price for bid
 		address currency;
@@ -240,63 +241,6 @@ contract Marketplace is
 
 		//create sale
 		saleId = _sellNFT(_auction.nftId, _sellingPrice, _auction.currency, 1);
-	}
-
-	/**
-	 * @notice This method allows anyone with accepted token to place the bid on auction to buy NFT. bidder need to approve his accepted tokens.
-	 * @param _auctionId indicates the auctionId for which user wants place bid.
-	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
-	 */
-	function placeBid(uint256 _auctionId, uint256 _bidAmount)
-		external
-		virtual
-		onlyValidAuctionId(_auctionId)
-		returns (uint256 bidId)
-	{
-		require(isActiveAuction(_auctionId), 'Market: CANNOT_BID_ON_INACTIVE_AUCTION');
-		AuctionInfo storage _auction = auction[_auctionId];
-		require(_auction.sellerAddress != msg.sender, 'Market: OWNER_CANNOT_PLACE_BID');
-
-		require(block.timestamp >= _auction.startBlock, 'Market: CANNOT_BID_BEFORE_AUCTION_STARTS');
-
-		require(
-			block.timestamp <= (_auction.startBlock + _auction.duration),
-			'Market: CANNOT_BID_AFTER_AUCTION_ENDS'
-		);
-
-		if (_auction.bidIds.length == 0) {
-			require(_bidAmount >= _auction.initialPrice, 'Market: INVALID_BID_AMOUNT');
-		} else {
-			require(_bidAmount > bid[_auction.winningBidId].bidAmount, 'Market: INVALID_BID_AMOUNT');
-		}
-		//transferFrom the tokens
-		require(
-			IBEP20(_auction.currency).transferFrom(msg.sender, address(this), _bidAmount),
-			'Market: TRANSFER_FROM_FAILED'
-		);
-
-		if (_auction.winningBidId != 0) {
-			//transfer back the tokens to the previous winner
-			require(
-				IBEP20(_auction.currency).transfer(
-					bid[_auction.winningBidId].bidderAddress,
-					bid[_auction.winningBidId].bidAmount
-				),
-				'Market: TRANSFER_FAILED'
-			);
-		}
-		//place bid
-		bidIdCounter.increment();
-		bidId = bidIdCounter.current();
-
-		bid[bidId] = Bid(_auctionId, msg.sender, _bidAmount);
-
-		_auction.winningBidId = bidId;
-		_auction.bidIds.push(bidId);
-
-		userBidIds[msg.sender].push(bidId);
-
-		emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount, block.timestamp);
 	}
 
 	/**
@@ -528,7 +472,8 @@ contract Marketplace is
 		uint256 _nftId,
 		uint256 _initialPrice,
 		address _tokenAddress,
-		uint256 _duration
+		uint256 _duration,
+		bool _isVipAuction
 	) internal virtual onlySupportedTokens(_tokenAddress) returns (uint256 auctionId) {
 		require(_duration >= minDuration, 'Market: INVALID_DURATION');
 
@@ -540,6 +485,7 @@ contract Marketplace is
 
 		auction[auctionId] = AuctionInfo(
 			_nftId,
+			_isVipAuction,
 			msg.sender,
 			_initialPrice,
 			_tokenAddress,
@@ -557,40 +503,55 @@ contract Marketplace is
 		emit NFTAuction(msg.sender, auctionId);
 	}
 
-	function _buyNFT(
-		uint256 _saleId,
-		bool _hasGenesisTalien,
-		uint256 _earlyAccessTime
-	) internal virtual onlyValidSaleId(_saleId) nonReentrant {
-		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
-		SaleInfo storage _sale = sale[_saleId];
+	function _placeBid(uint256 _auctionId, uint256 _bidAmount)
+		internal
+		virtual
+		returns (uint256 bidId)
+	{
+		require(isActiveAuction(_auctionId), 'Market: CANNOT_BID_ON_INACTIVE_AUCTION');
 
-		//give early access to vip members only
-		if (!_hasGenesisTalien) {
-			require(
-				block.timestamp >= (_sale.saleCreationTime + _earlyAccessTime),
-				'Market: EARLY_ACCESS_REQUIRED'
-			);
+		AuctionInfo storage _auction = auction[_auctionId];
+		require(_auction.sellerAddress != msg.sender, 'Market: OWNER_CANNOT_PLACE_BID');
+		require(block.timestamp >= _auction.startBlock, 'Market: CANNOT_BID_BEFORE_AUCTION_STARTS');
+		require(
+			block.timestamp <= (_auction.startBlock + _auction.duration),
+			'Market: CANNOT_BID_AFTER_AUCTION_ENDS'
+		);
+
+		if (_auction.bidIds.length == 0) {
+			require(_bidAmount >= _auction.initialPrice, 'Market: INVALID_BID_AMOUNT');
+		} else {
+			require(_bidAmount > bid[_auction.winningBidId].bidAmount, 'Market: INVALID_BID_AMOUNT');
 		}
 
-		//transfer tokens to the seller
+		//transferFrom the tokens
 		require(
-			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			IBEP20(_auction.currency).transferFrom(msg.sender, address(this), _bidAmount),
 			'Market: TRANSFER_FROM_FAILED'
 		);
 
-		//transfer one nft to buyer
-		nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
-
-		_sale.buyer = msg.sender;
-		_sale.remainingCopies = _sale.remainingCopies - 1;
-
-		//check if all copies of sale is sold
-		if (_sale.remainingCopies == 0) {
-			_sale.sellTimeStamp = block.timestamp;
+		if (_auction.winningBidId != 0) {
+			//transfer back the tokens to the previous winner
+			require(
+				IBEP20(_auction.currency).transfer(
+					bid[_auction.winningBidId].bidderAddress,
+					bid[_auction.winningBidId].bidAmount
+				),
+				'Market: TRANSFER_FAILED'
+			);
 		}
+		//place bid
+		bidIdCounter.increment();
+		bidId = bidIdCounter.current();
 
-		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
+		bid[bidId] = Bid(_auctionId, msg.sender, _bidAmount);
+
+		_auction.winningBidId = bidId;
+		_auction.bidIds.push(bidId);
+
+		userBidIds[msg.sender].push(bidId);
+
+		emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount, block.timestamp);
 	}
 
 	function onERC1155Received(

@@ -88,13 +88,15 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 	 * @param _tokenAddress indicates the the ERC20/BEP20 token address in which nft seller/owner wants to get paid in
 	 * @param _nftId indicates the ingredient id
 	 * @param _duration indicates the duration after which auction will get closed.
+	 * @param _isVipAuction indicates whether this new auction will be only for vip memmbers or not
 	 * @return auctionId - indicates auctionId though which copy of new unique NFT are sold.
 	 */
 	function createAndAuctionNFT(
 		uint256 _initialPrice,
 		address _tokenAddress,
 		uint256 _nftId,
-		uint256 _duration
+		uint256 _duration,
+		bool _isVipAuction
 	) external virtual onlyMinter nonReentrant returns (uint256 auctionId) {
 		require(_initialPrice > 0, 'PrivateMarketplace: INVALID_INITIAL_NFT_PRICE');
 		require(
@@ -106,7 +108,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 		nftContract.mint(address(this), _nftId, 1, '');
 
 		//creating auction for one copy of nft.
-		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration);
+		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration, _isVipAuction);
 	}
 
 	/**
@@ -114,10 +116,57 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
               buyer cannot buy/hold more than one copy of same nft.
     * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
    */
-	function buyNFT(uint256 _saleId) external virtual {
-		(, bool hasGenesisTalien) = isUserHasTalien();
+	function buyNFT(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
+		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
+		SaleInfo storage _sale = sale[_saleId];
 
-		_buyNFT(_saleId, hasGenesisTalien, earlyAccessTime);
+		(, bool hasGenesisTalien) = isUserHasTalien(msg.sender);
+
+		//give early access to vip members only
+		if (!hasGenesisTalien) {
+			require(
+				block.timestamp >= (_sale.saleCreationTime + earlyAccessTime),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
+		}
+
+		//transfer tokens to the seller
+		require(
+			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			'Market: TRANSFER_FROM_FAILED'
+		);
+
+		//transfer one nft to buyer
+		nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
+
+		_sale.buyer = msg.sender;
+		_sale.remainingCopies = _sale.remainingCopies - 1;
+
+		//check if all copies of sale is sold
+		if (_sale.remainingCopies == 0) {
+			_sale.sellTimeStamp = block.timestamp;
+		}
+
+		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
+	}
+
+	/**
+	 * @notice This method allows anyone with accepted token to place the bid on auction to buy NFT. bidder need to approve his accepted tokens.
+	 * @param _auctionId indicates the auctionId for which user wants place bid.
+	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
+	 */
+	function placeBid(uint256 _auctionId, uint256 _bidAmount)
+		external
+		virtual
+		onlyValidAuctionId(_auctionId)
+		returns (uint256 bidId)
+	{
+		if (auction[_auctionId].isVipAuction) {
+			(, bool hasGenesisTalien) = isUserHasTalien(msg.sender);
+			require(hasGenesisTalien, 'PrivateMarketplace: ONLY_VIP_MEMBERS_CAN_BID');
+		}
+
+		bidId = _placeBid(_auctionId, _bidAmount);
 	}
 
 	/**
@@ -178,13 +227,18 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 	 * @return hasTalien - indicates if user have any talien
 	 * @return isGenesis - indicates if the talien is genesis or not
 	 */
-	function isUserHasTalien() public virtual returns (bool hasTalien, bool isGenesis) {
-		uint256 userTalienBal = talien.balanceOf(msg.sender);
+	function isUserHasTalien(address _user)
+		public
+		view
+		virtual
+		returns (bool hasTalien, bool isGenesis)
+	{
+		uint256 userTalienBal = talien.balanceOf(_user);
 
 		if (userTalienBal > 0) {
 			hasTalien = true;
 			for (uint256 index = 0; index < userTalienBal; index++) {
-				uint256 talienId = talien.tokenOfOwnerByIndex(msg.sender, index);
+				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
 				(, uint256 generation, , , ) = talien.taliens(talienId);
 
 				// check if talien generation is genesis generation

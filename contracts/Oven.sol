@@ -148,7 +148,7 @@ contract Oven is
 			'Oven: INVALID_NUMBER_OF_INGREDIENTS'
 		);
 
-		(bool hasTalien, ) = isUserHasTalien();
+		(bool hasTalien, ) = isUserHasTalien(msg.sender);
 
 		if (!hasTalien) {
 			require(totalIngredients <= maxIngredients, 'Oven: USER_DONT_HAVE_TALIEN');
@@ -203,7 +203,7 @@ contract Oven is
 
 		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
 
-		(, bool hasGenesisTalie) = isUserHasTalien();
+		(, bool hasGenesisTalie) = isUserHasTalien(msg.sender);
 
 		// get fees for uncooking if user don`t have genesis talien
 		if (!hasGenesisTalie) {
@@ -397,13 +397,18 @@ contract Oven is
 	 * @return hasTalien - indicates if user have any talien
 	 * @return isGenesis - indicates if the talien is genesis or not
 	 */
-	function isUserHasTalien() public virtual returns (bool hasTalien, bool isGenesis) {
-		uint256 userTalienBal = talien.balanceOf(msg.sender);
+	function isUserHasTalien(address _user)
+		public
+		view
+		virtual
+		returns (bool hasTalien, bool isGenesis)
+	{
+		uint256 userTalienBal = talien.balanceOf(_user);
 
 		if (userTalienBal > 0) {
 			hasTalien = true;
 			for (uint256 index = 0; index < userTalienBal; index++) {
-				uint256 talienId = talien.tokenOfOwnerByIndex(msg.sender, index);
+				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
 				(, uint256 generation, , , ) = talien.taliens(talienId);
 
 				// check if talien generation is genesis generation
