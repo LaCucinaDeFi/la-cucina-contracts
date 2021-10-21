@@ -162,6 +162,12 @@ contract Pantry is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersio
 		baseIngredient[_baseIngredientId].variationIds.push(baseVariationId);
 	}
 
+	/*
+   =======================================================================
+   ======================== Getter Methods ===============================
+   =======================================================================
+ */
+
 	/**
 	 * @notice This method returns the baseIngredient id from the base ingredients list of given dish at given index.
 	 * @param _dishId - indicates the dish id

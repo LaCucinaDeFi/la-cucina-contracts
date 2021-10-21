@@ -59,7 +59,7 @@ contract BaseERC1155WithRoyalties is BaseERC1155 {
 		string memory baseTokenURI,
 		address _royaltyReceiver,
 		uint8 _royaltyFee
-	) internal initializer {
+	) internal virtual initializer {
 		__BaseERC1155_init(baseTokenURI);
 		__BaseERC1155WithRoyalties_init_unchained(_royaltyReceiver, _royaltyFee);
 	}

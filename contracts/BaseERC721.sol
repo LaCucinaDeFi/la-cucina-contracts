@@ -52,14 +52,6 @@ contract BaseERC721 is
 		_;
 	}
 
-	function initialize_BaseERC721(
-		string memory _name,
-		string memory _symbol,
-		string memory baseTokenURI
-	) internal virtual initializer {
-		__BaseERC721_init(_name, _symbol, baseTokenURI);
-	}
-
 	/**
 	 * @dev Grants `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE` and `PAUSER_ROLE` to the
 	 * account that deploys the contract.
@@ -71,7 +63,7 @@ contract BaseERC721 is
 		string memory _name,
 		string memory _symbol,
 		string memory baseTokenURI
-	) internal initializer {
+	) internal virtual initializer {
 		__Context_init_unchained();
 		__ERC165_init_unchained();
 		__AccessControl_init_unchained();
@@ -86,7 +78,7 @@ contract BaseERC721 is
 
 	function __BaseERC721_init_unchained(
 		string memory baseTokenURI
-	) internal initializer {
+	) internal virtual initializer {
 		_baseTokenURI = baseTokenURI;
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());

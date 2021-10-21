@@ -211,7 +211,7 @@ contract Oven is
 		}
 
 		// get the dish nft from user
-		dishesNft.safeTransferFrom(msg.sender, address(this), _dishId);
+		dishesNft.transferFrom(msg.sender, address(this), _dishId);
 
 		uncookedDishIds.push(_dishId);
 
@@ -225,13 +225,13 @@ contract Oven is
 		uint256 slotMultiplier;
 		uint256 variation;
 
-		// Iterate Ingredient hash and assemble SVG sandwich
+		// Iterate Ingredient variation hash and assemble SVG sandwich
 		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			slottedValue = ingredientVariationHash & bitMask; // Extract slotted value from hash
 			if (slottedValue > 0) {
-				variation = (slot > 0) // Extract IngredientID from slotted value
+				variation = (slot > 0) // Extract variation from slotted value
 					? slottedValue / slotMultiplier
 					: slottedValue;
 
@@ -372,6 +372,12 @@ contract Oven is
 		require(_additionalIngredients != additionalIngredients, 'Oven: ALREADY_SET');
 		additionalIngredients = _additionalIngredients;
 	}
+
+	/*
+   =======================================================================
+   ======================== Getter Methods ===============================
+   =======================================================================
+ */
 
 	/**
 	 * @notice This method tells whether dish is ready to uncook or not.

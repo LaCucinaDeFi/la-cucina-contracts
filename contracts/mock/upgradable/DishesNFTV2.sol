@@ -28,7 +28,7 @@ contract DishesNFTV2 is DishesNFT {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
 		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
 
-		initialize_BaseERC721(_name, _symbol, baseTokenURI);
+		__BaseERC721_init(_name, _symbol, baseTokenURI);
 
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		pantry = IPantry(_pantryAddress);
