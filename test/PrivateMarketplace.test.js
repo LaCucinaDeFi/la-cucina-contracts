@@ -13,32 +13,66 @@ const {getNutritionsHash} = require('./helper/NutrisionHash');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
+const TalienContract = artifacts.require('Talien');
+
+const {Talien} = require('./helper/talien');
 
 const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract('PrivateMarketplace', (accounts) => {
+contract.only('PrivateMarketplace', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
-	const royaltyReciever = accounts[8];
+	const fundReceiver = accounts[5];
+	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
+		// deploy Lac token
+		this.sampleToken = await SampleToken.new();
+
 		// deploy NFT token
-		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReciever, royaltyFee], {
+		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				this.sampleToken.address,
+				ether('10'),
+				royaltyReceiver,
+				'100',
+				'Mokoto Glitch Regular'
+			],
+			{
+				initializer: 'initialize'
+			}
+		);
+
+		this.TalienObj = new Talien(this.Talien);
+
+		await this.TalienObj.setup(owner);
+
 		// deploy private marketplace
-		this.privateMarketplace = await deployProxy(PrivateMarketplace, [this.Ingredient.address], {
-			initializer: 'initialize'
-		});
+		this.privateMarketplace = await deployProxy(
+			PrivateMarketplace,
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// add privateMarket as minter in ERC1155 contract.
 		const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -52,9 +86,6 @@ contract('PrivateMarketplace', (accounts) => {
 
 		// add minter in privateMarketplace
 		await this.privateMarketplace.grantRole(minterRole, minter);
-
-		// deploy Lac token
-		this.sampleToken = await SampleToken.new();
 
 		// mint tokens to users
 		await this.sampleToken.mint(user1, ether('100'), {from: owner});
@@ -764,7 +795,7 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				currentNftId,
-				1,
+				2,
 				{
 					from: minter
 				}
@@ -778,8 +809,42 @@ contract('PrivateMarketplace', (accounts) => {
 			// stash tokens
 			await this.Ingredient.safeTransferFrom(user1, stash, currentNftId, 1, '0x384', {from: user1});
 
+			// update early access time
+			await this.privateMarketplace.updateEarlyAccessTime(time.duration.days('1'), {from: owner});
+		});
+
+		it('should revert when non-vip member try to get eary access to new ingredients', async () => {
+			await expectRevert(
+				this.privateMarketplace.buyNFT(currentSaleId, {from: user1}),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
+		});
+
+		it('should give early access to vip members for buying ingredients', async () => {
+			// approve tokens to Oven
+			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
+
+			// get talien for user1
+			await this.Talien.generateTalien({from: user1});
+
 			// buy nft from sale
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
+		});
+
+		it('should revert when user with normal talien tries to get early access to ingredients', async () => {
+			// approve tokens to Oven
+			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user2});
+
+			// update generation
+			await this.TalienObj.addTraitVariations(owner);
+
+			// get talien for user1
+			await this.Talien.generateTalien({from: user2});
+
+			await expectRevert(
+				this.privateMarketplace.buyNFT(currentSaleId, {from: user2}),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
 		});
 
 		it('should reflect nft in user wallet correctly', async () => {
@@ -791,8 +856,8 @@ contract('PrivateMarketplace', (accounts) => {
 			const user1NFTBal = await this.Ingredient.balanceOf(user1, currentNftId);
 
 			expect(user1NFTBal).to.bignumber.be.eq(new BN('1'));
-			expect(privateMarketNFTBalBefore).to.bignumber.be.eq(new BN('31'));
-			expect(privateMarketNFTBalAfter).to.bignumber.be.eq(new BN('30'));
+			expect(privateMarketNFTBalBefore).to.bignumber.be.eq(new BN('32'));
+			expect(privateMarketNFTBalAfter).to.bignumber.be.eq(new BN('31'));
 		});
 
 		it('should emit BuySaleNFT event when user buys NFT from sale', async () => {
@@ -800,6 +865,11 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should revert when seller tries to cancel inactive sale', async () => {
+			// stash tokens
+			await this.Ingredient.safeTransferFrom(user1, stash, currentNftId, 1, '0x384', {from: user1});
+			// buy nft from sale
+			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
+
 			// cancel sale
 			await expectRevert(
 				this.privateMarketplace.cancelSale(currentSaleId, {from: minter}),

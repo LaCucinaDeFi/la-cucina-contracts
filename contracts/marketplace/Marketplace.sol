@@ -30,6 +30,7 @@ contract Marketplace is
 		uint256 remainingCopies;
 		uint256 sellingPrice;
 		address currency; // Token address in which seller will get paid
+		uint256 saleCreationTime;
 		uint256 sellTimeStamp; // here, if sellTimeStamp is zero it means nft is available to purchase
 		uint256 cancelTimeStamp;
 	}
@@ -239,35 +240,6 @@ contract Marketplace is
 
 		//create sale
 		saleId = _sellNFT(_auction.nftId, _sellingPrice, _auction.currency, 1);
-	}
-
-	/**
-    * @notice This method allows anyone with accepted tokens to purchase the NFT from the particular sale. user needs to approve his ERC20/BEP20 tokens to this contract.
-              buyer cannot buy/hold more than one copy of same nft.
-    * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
-   */
-	function buyNFT(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
-		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
-		SaleInfo storage _sale = sale[_saleId];
-
-		//transfer tokens to the seller
-		require(
-			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
-			'Market: TRANSFER_FROM_FAILED'
-		);
-
-		//transfer one nft to buyer
-		nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
-
-		_sale.buyer = msg.sender;
-		_sale.remainingCopies = _sale.remainingCopies - 1;
-
-		//check if all copies of sale is sold
-		if (_sale.remainingCopies == 0) {
-			_sale.sellTimeStamp = block.timestamp;
-		}
-
-		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
 	}
 
 	/**
@@ -542,6 +514,7 @@ contract Marketplace is
 			_amountOfCopies,
 			_nftPrice,
 			_tokenAddress,
+			block.timestamp,
 			0,
 			0
 		);
@@ -582,6 +555,42 @@ contract Marketplace is
 		userAuctionIds[msg.sender].push(auctionId);
 
 		emit NFTAuction(msg.sender, auctionId);
+	}
+
+	function _buyNFT(
+		uint256 _saleId,
+		bool _hasGenesisTalien,
+		uint256 _earlyAccessTime
+	) internal virtual onlyValidSaleId(_saleId) nonReentrant {
+		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
+		SaleInfo storage _sale = sale[_saleId];
+
+		//give early access to vip members only
+		if (!_hasGenesisTalien) {
+			require(
+				block.timestamp >= (_sale.saleCreationTime + _earlyAccessTime),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
+		}
+
+		//transfer tokens to the seller
+		require(
+			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			'Market: TRANSFER_FROM_FAILED'
+		);
+
+		//transfer one nft to buyer
+		nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
+
+		_sale.buyer = msg.sender;
+		_sale.remainingCopies = _sale.remainingCopies - 1;
+
+		//check if all copies of sale is sold
+		if (_sale.remainingCopies == 0) {
+			_sale.sellTimeStamp = block.timestamp;
+		}
+
+		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
 	}
 
 	function onERC1155Received(

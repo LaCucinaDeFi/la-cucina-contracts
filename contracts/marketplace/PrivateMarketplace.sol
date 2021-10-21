@@ -3,8 +3,17 @@ pragma solidity ^0.8.0;
 
 import './Marketplace.sol';
 import '../interfaces/IVersionedContract.sol';
+import '../interfaces/ITalien.sol';
 
 contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
+	/*
+   =======================================================================
+   ======================== Public Variables ============================
+   =======================================================================
+ */
+	ITalien public talien;
+	uint256 earlyAccessTime;
+
 	/*
    =======================================================================
    ======================== Constructor/Initializer ======================
@@ -13,10 +22,19 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
-	 * @param _nftContractAddress indicates the ERC1155 NFT contract address
+	 * @param _nftContractAddress - indicates the ERC1155 NFT contract address
+	 * @param _talienAddress - indicates the talien contract address
+	 * @param _earlyAccessTime - indicates the early access duration for the vip members(users with genesis Taliens)
 	 */
-	function initialize(address _nftContractAddress) external virtual initializer {
+	function initialize(
+		address _nftContractAddress,
+		address _talienAddress,
+		uint256 _earlyAccessTime
+	) external virtual initializer {
 		__Marketplace_init(_nftContractAddress);
+		require(_talienAddress != address(0), 'PrivateMarketplace: INVALID_TALIEN_ADDRESS');
+		talien = ITalien(_talienAddress);
+		earlyAccessTime = _earlyAccessTime;
 	}
 
 	/*
@@ -92,6 +110,17 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 	}
 
 	/**
+    * @notice This method allows anyone with accepted tokens to purchase the NFT from the particular sale. user needs to approve his ERC20/BEP20 tokens to this contract.
+              buyer cannot buy/hold more than one copy of same nft.
+    * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
+   */
+	function buyNFT(uint256 _saleId) external virtual {
+		(, bool hasGenesisTalien) = isUserHasTalien();
+
+		_buyNFT(_saleId, hasGenesisTalien, earlyAccessTime);
+	}
+
+	/**
 	 * @notice This method allows minter to cancel the sale, burn the token and delete the sale data
 	 * @param _saleId indicates the sale id
 	 */
@@ -133,6 +162,38 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 
 		//delete auction data
 		delete auction[_auctionId];
+	}
+
+	/**
+	 * @notice This method allows admin to update the early access time, so that user with genesis talien can get early access to ingredients.
+	 * @param _newAccessTime - indicates the new access time
+	 */
+	function updateEarlyAccessTime(uint256 _newAccessTime) external onlyAdmin {
+		require(earlyAccessTime != _newAccessTime, 'PrivateMarketplace: ALREADY_SET');
+		earlyAccessTime = _newAccessTime;
+	}
+
+	/**
+	 * @notice This method tells if user has any talien. also it tells if user has any genesis talien or not
+	 * @return hasTalien - indicates if user have any talien
+	 * @return isGenesis - indicates if the talien is genesis or not
+	 */
+	function isUserHasTalien() public virtual returns (bool hasTalien, bool isGenesis) {
+		uint256 userTalienBal = talien.balanceOf(msg.sender);
+
+		if (userTalienBal > 0) {
+			hasTalien = true;
+			for (uint256 index = 0; index < userTalienBal; index++) {
+				uint256 talienId = talien.tokenOfOwnerByIndex(msg.sender, index);
+				(, uint256 generation, , , ) = talien.taliens(talienId);
+
+				// check if talien generation is genesis generation
+				if (generation == 1) {
+					isGenesis = true;
+					break;
+				}
+			}
+		}
 	}
 
 	/**
