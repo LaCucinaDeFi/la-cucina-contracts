@@ -6,12 +6,15 @@ const path = require('path');
 
 const addresses = require('../configurations/Addresses.json');
 const {supportedTokens} = require('../configurations/supportedTokens');
-
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
 const Oven = artifacts.require('Oven');
 const SampleToken = artifacts.require('SampleToken');
 
+const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
+const maxIngredients = 5;
+const additionalIngredients = 2;
+const uncookingFee = ether('5');
 module.exports = async function (deployer) {
 	/*
    =======================================================================
@@ -30,7 +33,11 @@ module.exports = async function (deployer) {
 			[
 				addresses[deployer.network_id.toString()]['IngredientsNFT'],
 				addresses[deployer.network_id.toString()]['DishesNFT'],
-				supportedTokens[deployer.network_id][0]
+				supportedTokens[deployer.network_id][0],
+				TalienAddress,
+				uncookingFee,
+				maxIngredients,
+				additionalIngredients
 			],
 			{
 				initializer: 'initialize'
@@ -45,7 +52,11 @@ module.exports = async function (deployer) {
 			[
 				addresses[deployer.network_id.toString()]['IngredientsNFT'],
 				addresses[deployer.network_id.toString()]['DishesNFT'],
-				sampleToken.address
+				sampleToken.address,
+				TalienAddress,
+				uncookingFee,
+				maxIngredients,
+				additionalIngredients
 			],
 			{
 				initializer: 'initialize'
