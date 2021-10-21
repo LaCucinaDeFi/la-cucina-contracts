@@ -15,6 +15,9 @@ const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
 const PublicMarketplaceV2 = artifacts.require('PublicMarketplaceV2');
+const TalienContract = artifacts.require('Talien');
+
+const {Talien} = require('./helper/talien');
 
 const SampleToken = artifacts.require('SampleToken');
 
@@ -27,21 +30,52 @@ contract('PublicMarketplace', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
+	const fundReceiver = accounts[5];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
+		// deploy Lac token
+		this.sampleToken = await SampleToken.new();
+
 		// deploy NFT token
 		this.Ingredient = await deployProxy(IngredientsNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				this.sampleToken.address,
+				ether('10'),
+				royaltyReceiver,
+				'100',
+				'Mokoto Glitch Regular'
+			],
+			{
+				initializer: 'initialize'
+			}
+		);
+
+		this.TalienObj = new Talien(this.Talien);
+
+		await this.TalienObj.setup(owner);
+
 		// deploy private marketplace
-		this.privateMarketplace = await deployProxy(PrivateMarketplace, [this.Ingredient.address], {
-			initializer: 'initialize'
-		});
+		this.privateMarketplace = await deployProxy(
+			PrivateMarketplace,
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// deploy Public marketplace
 		this.publicMarketplace = await deployProxy(PublicMarketplace, [this.Ingredient.address], {
@@ -64,9 +98,6 @@ contract('PublicMarketplace', (accounts) => {
 
 		// add minter in publicMarketplace
 		await this.publicMarketplace.grantRole(minterRole, minter);
-
-		// deploy Lac token
-		this.sampleToken = await SampleToken.new();
 
 		// add supported token
 		await this.privateMarketplace.addSupportedToken(this.sampleToken.address);
