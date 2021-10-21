@@ -73,7 +73,7 @@ contract PublicMarketplace is Initializable, MarketplaceWithRoyalties, IVersione
 	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
 	 */
 	function placeBid(uint256 _auctionId, uint256 _bidAmount)
-		internal
+		external
 		virtual
 		onlyValidAuctionId(_auctionId)
 		returns (uint256 bidId)
