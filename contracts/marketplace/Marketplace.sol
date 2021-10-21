@@ -101,8 +101,8 @@ contract Marketplace is
 	/// @notice BidderAddress -> bidIds
 	mapping(address => uint256[]) public userBidIds;
 
-	/// @notice list of supported tokens
-	address[] public supportedTokens;
+	/// @notice tokenAddress => supported or not
+	mapping(address => bool) public supportedTokens;
 
 	/*
    =======================================================================
@@ -149,8 +149,7 @@ contract Marketplace is
 	}
 
 	modifier onlySupportedTokens(address _tokenAddress) {
-		(bool isSupported, ) = isSupportedToken(_tokenAddress);
-		require(isSupported, 'Market: UNSUPPORTED_TOKEN');
+		require(supportedTokens[_tokenAddress], 'Market: UNSUPPORTED_TOKEN');
 		_;
 	}
 
@@ -293,9 +292,8 @@ contract Marketplace is
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function addSupportedToken(address _tokenAddress) external virtual onlyAdmin {
-		(bool isSupported, ) = isSupportedToken(_tokenAddress);
-		require(!isSupported, 'Market: TOKEN_ALREADY_ADDED');
-		supportedTokens.push(_tokenAddress);
+		require(!supportedTokens[_tokenAddress], 'Market: TOKEN_ALREADY_ADDED');
+		supportedTokens[_tokenAddress] = true;
 	}
 
 	/**
@@ -303,26 +301,8 @@ contract Marketplace is
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function removeSupportedToken(address _tokenAddress) external virtual onlyAdmin {
-		uint256 noOfsupportedTokens = supportedTokens.length;
-		require(noOfsupportedTokens > 0, 'MARKET: NO_SUPPORTED_TOKENS_ADDED');
-
-		// check and remove if the last token is supported token to be removed.
-		if (supportedTokens[noOfsupportedTokens - 1] == _tokenAddress) {
-			supportedTokens.pop();
-			return;
-		}
-
-		(bool isSupported, uint256 index) = isSupportedToken(_tokenAddress);
-		require(isSupported, 'Market: TOKEN_DOES_NOT_EXISTS');
-
-		// move supported token to last
-		if (noOfsupportedTokens > 1) {
-			address temp = supportedTokens[noOfsupportedTokens - 1];
-			supportedTokens[index] = temp;
-		}
-
-		//remove supported token
-		supportedTokens.pop();
+		require(supportedTokens[_tokenAddress], 'Market: TOKEN_DOES_NOT_EXISTS');
+		supportedTokens[_tokenAddress] = false;
 	}
 
 	/**
@@ -411,26 +391,6 @@ contract Marketplace is
 			sale[_saleId].remainingCopies > 0 &&
 			sale[_saleId].cancelTimeStamp == 0
 		) return true;
-	}
-
-	/**
-	 * @notice This method allows user to check if particular token is supported to purchase the NFT or not.
-	 * @param _tokenAddress indicates EC20/BEP20 token address
-	 * @return isSupported - returns true if token is supported false otherwise. index - index of the supported token from the list of supported tokens
-	 */
-	function isSupportedToken(address _tokenAddress)
-		public
-		view
-		virtual
-		returns (bool isSupported, uint256 index)
-	{
-		for (uint256 i = 0; i < supportedTokens.length; i++) {
-			if (supportedTokens[i] == _tokenAddress) {
-				isSupported = true;
-				index = i;
-				break;
-			}
-		}
 	}
 
 	/*

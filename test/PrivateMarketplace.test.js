@@ -1001,17 +1001,17 @@ contract('PrivateMarketplace', (accounts) => {
 	describe('addSupportedToken()', () => {
 		let isSupportedBefore;
 		before('add supported token', async () => {
-			isSupportedBefore = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.privateMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should add supported token correctly', async () => {
-			const isSupportedAfter = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(false);
-			expect(isSupportedAfter[0]).to.be.eq(true);
+			expect(isSupportedBefore).to.be.eq(false);
+			expect(isSupportedAfter).to.be.eq(true);
 		});
 
 		it('should revert when admin tries to add token which is already supported', async () => {
@@ -1032,17 +1032,17 @@ contract('PrivateMarketplace', (accounts) => {
 	describe('removeSupportedToken()', () => {
 		let isSupportedBefore;
 		before('remove supported token', async () => {
-			isSupportedBefore = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// remove supported token
 			await this.privateMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should remove supported token correctly', async () => {
-			const isSupportedAfter = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(true);
-			expect(isSupportedAfter[0]).to.be.eq(false);
+			expect(isSupportedBefore).to.be.eq(true);
+			expect(isSupportedAfter).to.be.eq(false);
 		});
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
@@ -1534,13 +1534,13 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should return isSupported token correctly', async () => {
-			let isSupported = await this.privateMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(true);
+			let isSupported = await this.privateMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(true);
 
 			await this.privateMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
 
-			isSupported = await this.privateMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(false);
+			isSupported = await this.privateMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(false);
 		});
 	});
 

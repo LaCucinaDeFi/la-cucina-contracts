@@ -855,17 +855,17 @@ contract('PublicMarketplace', (accounts) => {
 	describe('addSupportedToken()', () => {
 		let isSupportedBefore;
 		before('add supported token', async () => {
-			isSupportedBefore = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should add supported token correctly', async () => {
-			const isSupportedAfter = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(false);
-			expect(isSupportedAfter[0]).to.be.eq(true);
+			expect(isSupportedBefore).to.be.eq(false);
+			expect(isSupportedAfter).to.be.eq(true);
 		});
 
 		it('should revert when admin tries to add token which is already supported', async () => {
@@ -886,7 +886,7 @@ contract('PublicMarketplace', (accounts) => {
 	describe('removeSupportedToken()', () => {
 		let isSupportedBefore;
 		before('remove supported token', async () => {
-			isSupportedBefore = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(this.privateMarketplace.address, {
@@ -903,14 +903,14 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		it('should remove supported token correctly', async () => {
-			const isSupportedAfter = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
-			const isSupportedAfter1 = await this.publicMarketplace.isSupportedToken(
+			const isSupportedAfter = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
+			const isSupportedAfter1 = await this.publicMarketplace.supportedTokens(
 				this.privateMarketplace.address
 			);
 
-			expect(isSupportedBefore[0]).to.be.eq(true);
-			expect(isSupportedAfter[0]).to.be.eq(false);
-			expect(isSupportedAfter1[0]).to.be.eq(false);
+			expect(isSupportedBefore).to.be.eq(true);
+			expect(isSupportedAfter).to.be.eq(false);
+			expect(isSupportedAfter1).to.be.eq(false);
 		});
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
@@ -1413,13 +1413,13 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		it('should return isSupported token correctly', async () => {
-			let isSupported = await this.publicMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(true);
+			let isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(true);
 
 			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
 
-			isSupported = await this.publicMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(false);
+			isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(false);
 		});
 	});
 
