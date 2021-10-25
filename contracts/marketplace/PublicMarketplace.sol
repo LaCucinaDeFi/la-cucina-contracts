@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import './Marketplace.sol';
+import './MarketplaceWithRoyalties.sol';
 import '../interfaces/IVersionedContract.sol';
 
-contract PublicMarketplace is Initializable, Marketplace, IVersionedContract {
+contract PublicMarketplace is Initializable, MarketplaceWithRoyalties, IVersionedContract {
 	/*
    =======================================================================
    ======================== Constructor/Initializer ======================
@@ -17,16 +17,7 @@ contract PublicMarketplace is Initializable, Marketplace, IVersionedContract {
 	 * @param _nftContractAddress indicates the ERC1155 NFT contract address
 	 */
 	function initialize(address _nftContractAddress) external virtual initializer {
-		__AccessControl_init();
-		__ReentrancyGuard_init();
-
-		require(_nftContractAddress != address(0), 'Market: INVALID_NFT_CONTRACT');
-
-		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-		_setupRole(MINTER_ROLE, _msgSender());
-
-		nftContract = INFT(_nftContractAddress);
-		minDuration = 1 days;
+		__MarketplaceWithRoyalties_init(_nftContractAddress);
 	}
 
 	/*

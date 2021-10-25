@@ -6,7 +6,7 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
 
-import '../interfaces/INFT.sol';
+import '../interfaces/IIngredientNFT.sol';
 import '../interfaces/IBEP20.sol';
 
 contract Marketplace is
@@ -77,7 +77,7 @@ contract Marketplace is
  */
 
 	/// @notice ERC1155 NFT contract
-	INFT public nftContract;
+	IIngredientNFT public nftContract;
 
 	uint256 public minDuration;
 
@@ -118,6 +118,23 @@ contract Marketplace is
 		uint256 bidAmount,
 		uint256 time
 	);
+
+	/**
+	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
+	 * @param _nftContractAddress indicates the ERC1155 NFT contract address
+	 */
+	function __Marketplace_init(address _nftContractAddress) internal virtual initializer {
+		__AccessControl_init();
+		__ReentrancyGuard_init();
+
+		require(_nftContractAddress != address(0), 'Market: INVALID_NFT_CONTRACT');
+
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+		_setupRole(MINTER_ROLE, _msgSender());
+
+		nftContract = IIngredientNFT(_nftContractAddress);
+		minDuration = 1 days;
+	}
 
 	/*
    =======================================================================
@@ -331,12 +348,13 @@ contract Marketplace is
 			'Market: CANNOT_RESOLVE_AUCTION_WITH_NO_BIDS'
 		);
 
+		// transfer the tokens to the auction creator
 		require(
 			IBEP20(_auction.currency).transfer(
 				_auction.sellerAddress,
 				bid[_auction.winningBidId].bidAmount
 			),
-			'Market: TRANSFER__FAILED'
+			'Market: TRANSFER_FAILED'
 		);
 
 		nftContract.safeTransferFrom(
