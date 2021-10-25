@@ -120,7 +120,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
 		SaleInfo storage _sale = sale[_saleId];
 
-		(, bool hasGenesisTalien) = isUserHasTalien(msg.sender);
+		(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 
 		//give early access to vip members only
 		if (!hasGenesisTalien) {
@@ -162,7 +162,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 		returns (uint256 bidId)
 	{
 		if (auction[_auctionId].isVipAuction) {
-			(, bool hasGenesisTalien) = isUserHasTalien(msg.sender);
+			(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 			require(hasGenesisTalien, 'PrivateMarketplace: ONLY_VIP_MEMBERS_CAN_BID');
 		}
 
@@ -227,7 +227,7 @@ contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
 	 * @return hasTalien - indicates if user have any talien
 	 * @return isGenesis - indicates if the talien is genesis or not
 	 */
-	function isUserHasTalien(address _user)
+	function doesUserHasTalien(address _user)
 		public
 		view
 		virtual

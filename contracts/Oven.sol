@@ -148,7 +148,7 @@ contract Oven is
 			'Oven: INVALID_NUMBER_OF_INGREDIENTS'
 		);
 
-		(bool hasTalien, ) = isUserHasTalien(msg.sender);
+		(bool hasTalien, ) = doesUserHasTalien(msg.sender);
 
 		if (!hasTalien) {
 			require(totalIngredients <= maxIngredients, 'Oven: USER_DONT_HAVE_TALIEN');
@@ -203,7 +203,7 @@ contract Oven is
 
 		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
 
-		(, bool hasGenesisTalie) = isUserHasTalien(msg.sender);
+		(, bool hasGenesisTalie) = doesUserHasTalien(msg.sender);
 
 		// get fees for uncooking if user don`t have genesis talien
 		if (!hasGenesisTalie) {
@@ -403,7 +403,7 @@ contract Oven is
 	 * @return hasTalien - indicates if user have any talien
 	 * @return isGenesis - indicates if the talien is genesis or not
 	 */
-	function isUserHasTalien(address _user)
+	function doesUserHasTalien(address _user)
 		public
 		view
 		virtual

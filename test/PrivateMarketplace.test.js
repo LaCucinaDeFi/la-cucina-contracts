@@ -1250,7 +1250,7 @@ contract('PrivateMarketplace', (accounts) => {
 
 			currentAuctionId = await this.privateMarketplace.getCurrentAuctionId();
 
-			const isVipUser = await this.privateMarketplace.isUserHasTalien(user2);
+			const isVipUser = await this.privateMarketplace.doesUserHasTalien(user2);
 			expect(isVipUser['1']).to.be.eq(false);
 
 			await expectRevert(
@@ -1260,10 +1260,10 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should allow only vip members to bid', async () => {
-			let isVipUser = await this.privateMarketplace.isUserHasTalien(user1);
+			let isVipUser = await this.privateMarketplace.doesUserHasTalien(user1);
 			expect(isVipUser[1]).to.be.eq(true);
 
-			isVipUser = await this.privateMarketplace.isUserHasTalien(user3);
+			isVipUser = await this.privateMarketplace.doesUserHasTalien(user3);
 			expect(isVipUser[1]).to.be.eq(true);
 
 			// user1 places bid on vip auction
