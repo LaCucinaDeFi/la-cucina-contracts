@@ -123,7 +123,7 @@ contract DishesNFT is BaseERC721 {
 		(, uint256 totalBaseIngredients) = pantry.dish(_dishId);
 		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
-		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplierHash) = _getHash(
+		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
 			_dishId,
 			totalBaseIngredients,
 			_ingredientIds
@@ -143,7 +143,7 @@ contract DishesNFT is BaseERC721 {
 			_flameId,
 			block.timestamp,
 			block.timestamp + _preparationTime,
-			multiplierHash
+			multiplier
 		);
 
 		nonce++;
@@ -204,11 +204,15 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
 	 * @param nutritionsHash - indicates the nutritionHash of ingredient
-	 * @return multiplier - indicates the multiplier calculated using nutritions
+	 * @return nutritionsList - indicates the values of nutritions and astrogrings
 	 */
-	function getMultiplier(uint256 nutritionsHash) public view virtual returns (uint256 multiplier) {
-		// will have the 8 nutritions
-		uint256[] memory nutritionsList = new uint256[](8);
+	function getMultiplier(uint256 nutritionsHash)
+		public
+		view
+		virtual
+		returns (uint256[] memory nutritionsList)
+	{
+		nutritionsList = new uint256[](2);
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -218,7 +222,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 nutrition;
 
 		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 0; slot < uint8(8); slot++) {
+		for (uint8 slot = 0; slot < uint8(7); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			nutritionsValue = nutritionsHash & bitMask;
@@ -228,16 +232,12 @@ contract DishesNFT is BaseERC721 {
 					? nutritionsValue / slotMultiplier
 					: nutritionsValue;
 
-				// store nutrition
-				nutritionsList[slot] = nutrition;
+				// store 2nd and last nutrition i.e plutamins and astogrings
+				if (slot == uint8(2) || slot == uint8(6)) {
+					nutritionsList[slot] = nutrition;
+				}
 			}
 		}
-
-		// multiply first two nutritions
-		multiplier = nutritionsList[0] * nutritionsList[1];
-
-		// divide multiplier by next two nutritions
-		multiplier /= nutritionsList[2] * nutritionsList[3];
 	}
 
 	/**
@@ -376,10 +376,13 @@ contract DishesNFT is BaseERC721 {
 		returns (
 			uint256 variationIdHash,
 			uint256 baseVariationHash,
-			uint256 multiplierHash
+			uint256 multiplier
 		)
 	{
-		uint256 multiplier;
+		uint256 totalIngredients = _ingredientIds.length;
+		uint256 plutamins;
+		uint256 astrogrings;
+
 		// get base Variation Hash
 		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
 			uint256 baseIngredientId = pantry.getBaseIngredientId(_dishId, baseIndex);
@@ -395,7 +398,7 @@ contract DishesNFT is BaseERC721 {
 		}
 
 		// get variationIdHash
-		for (uint256 i = 0; i < _ingredientIds.length; i++) {
+		for (uint256 i = 0; i < totalIngredients; i++) {
 			(, , uint256 totalVariations, uint256 nutritionsHash) = ingredientNft.ingredients(
 				_ingredientIds[i]
 			);
@@ -404,12 +407,19 @@ contract DishesNFT is BaseERC721 {
 			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = RecipeBase.getRandomVariation(nonce, totalVariations);
 			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
-			multiplier = getMultiplier(nutritionsHash);
-			uint256 product = 256**i;
+			uint256[] memory nutritions = getMultiplier(nutritionsHash);
 
-			multiplierHash += multiplier * product;
-			variationIdHash += variationId * product;
+			if (i == 0) {
+				plutamins = nutritions[0];
+				astrogrings = nutritions[1];
+			} else {
+				plutamins *= nutritions[0];
+				astrogrings += nutritions[1];
+			}
+
+			variationIdHash += variationId * 256**i;
 		}
+		if (astrogrings != 0) multiplier = plutamins / astrogrings;
 	}
 
 	function _getPlaceHolder(string memory _IngredientName, string memory _variationName)
