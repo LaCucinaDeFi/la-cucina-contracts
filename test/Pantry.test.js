@@ -8,7 +8,7 @@ const {cheese_1} = require('./svgs/Cheese');
 const Pantry = artifacts.require('Pantry');
 const PantryV2 = artifacts.require('PantryV2');
 
-contract('DishesNFT', (accounts) => {
+contract('Pantry', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];

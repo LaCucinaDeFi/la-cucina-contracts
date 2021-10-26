@@ -64,7 +64,21 @@ contract PublicMarketplace is Initializable, MarketplaceWithRoyalties, IVersione
 		//get nft copy from sender and put it in auction
 		nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
 
-		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration);
+		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration, false);
+	}
+
+	/**
+	 * @notice This method allows anyone with accepted token to place the bid on auction to buy NFT. bidder need to approve his accepted tokens.
+	 * @param _auctionId indicates the auctionId for which user wants place bid.
+	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
+	 */
+	function placeBid(uint256 _auctionId, uint256 _bidAmount)
+		external
+		virtual
+		onlyValidAuctionId(_auctionId)
+		returns (uint256 bidId)
+	{
+		bidId = _placeBid(_auctionId, _bidAmount);
 	}
 
 	/**

@@ -20,19 +20,19 @@ contract PrivateMarketplaceV2 is PrivateMarketplace {
 
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
-	 * @param _nftContractAddress indicates the ERC1155 NFT contract address
+	 * @param _nftContractAddress - indicates the ERC1155 NFT contract address
+	 * @param _talienAddress - indicates the talien contract address
+	 * @param _earlyAccessTime - indicates the early access duration for the vip members(users with genesis Taliens)
 	 */
-	function initialize(address _nftContractAddress) external virtual override initializer {
-		__AccessControl_init();
-		__ReentrancyGuard_init();
-
-		require(_nftContractAddress != address(0), 'PrivateMarketplace: INVALID_NFT_CONTRACT');
-
-		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-		_setupRole(MINTER_ROLE, _msgSender());
-
-		nftContract = IIngredientNFT(_nftContractAddress);
-		minDuration = 1 days;
+	function initialize(
+		address _nftContractAddress,
+		address _talienAddress,
+		uint256 _earlyAccessTime
+	) external virtual override initializer {
+		__Marketplace_init(_nftContractAddress);
+		require(_talienAddress != address(0), 'PrivateMarketplace: INVALID_TALIEN_ADDRESS');
+		talien = ITalien(_talienAddress);
+		earlyAccessTime = _earlyAccessTime;
 	}
 
 	/*

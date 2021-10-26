@@ -162,7 +162,6 @@ library RecipeBase {
 			)
 		) % _max;
 
-		_seed++;
 		return randomnumber;
 	}
 }

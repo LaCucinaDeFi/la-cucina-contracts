@@ -65,7 +65,7 @@ contract DishesNFT is BaseERC721 {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
 		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
 
-		initialize_BaseERC721(_name, _symbol, baseTokenURI);
+		__BaseERC721_init(_name, _symbol, baseTokenURI);
 
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		pantry = IPantry(_pantryAddress);
@@ -143,6 +143,8 @@ contract DishesNFT is BaseERC721 {
 			block.timestamp,
 			block.timestamp + _preparationTime
 		);
+
+		nonce++;
 
 		emit DishPrepared(dishNFTId);
 	}
@@ -272,15 +274,13 @@ contract DishesNFT is BaseERC721 {
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
-		returns (string memory)
+		returns (string memory accumulator)
 	{
-		string
-			memory accumulator = '<svg xmlns="http://www.w3.org/2000/svg" width="268.5" height="184.3">';
-
-		//get base variations
-
 		//add defs
-		accumulator = RecipeBase.strConcat(accumulator, string('<defs>'));
+		accumulator = RecipeBase.strConcat(
+			accumulator,
+			string('<svg xmlns="http://www.w3.org/2000/svg" width="268.5" height="184.3"><defs>')
+		);
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;

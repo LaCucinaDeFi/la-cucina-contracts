@@ -18,17 +18,23 @@ contract OvenV2 is Oven {
    =======================================================================
  */
 
-		/**
+	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
 	 */
 	function initialize(
 		address _ingredientNft,
 		address _dishesNft,
-		address _lacToken
+		address _lacToken,
+		address _talien,
+		uint256 _uncookingFee,
+		uint256 _maxIngredients,
+		uint256 _additionalIngredients
 	) external virtual override initializer {
 		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
 		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
 		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
+		require(_talien != address(0), 'Oven: INVALID_TALIEN_ADDRESS');
+		require(_maxIngredients > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
@@ -38,6 +44,10 @@ contract OvenV2 is Oven {
 		ingredientNft = IIngredientNFT(_ingredientNft);
 		dishesNft = IDishesNFT(_dishesNft);
 		lacToken = IBEP20(_lacToken);
+		talien = ITalien(_talien);
+		uncookingFee = _uncookingFee;
+		maxIngredients = _maxIngredients;
+		additionalIngredients = _additionalIngredients;
 	}
 
 	/*

@@ -15,6 +15,9 @@ const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
 const PublicMarketplaceV2 = artifacts.require('PublicMarketplaceV2');
+const TalienContract = artifacts.require('Talien');
+
+const {Talien} = require('./helper/talien');
 
 const SampleToken = artifacts.require('SampleToken');
 
@@ -27,21 +30,52 @@ contract('PublicMarketplace', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
+	const fundReceiver = accounts[5];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
+		// deploy Lac token
+		this.sampleToken = await SampleToken.new();
+
 		// deploy NFT token
 		this.Ingredient = await deployProxy(IngredientsNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				this.sampleToken.address,
+				ether('10'),
+				royaltyReceiver,
+				'100',
+				'Mokoto Glitch Regular'
+			],
+			{
+				initializer: 'initialize'
+			}
+		);
+
+		this.TalienObj = new Talien(this.Talien);
+
+		await this.TalienObj.setup(owner);
+
 		// deploy private marketplace
-		this.privateMarketplace = await deployProxy(PrivateMarketplace, [this.Ingredient.address], {
-			initializer: 'initialize'
-		});
+		this.privateMarketplace = await deployProxy(
+			PrivateMarketplace,
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// deploy Public marketplace
 		this.publicMarketplace = await deployProxy(PublicMarketplace, [this.Ingredient.address], {
@@ -64,9 +98,6 @@ contract('PublicMarketplace', (accounts) => {
 
 		// add minter in publicMarketplace
 		await this.publicMarketplace.grantRole(minterRole, minter);
-
-		// deploy Lac token
-		this.sampleToken = await SampleToken.new();
 
 		// add supported token
 		await this.privateMarketplace.addSupportedToken(this.sampleToken.address);
@@ -824,17 +855,17 @@ contract('PublicMarketplace', (accounts) => {
 	describe('addSupportedToken()', () => {
 		let isSupportedBefore;
 		before('add supported token', async () => {
-			isSupportedBefore = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should add supported token correctly', async () => {
-			const isSupportedAfter = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(false);
-			expect(isSupportedAfter[0]).to.be.eq(true);
+			expect(isSupportedBefore).to.be.eq(false);
+			expect(isSupportedAfter).to.be.eq(true);
 		});
 
 		it('should revert when admin tries to add token which is already supported', async () => {
@@ -855,7 +886,7 @@ contract('PublicMarketplace', (accounts) => {
 	describe('removeSupportedToken()', () => {
 		let isSupportedBefore;
 		before('remove supported token', async () => {
-			isSupportedBefore = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(this.privateMarketplace.address, {
@@ -872,14 +903,14 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		it('should remove supported token correctly', async () => {
-			const isSupportedAfter = await this.publicMarketplace.isSupportedToken(ZERO_ADDRESS);
-			const isSupportedAfter1 = await this.publicMarketplace.isSupportedToken(
+			const isSupportedAfter = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
+			const isSupportedAfter1 = await this.publicMarketplace.supportedTokens(
 				this.privateMarketplace.address
 			);
 
-			expect(isSupportedBefore[0]).to.be.eq(true);
-			expect(isSupportedAfter[0]).to.be.eq(false);
-			expect(isSupportedAfter1[0]).to.be.eq(false);
+			expect(isSupportedBefore).to.be.eq(true);
+			expect(isSupportedAfter).to.be.eq(false);
+			expect(isSupportedAfter1).to.be.eq(false);
 		});
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
@@ -1382,13 +1413,13 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		it('should return isSupported token correctly', async () => {
-			let isSupported = await this.publicMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(true);
+			let isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(true);
 
 			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
 
-			isSupported = await this.publicMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(false);
+			isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(false);
 		});
 	});
 

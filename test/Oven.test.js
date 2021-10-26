@@ -15,14 +15,16 @@ const {getNutritionsHash} = require('./helper/NutrisionHash');
 const fs = require('fs');
 const path = require('path');
 const {MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
+const {Talien} = require('./helper/talien');
 
 const Oven = artifacts.require('Oven');
 const OvenV2 = artifacts.require('OvenV2');
 
-const IngredientNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
+const IngredientNFT = artifacts.require('IngredientsNFT');
 const Pantry = artifacts.require('Pantry');
 const SampleToken = artifacts.require('SampleToken');
+const TalienContract = artifacts.require('Talien');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
@@ -33,7 +35,8 @@ contract('Oven', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
-	const royaltyReciever = accounts[8];
+	const fundReceiver = accounts[8];
+	const royaltyReceiver = accounts[9];
 	const royaltyFee = '100';
 
 	let dishId = 1;
@@ -41,7 +44,7 @@ contract('Oven', (accounts) => {
 	before(async () => {
 		this.SampleToken = await SampleToken.new();
 
-		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReciever, royaltyFee], {
+		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
@@ -57,9 +60,40 @@ contract('Oven', (accounts) => {
 			}
 		);
 
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				this.SampleToken.address,
+				ether('10'),
+				royaltyReceiver,
+				'100',
+				'Mokoto Glitch Regular'
+			],
+			{
+				initializer: 'initialize'
+			}
+		);
+
+		this.TalienObj = new Talien(this.Talien);
+
+		await this.TalienObj.setup(owner);
+
 		this.Oven = await deployProxy(
 			Oven,
-			[this.Ingredient.address, this.Dish.address, this.SampleToken.address],
+			[
+				this.Ingredient.address,
+				this.Dish.address,
+				this.SampleToken.address,
+				this.Talien.address,
+				ether('5'),
+				3,
+				2
+			],
 			{
 				initializer: 'initialize'
 			}
@@ -288,9 +322,7 @@ contract('Oven', (accounts) => {
 			this.add3Tx = await this.Ingredient.addIngredientVariation(5, 'One', truffle_1);
 			await this.Ingredient.addIngredientVariation(5, 'Two', truffle_2);
 			await this.Ingredient.addIngredientVariation(5, 'Three', truffle_3);
-		});
 
-		it('should make pizza with all ingredients', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
 			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
@@ -312,6 +344,27 @@ contract('Oven', (accounts) => {
 
 			//get current dish id
 			currentDishIdBefore = await this.Dish.getCurrentTokenId();
+		});
+
+		it('should revert if user tries to prepare dish with 4 ingredients without having Talien', async () => {
+			await expectRevert(
+				this.Oven.prepareDish(1, 1, [1, 2, 3, 4, 5], {from: user1}),
+				'Oven: USER_DONT_HAVE_TALIEN'
+			);
+		});
+
+		it('should revert if user tries to prepare dish with 6 ingredients without having Talien', async () => {
+			await expectRevert(
+				this.Oven.prepareDish(1, 1, [1, 2, 3, 4, 5, 6], {from: user1}),
+				'Oven: INVALID_NUMBER_OF_INGREDIENTS'
+			);
+		});
+
+		it('should make pizza with all ingredients', async () => {
+			// approve tokens to Oven
+			await this.SampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
+			// generate talien for user1
+			await this.Talien.generateTalien({from: user1});
 
 			// prepare the dish
 			this.prepareDish1Tx = await this.Oven.prepareDish(1, 1, [1, 2, 3, 4, 5], {from: user1});
@@ -626,7 +679,7 @@ contract('Oven', (accounts) => {
 		it('should revert when no ingredient ids are used to prepare dish', async () => {
 			await expectRevert(
 				this.Oven.prepareDish(1, 1, [], {from: user1}),
-				'Oven: INSUFFICIENT_INGREDIENTS'
+				'Oven: INVALID_NUMBER_OF_INGREDIENTS'
 			);
 		});
 
@@ -787,6 +840,66 @@ contract('Oven', (accounts) => {
 			expect(ovenTruffleBalanceAfter).to.bignumber.be.eq(new BN('5'));
 		});
 
+		it('should charge LAC while uncooking if user don`t have the no Talien', async () => {
+			// mint ingredients to the user2
+			await this.Ingredient.mint(user2, 2, 1, '0x384', {from: minter});
+			await this.Ingredient.mint(user2, 3, 1, '0x384', {from: minter});
+			await this.Ingredient.mint(user2, 4, 1, '0x384', {from: minter});
+			await this.Ingredient.mint(user2, 5, 1, '0x384', {from: minter});
+
+			// set approval to oven
+			await this.Ingredient.setApprovalForAll(this.Oven.address, true, {from: user2});
+			// approve tokens to Oven
+			await this.SampleToken.approve(this.Oven.address, MAX_UINT256, {from: user2});
+
+			// prepare the dish
+			await this.Oven.prepareDish(1, 4, [2, 3, 4], {from: user2});
+
+			const currentDishId = await this.Dish.getCurrentTokenId();
+
+			const lacBalBefore = await this.SampleToken.balanceOf(user2);
+
+			// approve dish to oven
+			await this.Dish.setApprovalForAll(this.Oven.address, true, {from: user2});
+			await time.increase(time.duration.days('1'));
+
+			await this.Oven.uncookDish(currentDishId, {from: user2});
+
+			const lacBalAfter = await this.SampleToken.balanceOf(user2);
+
+			expect(lacBalBefore).to.bignumber.be.gt(lacBalAfter);
+
+			expect(lacBalBefore).to.bignumber.be.eq(lacBalAfter.add(new BN(ether('5'))));
+		});
+
+		it('should charge LAC while uncooking if user don`t have the genesis Talien', async () => {
+			// prepare the dish
+			await this.Oven.prepareDish(1, 4, [2, 3, 4], {from: user2});
+
+			const currentDishId = await this.Dish.getCurrentTokenId();
+
+			// approve dish to oven
+			await this.Dish.setApprovalForAll(this.Oven.address, true, {from: user2});
+			// approve tokens to Oven
+			await this.SampleToken.approve(this.Talien.address, MAX_UINT256, {from: user2});
+
+			// update generation
+			await this.TalienObj.addTraitVariations(owner);
+
+			// generate talien for user2
+			await this.Talien.generateTalien({from: user2});
+			await time.increase(time.duration.days('1'));
+
+			const lacBalBefore = await this.SampleToken.balanceOf(user2);
+
+			await this.Oven.uncookDish(currentDishId, {from: user2});
+
+			const lacBalAfter = await this.SampleToken.balanceOf(user2);
+
+			expect(lacBalBefore).to.bignumber.be.gt(lacBalAfter);
+			expect(lacBalBefore).to.bignumber.be.eq(lacBalAfter.add(new BN(ether('5'))));
+		});
+
 		it('should add the dish id in uncooked dish ids list in Oven contract', async () => {
 			const uncookedDishIds = await this.Oven.uncookedDishIds(0);
 
@@ -802,7 +915,7 @@ contract('Oven', (accounts) => {
 
 		it('should revert when dishOwner tries to uncook the dish with invalid dish id', async () => {
 			await expectRevert(this.Oven.uncookDish(0, {from: user1}), 'Oven: INVALID_DISH_ID');
-			await expectRevert(this.Oven.uncookDish(11, {from: user1}), 'Oven: INVALID_DISH_ID');
+			await expectRevert(this.Oven.uncookDish(15, {from: user1}), 'Oven: INVALID_DISH_ID');
 		});
 
 		it('should revert when user wants to get svg of uncooked dish', async () => {

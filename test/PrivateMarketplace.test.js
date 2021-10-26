@@ -13,6 +13,9 @@ const {getNutritionsHash} = require('./helper/NutrisionHash');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
+const TalienContract = artifacts.require('Talien');
+
+const {Talien} = require('./helper/talien');
 
 const SampleToken = artifacts.require('SampleToken');
 
@@ -25,20 +28,51 @@ contract('PrivateMarketplace', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
-	const royaltyReciever = accounts[8];
+	const fundReceiver = accounts[5];
+	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
+		// deploy Lac token
+		this.sampleToken = await SampleToken.new();
+
 		// deploy NFT token
-		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReciever, royaltyFee], {
+		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
 
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				this.sampleToken.address,
+				ether('10'),
+				royaltyReceiver,
+				'100',
+				'Mokoto Glitch Regular'
+			],
+			{
+				initializer: 'initialize'
+			}
+		);
+
+		this.TalienObj = new Talien(this.Talien);
+
+		await this.TalienObj.setup(owner);
+
 		// deploy private marketplace
-		this.privateMarketplace = await deployProxy(PrivateMarketplace, [this.Ingredient.address], {
-			initializer: 'initialize'
-		});
+		this.privateMarketplace = await deployProxy(
+			PrivateMarketplace,
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// add privateMarket as minter in ERC1155 contract.
 		const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -53,12 +87,10 @@ contract('PrivateMarketplace', (accounts) => {
 		// add minter in privateMarketplace
 		await this.privateMarketplace.grantRole(minterRole, minter);
 
-		// deploy Lac token
-		this.sampleToken = await SampleToken.new();
-
 		// mint tokens to users
 		await this.sampleToken.mint(user1, ether('100'), {from: owner});
 		await this.sampleToken.mint(user2, ether('100'), {from: owner});
+		await this.sampleToken.mint(user3, ether('100'), {from: owner});
 	});
 
 	describe('initialize()', () => {
@@ -216,6 +248,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -252,6 +285,7 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					currentNftId,
 					String(time.duration.days('2')),
+					false,
 					{
 						from: user1
 					}
@@ -267,6 +301,7 @@ contract('PrivateMarketplace', (accounts) => {
 					ZERO_ADDRESS,
 					currentNftId,
 					String(time.duration.days('2')),
+					false,
 					{
 						from: minter
 					}
@@ -282,6 +317,7 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					currentNftId,
 					String(time.duration.days('2')),
+					false,
 					{
 						from: minter
 					}
@@ -296,6 +332,7 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					currentNftId,
 					'100',
+					false,
 					{
 						from: minter
 					}
@@ -497,6 +534,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -637,6 +675,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -690,6 +729,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -764,7 +804,7 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				currentNftId,
-				1,
+				2,
 				{
 					from: minter
 				}
@@ -778,8 +818,46 @@ contract('PrivateMarketplace', (accounts) => {
 			// stash tokens
 			await this.Ingredient.safeTransferFrom(user1, stash, currentNftId, 1, '0x384', {from: user1});
 
+			// update early access time
+			await this.privateMarketplace.updateEarlyAccessTime(time.duration.days('1'), {from: owner});
+		});
+
+		it('should revert when non-vip member try to get eary access to new ingredients', async () => {
+			await expectRevert(
+				this.privateMarketplace.buyNFT(currentSaleId, {from: user1}),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
+		});
+
+		it('should give early access to vip members for buying ingredients', async () => {
+			// approve tokens to Oven
+			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
+			// approve tokens to Oven
+			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user3});
+
+			// get talien for user1
+			await this.Talien.generateTalien({from: user1});
+			// get talien for user1
+			await this.Talien.generateTalien({from: user3});
+
 			// buy nft from sale
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
+		});
+
+		it('should revert when user with normal talien tries to get early access to ingredients', async () => {
+			// approve tokens to Oven
+			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user2});
+
+			// update generation
+			await this.TalienObj.addTraitVariations(owner);
+
+			// get talien for user1
+			await this.Talien.generateTalien({from: user2});
+
+			await expectRevert(
+				this.privateMarketplace.buyNFT(currentSaleId, {from: user2}),
+				'Market: EARLY_ACCESS_REQUIRED'
+			);
 		});
 
 		it('should reflect nft in user wallet correctly', async () => {
@@ -791,8 +869,8 @@ contract('PrivateMarketplace', (accounts) => {
 			const user1NFTBal = await this.Ingredient.balanceOf(user1, currentNftId);
 
 			expect(user1NFTBal).to.bignumber.be.eq(new BN('1'));
-			expect(privateMarketNFTBalBefore).to.bignumber.be.eq(new BN('31'));
-			expect(privateMarketNFTBalAfter).to.bignumber.be.eq(new BN('30'));
+			expect(privateMarketNFTBalBefore).to.bignumber.be.eq(new BN('32'));
+			expect(privateMarketNFTBalAfter).to.bignumber.be.eq(new BN('31'));
 		});
 
 		it('should emit BuySaleNFT event when user buys NFT from sale', async () => {
@@ -800,6 +878,11 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should revert when seller tries to cancel inactive sale', async () => {
+			// stash tokens
+			await this.Ingredient.safeTransferFrom(user1, stash, currentNftId, 1, '0x384', {from: user1});
+			// buy nft from sale
+			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
+
 			// cancel sale
 			await expectRevert(
 				this.privateMarketplace.cancelSale(currentSaleId, {from: minter}),
@@ -836,6 +919,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -882,6 +966,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -916,17 +1001,17 @@ contract('PrivateMarketplace', (accounts) => {
 	describe('addSupportedToken()', () => {
 		let isSupportedBefore;
 		before('add supported token', async () => {
-			isSupportedBefore = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
 			await this.privateMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should add supported token correctly', async () => {
-			const isSupportedAfter = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(false);
-			expect(isSupportedAfter[0]).to.be.eq(true);
+			expect(isSupportedBefore).to.be.eq(false);
+			expect(isSupportedAfter).to.be.eq(true);
 		});
 
 		it('should revert when admin tries to add token which is already supported', async () => {
@@ -947,17 +1032,17 @@ contract('PrivateMarketplace', (accounts) => {
 	describe('removeSupportedToken()', () => {
 		let isSupportedBefore;
 		before('remove supported token', async () => {
-			isSupportedBefore = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			isSupportedBefore = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// remove supported token
 			await this.privateMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner});
 		});
 
 		it('should remove supported token correctly', async () => {
-			const isSupportedAfter = await this.privateMarketplace.isSupportedToken(ZERO_ADDRESS);
+			const isSupportedAfter = await this.privateMarketplace.supportedTokens(ZERO_ADDRESS);
 
-			expect(isSupportedBefore[0]).to.be.eq(true);
-			expect(isSupportedAfter[0]).to.be.eq(false);
+			expect(isSupportedBefore).to.be.eq(true);
+			expect(isSupportedAfter).to.be.eq(false);
 		});
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
@@ -1040,6 +1125,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -1146,6 +1232,63 @@ contract('PrivateMarketplace', (accounts) => {
 				'Market: INVALID_AUCTION_ID'
 			);
 		});
+
+		it('should revert when non-vip members tries to place bid on vip auctions', async () => {
+			currentNftId = await this.Ingredient.getCurrentNftId();
+
+			//create vip auction
+			await this.privateMarketplace.createAndAuctionNFT(
+				ether('1'),
+				this.sampleToken.address,
+				currentNftId,
+				String(time.duration.days('2')),
+				true, // vip auction
+				{
+					from: minter
+				}
+			);
+
+			currentAuctionId = await this.privateMarketplace.getCurrentAuctionId();
+
+			const isVipUser = await this.privateMarketplace.doesUserHasTalien(user2);
+			expect(isVipUser['1']).to.be.eq(false);
+
+			await expectRevert(
+				this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {from: user2}),
+				'PrivateMarketplace: ONLY_VIP_MEMBERS_CAN_BID'
+			);
+		});
+
+		it('should allow only vip members to bid', async () => {
+			let isVipUser = await this.privateMarketplace.doesUserHasTalien(user1);
+			expect(isVipUser[1]).to.be.eq(true);
+
+			isVipUser = await this.privateMarketplace.doesUserHasTalien(user3);
+			expect(isVipUser[1]).to.be.eq(true);
+
+			// user1 places bid on vip auction
+			this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {from: user1});
+
+			// approve lac tokens to marketplace
+			await this.sampleToken.approve(this.privateMarketplace.address, MAX_UINT256, {from: user3});
+
+			// user3 places bid on vip auction
+			this.privateMarketplace.placeBid(currentAuctionId, ether('3'), {from: user3});
+		});
+
+		it('should resolve the vip auction correctly', async () => {
+			// increase duration
+			await time.increase(time.duration.days('3'));
+
+			currentBidId = await this.privateMarketplace.getCurrentBidId();
+
+			// resolve auction
+			await this.privateMarketplace.resolveAuction(currentAuctionId);
+
+			const auction = await this.privateMarketplace.auction(currentAuctionId);
+
+			expect(currentBidId).to.bignumber.be.eq(auction.winningBidId);
+		});
 	});
 
 	describe('resolveAuction()', () => {
@@ -1164,6 +1307,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -1223,6 +1367,7 @@ contract('PrivateMarketplace', (accounts) => {
 		it('should emit BuyAuctionNFT event when user resolves the auction', async () => {
 			await expectEvent(this.resolveTx, 'BuyAuctionNFT');
 		});
+
 		it('should revert when anyone tries to resolve auction which already resolved', async () => {
 			await expectRevert(
 				this.privateMarketplace.resolveAuction(currentAuctionId),
@@ -1237,6 +1382,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -1268,6 +1414,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -1316,6 +1463,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				currentNftId,
 				String(time.duration.days('2')),
+				false,
 				{
 					from: minter
 				}
@@ -1386,13 +1534,13 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should return isSupported token correctly', async () => {
-			let isSupported = await this.privateMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(true);
+			let isSupported = await this.privateMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(true);
 
 			await this.privateMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
 
-			isSupported = await this.privateMarketplace.isSupportedToken(this.sampleToken.address);
-			expect(isSupported[0]).to.be.eq(false);
+			isSupported = await this.privateMarketplace.supportedTokens(this.sampleToken.address);
+			expect(isSupported).to.be.eq(false);
 		});
 	});
 

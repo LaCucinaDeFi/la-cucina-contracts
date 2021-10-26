@@ -1,5 +1,6 @@
 const {deployProxy, getProxyImplementation} = require('@openzeppelin/truffle-upgrades');
 const {supportedTokens} = require('../configurations/supportedTokens');
+const {time} = require('@openzeppelin/test-helpers');
 
 const fs = require('fs');
 const path = require('path');
@@ -8,7 +9,7 @@ const addresses = require('../configurations/Addresses.json');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
-
+const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
 module.exports = async function (deployer) {
 	/*
    =======================================================================
@@ -19,7 +20,11 @@ module.exports = async function (deployer) {
 
 	const instance = await deployProxy(
 		PrivateMarketplace,
-		[addresses[deployer.network_id.toString()]['IngredientsNFT']],
+		[
+			addresses[deployer.network_id.toString()]['IngredientsNFT'],
+			TalienAddress,
+			time.duration.days(1)
+		],
 		{
 			deployer,
 			initializer: 'initialize'

@@ -10,6 +10,7 @@ import './interfaces/IIngredientNFT.sol';
 import './interfaces/IDishesNFT.sol';
 import './interfaces/IVersionedContract.sol';
 import './interfaces/IBEP20.sol';
+import './interfaces/ITalien.sol';
 
 contract Oven is
 	AccessControlUpgradeable,
@@ -46,6 +47,15 @@ contract Oven is
 	IIngredientNFT public ingredientNft;
 	IDishesNFT public dishesNft;
 	IBEP20 public lacToken;
+	ITalien public talien;
+
+	uint256 public uncookingFee;
+
+	// @notice user without talien can prepare dish with maxIngredients number of ingredients
+	uint256 public maxIngredients;
+
+	// @notice user with talien can prepare dish with maxIngredients + additionalIngredients number of ingredients
+	uint256 public additionalIngredients;
 
 	/// @notice Stores the uncooked dishNFT ids
 	uint256[] public uncookedDishIds;
@@ -65,11 +75,17 @@ contract Oven is
 	function initialize(
 		address _ingredientNft,
 		address _dishesNft,
-		address _lacToken
+		address _lacToken,
+		address _talien,
+		uint256 _uncookingFee,
+		uint256 _maxIngredients,
+		uint256 _additionalIngredients
 	) external virtual initializer {
 		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
 		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
 		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
+		require(_talien != address(0), 'Oven: INVALID_TALIEN_ADDRESS');
+		require(_maxIngredients > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
@@ -79,6 +95,10 @@ contract Oven is
 		ingredientNft = IIngredientNFT(_ingredientNft);
 		dishesNft = IDishesNFT(_dishesNft);
 		lacToken = IBEP20(_lacToken);
+		talien = ITalien(_talien);
+		uncookingFee = _uncookingFee;
+		maxIngredients = _maxIngredients;
+		additionalIngredients = _additionalIngredients;
 	}
 
 	/*
@@ -120,14 +140,27 @@ contract Oven is
 	) external onlyValidFlameId(_flameId) returns (uint256 dishId) {
 		FlameDetail memory flame = flames[_flameId];
 		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
+		uint256 maxAllowedIngredients = maxIngredients + additionalIngredients;
+		uint256 totalIngredients = _ingredientIds.length;
 
-		// get the LAC tokens from user
-		if (flame.lacCharge > 0) {
+		require(
+			totalIngredients > 1 && totalIngredients <= maxAllowedIngredients,
+			'Oven: INVALID_NUMBER_OF_INGREDIENTS'
+		);
+
+		(bool hasTalien, ) = doesUserHasTalien(msg.sender);
+
+		if (!hasTalien) {
+			require(totalIngredients <= maxIngredients, 'Oven: USER_DONT_HAVE_TALIEN');
+		}
+
+		if (flame.lacCharge > 0) // get the LAC tokens from user
+		{
 			require(lacToken.transferFrom(msg.sender, address(this), flame.lacCharge));
 		}
 
 		// get Ingredient NFTs from user
-		for (uint256 i = 0; i < _ingredientIds.length; i++) {
+		for (uint256 i = 0; i < totalIngredients; i++) {
 			require(
 				_ingredientIds[i] > 0 && _ingredientIds[i] <= currentIngredientId,
 				'Oven: INVALID_INGREDIENT_ID'
@@ -170,8 +203,15 @@ contract Oven is
 
 		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
 
+		(, bool hasGenesisTalie) = doesUserHasTalien(msg.sender);
+
+		// get fees for uncooking if user don`t have genesis talien
+		if (!hasGenesisTalie) {
+			require(lacToken.transferFrom(msg.sender, address(this), uncookingFee));
+		}
+
 		// get the dish nft from user
-		dishesNft.safeTransferFrom(msg.sender, address(this), _dishId);
+		dishesNft.transferFrom(msg.sender, address(this), _dishId);
 
 		uncookedDishIds.push(_dishId);
 
@@ -185,13 +225,13 @@ contract Oven is
 		uint256 slotMultiplier;
 		uint256 variation;
 
-		// Iterate Ingredient hash and assemble SVG sandwich
+		// Iterate Ingredient variation hash and assemble SVG sandwich
 		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			slottedValue = ingredientVariationHash & bitMask; // Extract slotted value from hash
 			if (slottedValue > 0) {
-				variation = (slot > 0) // Extract IngredientID from slotted value
+				variation = (slot > 0) // Extract variation from slotted value
 					? slottedValue / slotMultiplier
 					: slottedValue;
 
@@ -307,6 +347,39 @@ contract Oven is
 	}
 
 	/**
+	 * @notice This method allows admin to update the uncooking fee
+	 * @param _newFee - indicates the new uncooking fee to set
+	 */
+	function updateUncookingFee(uint256 _newFee) external onlyAdmin {
+		require(_newFee != uncookingFee, 'Oven: INVALID_FEE');
+		uncookingFee = _newFee;
+	}
+
+	/**
+	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
+	 * @param _maxIngredients - indicates the new uncooking fee to set
+	 */
+	function updateMaxIngredients(uint256 _maxIngredients) external onlyAdmin {
+		require(_maxIngredients > 1 && _maxIngredients != maxIngredients, 'Oven: INVALID_INGREDIENTS');
+		maxIngredients = _maxIngredients;
+	}
+
+	/**
+	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
+	 * @param _additionalIngredients - indicates the additional number of ingrediens that vip user can prepare a dish with
+	 */
+	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyAdmin {
+		require(_additionalIngredients != additionalIngredients, 'Oven: ALREADY_SET');
+		additionalIngredients = _additionalIngredients;
+	}
+
+	/*
+   =======================================================================
+   ======================== Getter Methods ===============================
+   =======================================================================
+ */
+
+	/**
 	 * @notice This method tells whether dish is ready to uncook or not.
 	 * @param _dishNFTId - indicates the dish id
 	 * @return true if dish is ready to uncook otherwise returns false.
@@ -323,6 +396,34 @@ contract Oven is
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * @notice This method tells if user has any talien. also it tells if user has any genesis talien or not
+	 * @return hasTalien - indicates if user have any talien
+	 * @return isGenesis - indicates if the talien is genesis or not
+	 */
+	function doesUserHasTalien(address _user)
+		public
+		view
+		virtual
+		returns (bool hasTalien, bool isGenesis)
+	{
+		uint256 userTalienBal = talien.balanceOf(_user);
+
+		if (userTalienBal > 0) {
+			hasTalien = true;
+			for (uint256 index = 0; index < userTalienBal; index++) {
+				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
+				(, uint256 generation, , , ) = talien.taliens(talienId);
+
+				// check if talien generation is genesis generation
+				if (generation == 1) {
+					isGenesis = true;
+					break;
+				}
+			}
+		}
 	}
 
 	/**
