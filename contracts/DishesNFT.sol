@@ -25,6 +25,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 flameType;
 		uint256 creationTime;
 		uint256 completionTime;
+		uint256 multiplier;
 	}
 
 	/*
@@ -122,7 +123,7 @@ contract DishesNFT is BaseERC721 {
 		(, uint256 totalBaseIngredients) = pantry.dish(_dishId);
 		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
-		(uint256 ingrediendVariaionHash, uint256 baseVariationHash) = _getHash(
+		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplierHash) = _getHash(
 			_dishId,
 			totalBaseIngredients,
 			_ingredientIds
@@ -141,7 +142,8 @@ contract DishesNFT is BaseERC721 {
 			baseVariationHash,
 			_flameId,
 			block.timestamp,
-			block.timestamp + _preparationTime
+			block.timestamp + _preparationTime,
+			multiplierHash
 		);
 
 		nonce++;
@@ -198,6 +200,45 @@ contract DishesNFT is BaseERC721 {
    ======================== Getter Methods ===============================
    =======================================================================
  */
+
+	/**
+	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
+	 * @param nutritionsHash - indicates the nutritionHash of ingredient
+	 * @return multiplier - indicates the multiplier calculated using nutritions
+	 */
+	function getMultiplier(uint256 nutritionsHash) public view virtual returns (uint256 multiplier) {
+		// will have the 8 nutritions
+		uint256[] memory nutritionsList = new uint256[](8);
+
+		uint256 slotConst = 256;
+		uint256 slotMask = 255;
+		uint256 bitMask;
+		uint256 slotMultiplier;
+		uint256 nutritionsValue;
+		uint256 nutrition;
+
+		// Iterate Ingredient hash and assemble SVGs
+		for (uint8 slot = 0; slot < uint8(8); slot++) {
+			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
+			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
+			nutritionsValue = nutritionsHash & bitMask;
+
+			if (nutritionsValue > 0) {
+				nutrition = (slot > 0) // Extract nutrition from slotted value
+					? nutritionsValue / slotMultiplier
+					: nutritionsValue;
+
+				// store nutrition
+				nutritionsList[slot] = nutrition;
+			}
+		}
+
+		// multiply first two nutritions
+		multiplier = nutritionsList[0] * nutritionsList[1];
+
+		// divide multiplier by next two nutritions
+		multiplier /= nutritionsList[2] * nutritionsList[3];
+	}
 
 	/**
 		@notice This method allows users to get the svg of their dish
@@ -329,7 +370,16 @@ contract DishesNFT is BaseERC721 {
 		uint256 _dishId,
 		uint256 _totalBaseIngredients,
 		uint256[] memory _ingredientIds
-	) internal view returns (uint256 variationIdHash, uint256 baseVariationHash) {
+	)
+		internal
+		view
+		returns (
+			uint256 variationIdHash,
+			uint256 baseVariationHash,
+			uint256 multiplierHash
+		)
+	{
+		uint256 multiplier;
 		// get base Variation Hash
 		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
 			uint256 baseIngredientId = pantry.getBaseIngredientId(_dishId, baseIndex);
@@ -346,14 +396,19 @@ contract DishesNFT is BaseERC721 {
 
 		// get variationIdHash
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
-			(, , uint256 totalVariations, ) = ingredientNft.ingredients(_ingredientIds[i]);
+			(, , uint256 totalVariations, uint256 nutritionsHash) = ingredientNft.ingredients(
+				_ingredientIds[i]
+			);
 			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = RecipeBase.getRandomVariation(nonce, totalVariations);
 			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
+			multiplier = getMultiplier(nutritionsHash);
+			uint256 product = 256**i;
 
-			variationIdHash += variationId * 256**i;
+			multiplierHash += multiplier * product;
+			variationIdHash += variationId * product;
 		}
 	}
 

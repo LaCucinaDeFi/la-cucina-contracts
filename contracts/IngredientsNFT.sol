@@ -240,51 +240,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    =======================================================================
  */
 
-	/**
-	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
-	 * @param _ingredientId - indicates the ingredient id
-	 * @return multiplier - indicates the multiplier calculated using nutritions
-	 */
-	function getMultiplier(uint256 _ingredientId)
-		public
-		view
-		virtual
-		onlyValidNftId(_ingredientId)
-		returns (uint256 multiplier)
-	{
-		uint256 nutritionsHash = ingredients[_ingredientId].nutritionsHash;
-
-		uint256[] memory nutritionsList = new uint256[](8);
-
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
-		uint256 bitMask;
-		uint256 slotMultiplier;
-		uint256 nutritionsValue;
-		uint256 nutrition;
-
-		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 0; slot < uint8(8); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			nutritionsValue = nutritionsHash & bitMask;
-
-			if (nutritionsValue > 0) {
-				nutrition = (slot > 0) // Extract nutrition from slotted value
-					? nutritionsValue / slotMultiplier
-					: nutritionsValue;
-
-				// store nutrition
-				nutritionsList[slot] = nutrition;
-			}
-		}
-
-		// multiply first two nutritions
-		multiplier = nutritionsList[0] * nutritionsList[1];
-
-		// divide multiplier by next two nutritions
-		multiplier /= nutritionsList[2] * nutritionsList[3];
-	}
 
 	/**
 	 * @notice This method allows us to get the ingredient variation id from the list of variations.

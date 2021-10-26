@@ -198,6 +198,7 @@ contract Oven is
 			,
 			,
 			,
+			,
 
 		) = dishesNft.dish(_dishId);
 
@@ -316,6 +317,7 @@ contract Oven is
 			,
 			uint256 oldFlameId,
 			,
+			,
 
 		) = dishesNft.dish(_dishNFTId);
 
@@ -390,7 +392,7 @@ contract Oven is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
-		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (block.timestamp > completionTime) {
 			return true;
@@ -437,7 +439,7 @@ contract Oven is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{
-		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (completionTime > block.timestamp) {
 			return completionTime - block.timestamp;
