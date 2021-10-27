@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '../BaseERC721.sol';
-import '../interfaces/IERC2981.sol';
+import '../../BaseERC721.sol';
+import '../../interfaces/IERC2981.sol';
 
 /**
  * @dev {ERC721} token, including:

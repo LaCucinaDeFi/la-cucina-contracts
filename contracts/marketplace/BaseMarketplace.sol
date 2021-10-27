@@ -9,7 +9,7 @@ import '@openzeppelin/contracts/utils/Counters.sol';
 import '../interfaces/IIngredientNFT.sol';
 import '../interfaces/IBEP20.sol';
 
-contract Marketplace is
+contract BaseMarketplace is
 	AccessControlUpgradeable,
 	ReentrancyGuardUpgradeable,
 	ERC1155ReceiverUpgradeable

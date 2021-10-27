@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IPantry {
+interface IKitchen {
 	function dish(uint256 _dishId)
 		external
 		returns (string memory name, uint256 totalBaseIngredients);

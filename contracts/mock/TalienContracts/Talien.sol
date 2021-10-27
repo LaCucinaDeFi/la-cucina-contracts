@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
 import './BaseERC721WithRoyalties.sol';
-import '../library/LaCucinaUtils.sol';
+import '../../library/LaCucinaUtils.sol';
 import './TraitFactory.sol';
 
 contract Talien is BaseERC721WithRoyalties, TraitFactory, ReentrancyGuardUpgradeable {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './Marketplace.sol';
+import './BaseMarketplace.sol';
 
-contract MarketplaceWithRoyalties is Marketplace {
+contract BaseMarketplaceWithRoyalties is BaseMarketplace {
 	/*
    =======================================================================
    ======================== Constructor/Initializer ======================

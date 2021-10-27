@@ -5,14 +5,14 @@ pragma solidity ^0.8.0;
 import './BaseERC721.sol';
 import './library/RecipeBase.sol';
 import './interfaces/IIngredientNFT.sol';
-import './interfaces/IPantry.sol';
+import './interfaces/IKitchen.sol';
 
 contract DishesNFT is BaseERC721 {
 	/*
-   =======================================================================
-   ======================== Structures ===================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Structures ===================================
+   	=======================================================================
+ 	*/
 
 	struct Dish {
 		address dishOwner;
@@ -43,7 +43,7 @@ contract DishesNFT is BaseERC721 {
 	uint256 private nonce;
 
 	IIngredientNFT public ingredientNft;
-	IPantry public pantry;
+	IKitchen public kitchen;
 
 	address[] public exceptedAddresses;
 
@@ -53,41 +53,41 @@ contract DishesNFT is BaseERC721 {
 	mapping(uint256 => string) public dishNames;
 
 	/*
-   =======================================================================
-   ======================== Constructor/Initializer ======================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Constructor/Initializer ======================
+   	=======================================================================
+ 	*/
 
 	function initialize(
 		string memory _name,
 		string memory _symbol,
 		string memory baseTokenURI,
 		address _ingredientAddress,
-		address _pantryAddress
+		address _kitchenAddress
 	) public virtual initializer {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
-		require(_pantryAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
+		require(_kitchenAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
 
 		__BaseERC721_init(_name, _symbol, baseTokenURI);
 
 		ingredientNft = IIngredientNFT(_ingredientAddress);
-		pantry = IPantry(_pantryAddress);
+		kitchen = IKitchen(_kitchenAddress);
 		nonce = 1;
 	}
 
 	/*
-   =======================================================================
-   ======================== Events =======================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Events =======================================
+   	=======================================================================
+ 	*/
 	event DishPrepared(uint256 dishId);
 	event DishUncooked(uint256 dishId);
 
 	/*
-   =======================================================================
-   ======================== Modifiers ====================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Modifiers ====================================
+   	=======================================================================
+ 	*/
 	modifier OnlyOven() {
 		require(hasRole(OVEN_ROLE, msg.sender), 'DishesNFT: ONLY_OVEN_CAN_CALL');
 		_;
@@ -99,10 +99,10 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Methods ===============================
+   	=======================================================================
+ 	*/
 	/**
 	 * @notice This method allows chef contract to prepare the dish and mint dish nft to specified user
 	 * @param _user - indicates the user address to whom dish nft to allocate
@@ -119,10 +119,10 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory _ingredientIds
 	) external OnlyOven returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
-		require(_dishId > 0 && _dishId <= pantry.getCurrentDishId(), 'Oven: INVALID_DISH_ID');
+		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishId(), 'Oven: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
-		(, uint256 totalBaseIngredients) = pantry.dish(_dishId);
+		(, uint256 totalBaseIngredients) = kitchen.dish(_dishId);
 		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
 		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
@@ -208,10 +208,10 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	/*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Getter Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
@@ -320,10 +320,10 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	/*
-   =======================================================================
-   ======================== Internal Methods =============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+ 		*/
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
@@ -354,14 +354,14 @@ contract DishesNFT is BaseERC721 {
 					: baseVariationValue;
 
 				require(
-					baseVariationId > 0 && baseVariationId <= pantry.getCurrentBaseVariationId(),
+					baseVariationId > 0 && baseVariationId <= kitchen.getCurrentBaseVariationId(),
 					'DishesNFT: INVALID_BASE_VARIATION_ID'
 				);
 
-				(uint256 baseId, string memory baseVariationName, string memory variationSvg) = pantry
+				(uint256 baseId, string memory baseVariationName, string memory variationSvg) = kitchen
 					.baseVariation(baseVariationId);
 
-				(string memory baseName, ) = pantry.baseIngredient(baseId);
+				(string memory baseName, ) = kitchen.baseIngredient(baseId);
 
 				// add base variation to defs
 				accumulator = RecipeBase.strConcat(accumulator, variationSvg);
@@ -397,14 +397,14 @@ contract DishesNFT is BaseERC721 {
 
 		// get base Variation Hash
 		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
-			uint256 baseIngredientId = pantry.getBaseIngredientId(_dishId, baseIndex);
-			(, uint256 baseVariationCount) = pantry.baseIngredient(baseIngredientId);
+			uint256 baseIngredientId = kitchen.getBaseIngredientId(_dishId, baseIndex);
+			(, uint256 baseVariationCount) = kitchen.baseIngredient(baseIngredientId);
 
 			require(baseVariationCount > 0, 'Oven: NO_BASE_VARIATIONS');
 
 			uint256 randomVarionIndex = RecipeBase.getRandomVariation(nonce, baseVariationCount);
 
-			uint256 baseVariationId = pantry.getBaseVariationId(baseIngredientId, randomVarionIndex);
+			uint256 baseVariationId = kitchen.getBaseVariationId(baseIngredientId, randomVarionIndex);
 
 			baseVariationHash += baseVariationId * 256**baseIndex;
 		}

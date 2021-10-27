@@ -22,7 +22,7 @@ const OvenV2 = artifacts.require('OvenV2');
 
 const DishesNFT = artifacts.require('DishesNFT');
 const IngredientNFT = artifacts.require('IngredientsNFT');
-const Pantry = artifacts.require('Pantry');
+const Kitchen = artifacts.require('Kitchen');
 const SampleToken = artifacts.require('SampleToken');
 const TalienContract = artifacts.require('Talien');
 
@@ -48,13 +48,13 @@ contract('Oven', (accounts) => {
 			initializer: 'initialize'
 		});
 
-		this.Pantry = await deployProxy(Pantry, [], {
+		this.Kitchen = await deployProxy(Kitchen, [], {
 			initializer: 'initialize'
 		});
 
 		this.Dish = await deployProxy(
 			DishesNFT,
-			['DishesNFT', 'Dish', url, this.Ingredient.address, this.Pantry.address],
+			['DishesNFT', 'Dish', url, this.Ingredient.address, this.Kitchen.address],
 			{
 				initializer: 'initialize'
 			}
@@ -270,24 +270,24 @@ contract('Oven', (accounts) => {
 
 			// ****************************************************************************
 
-			// add dish in pantry
-			await this.Pantry.addDish('Pizza', {from: owner});
-			currentDishId = await this.Pantry.getCurrentDishId();
+			// add dish in kitchen
+			await this.Kitchen.addDishType('Pizza', {from: owner});
+			currentDishId = await this.Kitchen.getCurrentDishTypeId();
 
 			// add base Ingredients for dish
-			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Slice', {from: owner});
-			await this.Pantry.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
+			await this.Kitchen.addBaseIngredientForDish(currentDishId, 'Slice', {from: owner});
+			await this.Kitchen.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
 
 			// add variations for base ingredients
 			// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
 			// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
-			await this.Pantry.addBaseIngredientVariation(1, 'One', slice_1, {from: owner});
-			await this.Pantry.addBaseIngredientVariation(1, 'Two', slice_2, {from: owner});
-			await this.Pantry.addBaseIngredientVariation(1, 'Three', slice_3, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(1, 'One', slice_1, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(1, 'Two', slice_2, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(1, 'Three', slice_3, {from: owner});
 
-			await this.Pantry.addBaseIngredientVariation(2, 'One', cheese_1, {from: owner});
-			await this.Pantry.addBaseIngredientVariation(2, 'Two', cheese_2, {from: owner});
-			await this.Pantry.addBaseIngredientVariation(2, 'Three', cheese_3, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(2, 'One', cheese_1, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(2, 'Two', cheese_2, {from: owner});
+			await this.Kitchen.addBaseIngredientVariation(2, 'Three', cheese_3, {from: owner});
 
 			// add ingredients
 			// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2

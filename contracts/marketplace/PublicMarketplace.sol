@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import './MarketplaceWithRoyalties.sol';
+import './BaseMarketplaceWithRoyalties.sol';
 import '../interfaces/IVersionedContract.sol';
 
-contract PublicMarketplace is Initializable, MarketplaceWithRoyalties, IVersionedContract {
+contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVersionedContract {
 	/*
    =======================================================================
    ======================== Constructor/Initializer ======================

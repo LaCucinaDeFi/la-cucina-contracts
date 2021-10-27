@@ -4,8 +4,7 @@ const {ether} = require('@openzeppelin/test-helpers');
 const fs = require('fs');
 const path = require('path');
 
-const addresses = require('../configurations/Addresses.json');
-const {supportedTokens} = require('../configurations/supportedTokens');
+const {supportedTokens} = require('../configurations/config');
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const DishesNFT = artifacts.require('DishesNFT');
 const Oven = artifacts.require('Oven');
@@ -15,12 +14,14 @@ const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
 const maxIngredients = 5;
 const additionalIngredients = 2;
 const uncookingFee = ether('5');
+
 module.exports = async function (deployer) {
 	/*
-   =======================================================================
-   ======================== Deploy contract ==============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Deploy contract ==============================
+   	=======================================================================
+ 	*/
+	const addresses = require(`../configurations/${deployer.network_id.toString()}/Addresses.json`);
 	console.log('deploying Oven contract............');
 	// store proxy address in file
 	const data = addresses[deployer.network_id.toString()];
@@ -69,17 +70,17 @@ module.exports = async function (deployer) {
 	data['Oven'] = instance.address.toString();
 	addresses[deployer.network_id.toString()] = data;
 
-	const addresssPath = await path.join('configurations', 'Addresses.json');
+	const addresssPath = await path.join(`configurations/${deployer.network_id.toString()}`, 'Addresses.json');
 
 	await fs.writeFile(addresssPath, JSON.stringify(addresses), (err) => {
 		if (err) throw err;
 	});
 
 	/*
-   =======================================================================
-   ======================== Configure contracts ==========================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Configure contracts ==========================
+   	=======================================================================
+ 	*/
 	const IngredientNFT = await IngredientsNFT.at(
 		addresses[deployer.network_id.toString()]['IngredientsNFT']
 	);
@@ -90,14 +91,14 @@ module.exports = async function (deployer) {
 	const OVEN_ROLE = await DishNFT.OVEN_ROLE();
 	await DishNFT.grantRole(OVEN_ROLE, instance.address);
 
-	// add Oven contract as exceptedFrom address in ingredient
-	await IngredientNFT.addExceptedFromAddress(instance.address);
-
 	// add Oven contract as excepted address in ingredient
 	await IngredientNFT.addExceptedAddress(instance.address);
 
 	// add Oven contract as excepted address in dishesNft
 	await DishNFT.addExceptedAddress(instance.address);
+
+	// add Oven contract as exceptedFrom address in ingredient
+	await IngredientNFT.addExceptedFromAddress(instance.address);
 
 	//*****************************Add flames in ovens*********************************** */
 

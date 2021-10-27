@@ -3,16 +3,17 @@ const fs = require('fs');
 const path = require('path');
 
 const DishesNFT = artifacts.require('DishesNFT');
-const addresses = require('../configurations/Addresses.json');
 
 const uri = 'https://token-cdn-domain/{id}.json';
 
 module.exports = async function (deployer) {
 	/*
-   =======================================================================
-   ======================== Deploy contract ==============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Deploy contract ==============================
+   	=======================================================================
+ 	*/	
+	const addresses = require(`../configurations/${deployer.network_id.toString()}/Addresses.json`);
+	
 	console.log('deploying DishesNFT contract............');
 	const instance = await deployProxy(
 		DishesNFT,
@@ -21,7 +22,7 @@ module.exports = async function (deployer) {
 			'DISH',
 			uri,
 			addresses[deployer.network_id.toString()]['IngredientsNFT'],
-			addresses[deployer.network_id.toString()]['Pantry']
+			addresses[deployer.network_id.toString()]['Kitchen']
 		],
 		{
 			initializer: 'initialize'
@@ -36,7 +37,7 @@ module.exports = async function (deployer) {
 	data['DishesNFT'] = instance.address.toString();
 	addresses[deployer.network_id.toString()] = data;
 
-	const addresssPath = await path.join('configurations', 'Addresses.json');
+	const addresssPath = await path.join(`configurations/${deployer.network_id.toString()}`, 'Addresses.json');
 
 	await fs.writeFile(addresssPath, JSON.stringify(addresses), (err) => {
 		if (err) throw err;
