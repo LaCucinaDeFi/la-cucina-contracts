@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './Marketplace.sol';
+import './BaseMarketplace.sol';
 import '../interfaces/IVersionedContract.sol';
 import '../interfaces/ITalien.sol';
 
-contract PrivateMarketplace is Initializable, Marketplace, IVersionedContract {
+contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContract {
 	/*
    =======================================================================
    ======================== Public Variables ============================

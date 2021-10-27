@@ -211,7 +211,7 @@ We have 2 main contracts:
 # Recipe Contracts
 Their are four main contracts in recipe which are listed below-
 * IngredientsNFT Contract
-* Pantry Contract
+* Kitchen Contract
 * DishesNFT Contract
 * Oven Contract 
 
@@ -225,11 +225,11 @@ Their are four main contracts in recipe which are listed below-
  * This contract also ensures that each user will have only one NFT except the excepted addressses which are allowed to hold multiple nfts. these excepted addresses are mostly the contracts` addresses.
  * This contract allows Market contract to create new nfts.
   
-## Pantry Contract
+## Kitchen Contract
 
-* Pantry contract allows admin to store and manage all the data related with the dishes. It stores the baseIngredients information and the svgs for the different variations of the base ingredients.
-* The Pantry contract is mainly used in the Dishes NFT contract for preparing and serving the dish.
-* All supported dishes are added in the pantry contract. 
+* Kitchen contract allows admin to store and manage all the data related with the dishes. It stores the baseIngredients information and the svgs for the different variations of the base ingredients.
+* The Kitchen contract is mainly used in the Dishes NFT contract for preparing and serving the dish.
+* All supported dishes are added in the kitchen contract. 
 
 ## DishesNFT Contract
 
@@ -260,9 +260,9 @@ Their are four main contracts in recipe which are listed below-
 * Then, admin adds the different variations for the ingredient using the **addIngredientVariation()** method which requires the ingredientId, variation name and the svg for the variation.
 
 
-## Deploy Pantry contract 
-* After deploying the IngredientsNFT contract, admin deploy the Pantry contract.
-* Then admin adds the dish in the pantry using the **addDish()** method which requires the name of the dish as a parameter.
+## Deploy Kitchen contract 
+* After deploying the IngredientsNFT contract, admin deploy the Kitchen contract.
+* Then admin adds the dish in the kitchen using the **addDish()** method which requires the name of the dish as a parameter.
 * After adding a dish, admin need to add the baseIngredient for the dish using the **addBaseIngredientForDish()** method which requires the dishID and the name of the baseIngredient as a parameter.
 * Then admin adds the different variations of the baseIngredient using the **addBaseIngredientVariation()** method which requires the baseIngredientId, variation name and the svg for the variation.
 
@@ -272,7 +272,7 @@ Their are four main contracts in recipe which are listed below-
   * _symbol: Indicates the symbol of the dish contract.
   * _baseTokenUri: Indicates the uri for the ERC721 tokens.
   * _ingredientNFTAddress: Indicates the address of the ingredient contract.
-  * _pantryAddress: Indicates the address of the pantry contract.
+  * _kitchenAddress: Indicates the address of the kitchen contract.
 
 ## Deploy Oven contract
 * After deploying the above contracts, admin need to deploy the oven contract with following parameters-

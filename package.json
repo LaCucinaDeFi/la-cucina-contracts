@@ -5,7 +5,7 @@
   "private": "true",
   "license": "MIT",
   "scripts": {
-    "compile": "sudo npx truffle compile",
+    "compile": "npx truffle compile",
     "verify_test": "truffle run verify --network bsc_test",
     "verify_main": "truffle run verify --network bsc_main",
     "ganache": "./scripts/start_ganache.sh",

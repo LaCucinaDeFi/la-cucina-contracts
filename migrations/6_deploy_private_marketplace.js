@@ -1,15 +1,15 @@
 const {deployProxy, getProxyImplementation} = require('@openzeppelin/truffle-upgrades');
-const {supportedTokens} = require('../configurations/supportedTokens');
 const {time} = require('@openzeppelin/test-helpers');
 
 const fs = require('fs');
 const path = require('path');
 
-const addresses = require('../configurations/Addresses.json');
+const {supportedTokens} = require('../configurations/config');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
+
 module.exports = async function (deployer) {
 	/*
    =======================================================================
@@ -17,6 +17,7 @@ module.exports = async function (deployer) {
    =======================================================================
  */
 	console.log('deploying PrivateMarketplace contract ....................');
+	const addresses = require(`../configurations/${deployer.network_id.toString()}/Addresses.json`);
 
 	const instance = await deployProxy(
 		PrivateMarketplace,
@@ -40,7 +41,7 @@ module.exports = async function (deployer) {
 	data['PrivateMarketplace'] = instance.address.toString();
 	addresses[deployer.network_id.toString()] = data;
 
-	const addresssPath = await path.join('configurations', 'Addresses.json');
+	const addresssPath = await path.join(`configurations/${deployer.network_id.toString()}`, 'Addresses.json');
 
 	await fs.writeFile(addresssPath, JSON.stringify(addresses), (err) => {
 		if (err) throw err;

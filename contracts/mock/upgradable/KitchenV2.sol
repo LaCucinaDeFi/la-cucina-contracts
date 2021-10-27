@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../Pantry.sol';
+import '../../Kitchen.sol';
 
-contract PantryV2 is Pantry {
+contract KitchenV2 is Kitchen {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -35,7 +35,7 @@ contract PantryV2 is Pantry {
  */
 
 	function addBurner(address _burner) public virtual {
-		require(_burner != address(0), 'PantryV2: ZERO_ADDRESS_FOUND');
+		require(_burner != address(0), 'KitchenV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}
 

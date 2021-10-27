@@ -7,7 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Paus
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
 
 /**
@@ -32,7 +32,7 @@ contract BaseERC1155 is
 	ERC1155SupplyUpgradeable,
 	IVersionedContract
 {
-	using Counters for Counters.Counter;
+	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*
    =======================================================================
@@ -47,7 +47,7 @@ contract BaseERC1155 is
    ======================== Private Variables ============================
    =======================================================================
  */
-	Counters.Counter internal tokenCounter;
+	CountersUpgradeable.Counter internal tokenCounter;
 
 	/*
    =======================================================================
