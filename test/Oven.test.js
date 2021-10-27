@@ -29,7 +29,7 @@ const TalienContract = artifacts.require('Talien');
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract('Oven', (accounts) => {
+contract.only('Oven', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -275,8 +275,8 @@ contract('Oven', (accounts) => {
 			currentDishId = await this.Kitchen.getCurrentDishTypeId();
 
 			// add base Ingredients for dish
-			await this.Kitchen.addBaseIngredientForDish(currentDishId, 'Slice', {from: owner});
-			await this.Kitchen.addBaseIngredientForDish(currentDishId, 'Cheese', {from: owner});
+			await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Slice', {from: owner});
+			await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Cheese', {from: owner});
 
 			// add variations for base ingredients
 			// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
@@ -293,42 +293,98 @@ contract('Oven', (accounts) => {
 			// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
 			// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
 
+			// add owner as excepted address
+			await this.Ingredient.addExceptedAddress(owner);
+
 			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
 
-			await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Gold', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Beef', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Truffle', CaviarNutrisionHash, ipfsHash);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Caviar',
+				CaviarNutrisionHash,
+				ipfsHash,
+				['Red', 'Yellow', 'Green'],
+				[caviar_1, caviar_2, caviar_3],
+				['One', 'Two', 'Three'],
+				{
+					from: owner
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Tuna',
+				CaviarNutrisionHash,
+				ipfsHash,
+				['Red', 'Yellow', 'Green'],
+				[tuna_1, tuna_2, tuna_3],
+				['One', 'Two', 'Three'],
+				{
+					from: owner,
+					gas: 10000000000
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Gold',
+				CaviarNutrisionHash,
+				ipfsHash,
+				['Red', 'Yellow', 'Green'],
+				[gold_1, gold_2, gold_3],
+				['One', 'Two', 'Three'],
+				{
+					from: owner,
+					gas: 10000000000
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Beef',
+				CaviarNutrisionHash,
+				ipfsHash,
+				['Red', 'Yellow', 'Green'],
+				[beef_1, beef_2, beef_3],
+				['One', 'Two', 'Three'],
+				{
+					from: owner,
+					gas: 10000000000
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Truffle',
+				CaviarNutrisionHash,
+				ipfsHash,
+				['Red', 'Yellow', 'Green'],
+				[truffle_1, truffle_2, truffle_3],
+				['One', 'Two', 'Three'],
+				{
+					from: owner,
+					gas: 10000000000
+				}
+			);
 
 			// add ingredient variations
 
-			this.add2Tx = await this.Ingredient.addIngredientVariation(1, 'One', caviar_1);
-			await this.Ingredient.addIngredientVariation(1, 'Two', caviar_2);
-			await this.Ingredient.addIngredientVariation(1, 'Three', caviar_3);
-
-			await this.Ingredient.addIngredientVariation(2, 'One', tuna_1);
-			await this.Ingredient.addIngredientVariation(2, 'Two', tuna_2);
-			await this.Ingredient.addIngredientVariation(2, 'Three', tuna_3);
-
-			await this.Ingredient.addIngredientVariation(3, 'One', gold_1);
-			await this.Ingredient.addIngredientVariation(3, 'Two', gold_2);
-			await this.Ingredient.addIngredientVariation(3, 'Three', gold_3);
-
-			await this.Ingredient.addIngredientVariation(4, 'One', beef_1);
-			await this.Ingredient.addIngredientVariation(4, 'Two', beef_2);
-			await this.Ingredient.addIngredientVariation(4, 'Three', beef_3);
-
-			this.add3Tx = await this.Ingredient.addIngredientVariation(5, 'One', truffle_1);
-			await this.Ingredient.addIngredientVariation(5, 'Two', truffle_2);
-			await this.Ingredient.addIngredientVariation(5, 'Three', truffle_3);
-
-			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 3, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 4, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			// transfer ingredients to the user1
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			user1CaviarBalance = await this.Ingredient.balanceOf(user1, 1);
 			user1TunaBalance = await this.Ingredient.balanceOf(user1, 2);
