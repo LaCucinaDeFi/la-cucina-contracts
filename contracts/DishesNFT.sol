@@ -49,6 +49,8 @@ contract DishesNFT is BaseERC721 {
 
 	// dishID => dish
 	mapping(uint256 => Dish) public dish;
+	// dishID => dishName
+	mapping(uint256 => string) public dishNames;
 
 	/*
    =======================================================================
@@ -129,6 +131,15 @@ contract DishesNFT is BaseERC721 {
 			_ingredientIds
 		);
 
+		(string memory _dishName, ) = pantry.dish(_dishId);
+		string memory dishName = string(
+			abi.encodePacked(
+				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0), // 1st keyword of 1st ingredient
+				ingredientNft.getIngredientKeyword(_ingredientIds[1], 1), // 2nd keyword of 2nd ingredient
+				_dishName
+			)
+		);
+
 		// mint dish nft to user
 		dishNFTId = mint(_user);
 
@@ -146,6 +157,7 @@ contract DishesNFT is BaseERC721 {
 			multiplier
 		);
 
+		dishNames[dishNFTId] = dishName;
 		nonce++;
 
 		emit DishPrepared(dishNFTId);

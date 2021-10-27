@@ -114,24 +114,6 @@ contract BaseERC1155 is
  */
 
 	/**
-	 * @dev Creates `amount` new tokens for `to`, of token type `id`.
-	 *
-	 * See {ERC1155-_mint}.
-	 *
-	 * Requirements:
-	 *
-	 * - the caller must have the `MINTER_ROLE`.
-	 */
-	function mint(
-		address to,
-		uint256 id,
-		uint256 amount,
-		bytes memory data
-	) public virtual onlyMinter onlyValidNftId(id) {
-		_mint(to, id, amount, data);
-	}
-
-	/**
 	 * @notice This function allows minter to burn the tokens
 	 * @param _from - indicates the user address from which tokens to removed
 	 * @param _id - indicates the ingredient id to burn

@@ -25,6 +25,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 totalVariations;
 		uint256 nutritionsHash;
 		uint256[] defIds;
+		string[] keywords;
 	}
 
 	/*
@@ -102,10 +103,16 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function addIngredient(
 		string memory _name,
 		uint256 _nutritionsHash,
-		string memory _ipfsHash
-	) external virtual onlyAdmin returns (uint256 ingredientId) {
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		uint256 _amount,
+		address _user
+	) external virtual onlyMinter returns (uint256 ingredientId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
+		require(_keywords.length > 1, 'IngredientNFT: INSUFFICIENT_KEYWORDS');
+		require(_amount > 0, 'IngredientNFT: INVALID_AMOUNT');
+		require(_user != address(0), 'IngredientNFT: INVALID_USER');
 
 		// generate ingredient Id
 		tokenCounter.increment();
@@ -113,8 +120,18 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256[] memory defIds;
 
 		// store ingredient details
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, 0, _nutritionsHash, defIds);
+		ingredients[ingredientId] = Ingredient(
+			ingredientId,
+			_name,
+			0,
+			_nutritionsHash,
+			defIds,
+			_keywords
+		);
 		ipfsHash[ingredientId] = _ipfsHash;
+
+		// mint ingredients to account
+		_mint(_user, ingredientId, _amount, '');
 
 		emit IngredientAdded(ingredientId);
 	}
@@ -240,7 +257,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    =======================================================================
  */
 
-
 	/**
 	 * @notice This method allows us to get the ingredient variation id from the list of variations.
 	 * @param _ingredientId - indicates ingredient id
@@ -299,6 +315,24 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function isExceptedFromAddress(address _account) external view virtual returns (bool) {
 		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedFromAddresses, _account);
 		return isExcepted;
+	}
+
+	/**
+	 * @notice This method allows us to get the ingredient keyword with the index
+	 * @param _ingredientId - ingredient id
+	 * @param _index - index of the keyword
+	 * @return keyword from the keyword list
+	 */
+	function getIngredientKeyword(uint256 _ingredientId, uint256 _index)
+		external
+		view
+		virtual
+		onlyValidNftId(_ingredientId)
+		returns (string memory)
+	{
+		Ingredient memory ingredient = ingredients[_ingredientId];
+		require(_index < ingredient.keywords.length, 'IngredientsNFT: INVALID_INDEX');
+		return ingredient.keywords[_index];
 	}
 
 	/*

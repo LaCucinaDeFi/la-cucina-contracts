@@ -27,6 +27,11 @@ interface IIngredientNFT is INFT {
 			uint256 nutritionsHash
 		);
 
+	function getIngredientKeyword(uint256 _ingredientId, uint256 _index)
+		external
+		view
+		returns (string memory);
+
 	function getVariationIdByIndex(uint256 _ingredientId, uint256 _index)
 		external
 		view
