@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import './BaseERC721.sol';
-import './library/RecipeBase.sol';
+import './library/LaCucinaUtils.sol';
 import './interfaces/IIngredientNFT.sol';
 import './interfaces/IKitchen.sol';
 
@@ -122,7 +122,7 @@ contract DishesNFT is BaseERC721 {
 		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishId(), 'Oven: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
-		(, uint256 totalBaseIngredients) = kitchen.dish(_dishId);
+		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dish(_dishId);
 		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
 		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
@@ -131,11 +131,12 @@ contract DishesNFT is BaseERC721 {
 			_ingredientIds
 		);
 
-		(string memory _dishName, ) = pantry.dish(_dishId);
 		string memory dishName = string(
 			abi.encodePacked(
-				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0), // 1st keyword of 1st ingredient
+				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0),
+				' ', // 1st keyword of 1st ingredient
 				ingredientNft.getIngredientKeyword(_ingredientIds[1], 1), // 2nd keyword of 2nd ingredient
+				' ',
 				_dishName
 			)
 		);
@@ -196,7 +197,7 @@ contract DishesNFT is BaseERC721 {
 	 * @param _account indicates the address to add.
 	 */
 	function addExceptedAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.addAddressInList(exceptedAddresses, _account);
+		LaCucinaUtils.addAddressInList(exceptedAddresses, _account);
 	}
 
 	/**
@@ -204,7 +205,7 @@ contract DishesNFT is BaseERC721 {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.removeAddressFromList(exceptedAddresses, _account);
+		LaCucinaUtils.removeAddressFromList(exceptedAddresses, _account);
 	}
 
 	/*
@@ -216,7 +217,7 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
 	 * @param nutritionsHash - indicates the nutritionHash of ingredient
-	 * @return nutritionsList - indicates the values of nutritions and astrogrings
+	 * @return nutritionsList - indicates the values of nutritions and strongies
 	 */
 	function getMultiplier(uint256 nutritionsHash)
 		public
@@ -270,7 +271,7 @@ contract DishesNFT is BaseERC721 {
 
 		string memory ingredientPlaceholders;
 		string memory defs;
-		defs = RecipeBase.strConcat(defs, string('<defs>'));
+		defs = LaCucinaUtils.strConcat(defs, string('<defs>'));
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -296,7 +297,7 @@ contract DishesNFT is BaseERC721 {
 				);
 
 				(, , string memory svg) = ingredientNft.defs(variationId);
-				defs = RecipeBase.strConcat(defs, svg);
+				defs = LaCucinaUtils.strConcat(defs, svg);
 
 				(uint256 ingredientId, string memory variationName, ) = ingredientNft.defs(variationId);
 
@@ -308,13 +309,13 @@ contract DishesNFT is BaseERC721 {
 			}
 		}
 
-		defs = RecipeBase.strConcat(defs, string('</defs>'));
+		defs = LaCucinaUtils.strConcat(defs, string('</defs>'));
 
 		// get ingredient variation defs
-		accumulator = RecipeBase.strConcat(accumulator, defs);
+		accumulator = LaCucinaUtils.strConcat(accumulator, defs);
 		// get the placeholders for ingredients
-		accumulator = RecipeBase.strConcat(accumulator, ingredientPlaceholders);
-		accumulator = RecipeBase.strConcat(accumulator, string('</svg>'));
+		accumulator = LaCucinaUtils.strConcat(accumulator, ingredientPlaceholders);
+		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 
 		return accumulator;
 	}
@@ -330,7 +331,7 @@ contract DishesNFT is BaseERC721 {
 		returns (string memory accumulator)
 	{
 		//add defs
-		accumulator = RecipeBase.strConcat(
+		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
 			string('<svg xmlns="http://www.w3.org/2000/svg" width="268.5" height="184.3"><defs>')
 		);
@@ -364,16 +365,16 @@ contract DishesNFT is BaseERC721 {
 				(string memory baseName, ) = kitchen.baseIngredient(baseId);
 
 				// add base variation to defs
-				accumulator = RecipeBase.strConcat(accumulator, variationSvg);
+				accumulator = LaCucinaUtils.strConcat(accumulator, variationSvg);
 
-				basePlaceHolders = RecipeBase.strConcat(
+				basePlaceHolders = LaCucinaUtils.strConcat(
 					basePlaceHolders,
 					_getPlaceHolder(baseName, baseVariationName)
 				);
 			}
 		}
-		accumulator = RecipeBase.strConcat(accumulator, string('</defs>'));
-		accumulator = RecipeBase.strConcat(accumulator, basePlaceHolders);
+		accumulator = LaCucinaUtils.strConcat(accumulator, string('</defs>'));
+		accumulator = LaCucinaUtils.strConcat(accumulator, basePlaceHolders);
 
 		return accumulator;
 	}
@@ -393,7 +394,7 @@ contract DishesNFT is BaseERC721 {
 	{
 		uint256 totalIngredients = _ingredientIds.length;
 		uint256 plutamins;
-		uint256 astrogrings;
+		uint256 strongies;
 
 		// get base Variation Hash
 		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
@@ -402,7 +403,7 @@ contract DishesNFT is BaseERC721 {
 
 			require(baseVariationCount > 0, 'Oven: NO_BASE_VARIATIONS');
 
-			uint256 randomVarionIndex = RecipeBase.getRandomVariation(nonce, baseVariationCount);
+			uint256 randomVarionIndex = LaCucinaUtils.getRandomVariation(nonce, baseVariationCount);
 
 			uint256 baseVariationId = kitchen.getBaseVariationId(baseIngredientId, randomVarionIndex);
 
@@ -417,21 +418,21 @@ contract DishesNFT is BaseERC721 {
 			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			// add plus one to avoid the 0 as random variation id
-			uint256 variationIndex = RecipeBase.getRandomVariation(nonce, totalVariations);
+			uint256 variationIndex = LaCucinaUtils.getRandomVariation(nonce, totalVariations);
 			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
 			uint256[] memory nutritions = getMultiplier(nutritionsHash);
 
 			if (i == 0) {
 				plutamins = nutritions[0];
-				astrogrings = nutritions[1];
+				strongies = nutritions[1];
 			} else {
 				plutamins *= nutritions[0];
-				astrogrings += nutritions[1];
+				strongies += nutritions[1];
 			}
 
 			variationIdHash += variationId * 256**i;
 		}
-		if (astrogrings != 0) multiplier = plutamins / astrogrings;
+		if (strongies != 0) multiplier = plutamins / strongies;
 	}
 
 	function _getPlaceHolder(string memory _IngredientName, string memory _variationName)
@@ -458,7 +459,7 @@ contract DishesNFT is BaseERC721 {
 	) internal virtual override(BaseERC721) {
 		// ensure dish is not transferable
 		if (from != address(0) && to != address(0)) {
-			(bool isToExcepted, ) = RecipeBase.isAddressExists(exceptedAddresses, to);
+			(bool isToExcepted, ) = LaCucinaUtils.isAddressExists(exceptedAddresses, to);
 
 			require(isToExcepted, 'DishesNFT: CANNOT_TRANSFER_DISH');
 		}

@@ -55,60 +55,89 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
  */
 
 	/**
-	 * @notice This method allows minter to create a new nfts and put them for sale. only minter can call this
-	 * @param _nftPrice indicates the selling price for nft in given token address.
-	 * @param _tokenAddress indicates the the ERC20/BEP20 token address in which nft seller/owner wants to get paid in
-	 * @param _nftId indicates the ingredient id
-	 * @param _amountOfCopies indicates the no. of copies to create for the nft id
-	 * @return saleId - indicates saleId in which copies of new NFT are sold.
+	 * 	@notice This method allows minter to create a new nfts and put them for sale. only minter can call this
+	 * 	@param _nftPrice indicates the selling price for nft in given token address.
+	 * 	@param _tokenAddress indicates the the ERC20/BEP20 token address in which nft seller/owner wants to get paid in
+	 * 	@param _amountOfCopies indicates the no. of copies to create for the nft id
+	 *  @param _ingredientName - indicates the name of the ingredient
+	 *  @param _nutritionsHash - indicates the nutritions
+	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
+	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 * 	@return nftId - indicates id of nft created in sale.
+	 * 	@return saleId - indicates saleId in which copies of new NFT are sold.
 	 */
 	function createAndSellNFT(
 		uint256 _nftPrice,
 		address _tokenAddress,
-		uint256 _nftId,
-		uint256 _amountOfCopies
-	) external virtual onlyMinter nonReentrant returns (uint256 saleId) {
+		uint256 _amountOfCopies,
+		string memory _ingredientName,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		string[] memory _svgs,
+		string[] memory _variationNames
+	) external virtual onlyMinter nonReentrant returns (uint256 nftId, uint256 saleId) {
 		require(_nftPrice > 0, 'PrivateMarketplace: INVALID_NFT_PRICE');
-		require(
-			_nftId > 0 && _nftId <= nftContract.getCurrentNftId(),
-			'PrivateMarketplace: INVALID_INGREDIENT_ID'
-		);
+
 		require(_amountOfCopies > 0, 'PrivateMarketplace: INVALID_NUMBER_OF_COPIES');
 
 		//mint nfts
-		nftContract.mint(address(this), _nftId, _amountOfCopies, '');
+		nftId = nftContract.addIngredientWithVariations(
+			address(this),
+			_amountOfCopies,
+			_ingredientName,
+			_nutritionsHash,
+			_ipfsHash,
+			_keywords,
+			_svgs,
+			_variationNames
+		);
 
 		//create sale
-		saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, _amountOfCopies);
+		saleId = _sellNFT(nftId, _nftPrice, _tokenAddress, _amountOfCopies);
 	}
 
 	/**
-	 * @notice This method allows minter to create a new unique NFT and put it in auction. only minter can call this method
-	 * @param _initialPrice indicates the startting price for the auction. all the bids should be greater than the initial price.
-	 * @param _tokenAddress indicates the the ERC20/BEP20 token address in which nft seller/owner wants to get paid in
-	 * @param _nftId indicates the ingredient id
-	 * @param _duration indicates the duration after which auction will get closed.
-	 * @param _isVipAuction indicates whether this new auction will be only for vip memmbers or not
-	 * @return auctionId - indicates auctionId though which copy of new unique NFT are sold.
+	 * 	@notice This method allows minter to create a new unique NFT and put it in auction. only minter can call this method
+	 * 	@param _initialPrice indicates the startting price for the auction. all the bids should be greater than the initial price.
+	 * 	@param _tokenAddress indicates the the ERC20/BEP20 token address in which nft seller/owner wants to get paid in
+	 * 	@param _duration indicates the duration after which auction will get closed.
+	 * 	@param _isVipAuction indicates whether this new auction will be only for vip memmbers or not
+	 *  @param _ingredientName - indicates the name of the ingredient
+	 *  @param _nutritionsHash - indicates the nutritions
+	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
+	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 * 	@return nftId - indicates id of nft created in sale.
+	 * 	@return auctionId - indicates auctionId though which copy of new unique NFT are sold.
 	 */
 	function createAndAuctionNFT(
 		uint256 _initialPrice,
 		address _tokenAddress,
-		uint256 _nftId,
 		uint256 _duration,
-		bool _isVipAuction
-	) external virtual onlyMinter nonReentrant returns (uint256 auctionId) {
+		bool _isVipAuction,
+		string memory _ingredientName,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		string[] memory _svgs,
+		string[] memory _variationNames
+	) external virtual onlyMinter nonReentrant returns (uint256 nftId, uint256 auctionId) {
 		require(_initialPrice > 0, 'PrivateMarketplace: INVALID_INITIAL_NFT_PRICE');
-		require(
-			_nftId > 0 && _nftId <= nftContract.getCurrentNftId(),
-			'PrivateMarketplace: INVALID_INGREDIENT_ID'
+
+		//mint nft
+		nftId = nftContract.addIngredientWithVariations(
+			address(this),
+			1,
+			_ingredientName,
+			_nutritionsHash,
+			_ipfsHash,
+			_keywords,
+			_svgs,
+			_variationNames
 		);
 
-		//mint nfts
-		nftContract.mint(address(this), _nftId, 1, '');
-
 		//creating auction for one copy of nft.
-		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration, _isVipAuction);
+		auctionId = _createAuction(nftId, _initialPrice, _tokenAddress, _duration, _isVipAuction);
 	}
 
 	/**

@@ -49,4 +49,24 @@ interface IIngredientNFT is INFT {
 	function getCurrentDefs() external view returns (uint256);
 
 	function royaltyInfo(uint256, uint256 _salePrice) external view returns (address, uint256);
+
+	function addIngredientWithVariations(
+		address _user,
+		uint256 _amount,
+		string memory _name,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		string[] memory _svgs,
+		string[] memory _variationNames
+	) external returns (uint256 ingredientId);
+
+	function addIngredient(
+		address _user,
+		uint256 _amount,
+		string memory _name,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords
+	) external returns (uint256 ingredientId);
 }

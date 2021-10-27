@@ -370,21 +370,21 @@ contract Talien is BaseERC721WithRoyalties, TraitFactory, ReentrancyGuardUpgrade
 					'Talien: INVALID_VARIAION_ID'
 				);
 
-				pictureSvg = TalienUtils.strConcat(pictureSvg, traitVariationSvgs[traitVariationId].svg);
+				pictureSvg = LaCucinaUtils.strConcat(pictureSvg, traitVariationSvgs[traitVariationId].svg);
 			}
 		}
 		if (isNumberedNft) {
-			pictureSvg = TalienUtils.strConcat(pictureSvg, _getSvgNumber(_tokenId));
+			pictureSvg = LaCucinaUtils.strConcat(pictureSvg, _getSvgNumber(_tokenId));
 		}
 
 		string memory badge = _getSvgBadge(profile.likes);
 
-		if (bytes(badge).length > 0) pictureSvg = TalienUtils.strConcat(pictureSvg, badge);
+		if (bytes(badge).length > 0) pictureSvg = LaCucinaUtils.strConcat(pictureSvg, badge);
 
 		if (profile.likes > 0)
-			pictureSvg = TalienUtils.strConcat(pictureSvg, _getSvgLikes(profile.likes));
+			pictureSvg = LaCucinaUtils.strConcat(pictureSvg, _getSvgLikes(profile.likes));
 
-		pictureSvg = TalienUtils.strConcat(pictureSvg, '</svg>');
+		pictureSvg = LaCucinaUtils.strConcat(pictureSvg, '</svg>');
 	}
 
 	/**
@@ -472,7 +472,7 @@ contract Talien is BaseERC721WithRoyalties, TraitFactory, ReentrancyGuardUpgrade
 				'<style>@import url(https://assets.lacucina.finance/css/fonts.css);</style><text x="570" y="25" text-anchor="end" font-family="',
 				fontName,
 				'" fill="#ff17b9" font-size="20">',
-				TalienUtils.toString(_tokenId),
+				LaCucinaUtils.toString(_tokenId),
 				'</text>'
 			)
 		);
@@ -494,7 +494,7 @@ contract Talien is BaseERC721WithRoyalties, TraitFactory, ReentrancyGuardUpgrade
 				'<style>@import url(https://assets.lacucina.finance/css/fonts.css);</style><text x="10" y="570" text-anchor="start" font-family="',
 				fontName,
 				'" fill="#ff17b9" font-size="20">',
-				TalienUtils.toString(_totalLikes),
+				LaCucinaUtils.toString(_totalLikes),
 				'</text>'
 			)
 		);
@@ -518,10 +518,10 @@ contract Talien is BaseERC721WithRoyalties, TraitFactory, ReentrancyGuardUpgrade
 		// prefix[n-1] is sum of all frequencies.
 		// Generate a random number with
 		// value from 1 to this sum
-		uint256 r = TalienUtils.random(nonce, prefix[n - 1]) + 1;
+		uint256 r = LaCucinaUtils.random(nonce, prefix[n - 1]) + 1;
 
 		// Find index of ceiling of r in prefix array
-		uint256 index = TalienUtils.findCeil(prefix, r, 0, n - 1);
+		uint256 index = LaCucinaUtils.findCeil(prefix, r, 0, n - 1);
 
 		require(index < n, 'Talien:INVALID_VARIATION_INDEX');
 
