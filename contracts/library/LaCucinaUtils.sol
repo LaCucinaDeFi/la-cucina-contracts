@@ -47,10 +47,10 @@ library LaCucinaUtils {
 	 * @param _address indicates the address to add.
 	 */
 	function addAddressInList(address[] storage _list, address _address) internal {
-		require(_address != address(0), 'BaseUtils: CANNOT_EXCEPT_ZERO_ADDRESS');
+		require(_address != address(0), 'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS');
 
 		(bool isExists, ) = isAddressExists(_list, _address);
-		require(!isExists, 'BaseUtils: ADDRESS_ALREADY_EXISTS');
+		require(!isExists, 'LaCucinaUtils: ADDRESS_ALREADY_EXISTS');
 
 		_list.push(_address);
 	}
@@ -60,7 +60,7 @@ library LaCucinaUtils {
 	 */
 	function removeAddressFromList(address[] storage _list, address _item) internal {
 		uint256 listItems = _list.length;
-		require(listItems > 0, 'BaseUtils: EMPTY_LIST');
+		require(listItems > 0, 'LaCucinaUtils: EMPTY_LIST');
 
 		// check and remove if the last item is item to be removed.
 		if (_list[listItems - 1] == _item) {
@@ -69,7 +69,7 @@ library LaCucinaUtils {
 		}
 
 		(bool isExists, uint256 index) = isAddressExists(_list, _item);
-		require(isExists, 'BaseUtils: ITEM_DOES_NOT_EXISTS');
+		require(isExists, 'LaCucinaUtils: ITEM_DOES_NOT_EXISTS');
 
 		// move supported token to last
 		if (listItems > 1) {
@@ -106,7 +106,7 @@ library LaCucinaUtils {
 	 */
 	function removeNumberFromList(uint256[] storage _list, uint256 _item) internal {
 		uint256 listItems = _list.length;
-		require(listItems > 0, 'ProfileBase: EMPTY_LIST');
+		require(listItems > 0, 'LaCucinaUtils: EMPTY_LIST');
 
 		// check and remove if the last item is item to be removed.
 		if (_list[listItems - 1] == _item) {
@@ -115,7 +115,7 @@ library LaCucinaUtils {
 		}
 
 		(bool isExists, uint256 index) = isNumberExists(_list, _item);
-		require(isExists, 'ProfilePictures: ITEM_DOES_NOT_EXISTS');
+		require(isExists, 'LaCucinaUtils: ITEM_DOES_NOT_EXISTS');
 
 		// move supported token to last
 		if (listItems > 1) {
@@ -153,11 +153,11 @@ library LaCucinaUtils {
 		returns (uint256 randomVariation)
 	{
 		randomVariation = random(_seed, _max);
-		require(randomVariation < _max, 'ProfilePictures: INVALID_VARIATION');
+		require(randomVariation < _max, 'LaCucinaUtils: INVALID_VARIATION');
 	}
 
 	function random(uint256 _seed, uint256 _max) internal view returns (uint256) {
-		require(_max > 0, 'ProfilePictures: INVALID_MAX');
+		require(_max > 0, 'LaCucinaUtils: INVALID_MAX');
 		uint256 randomnumber = uint256(
 			keccak256(
 				abi.encodePacked(block.timestamp, block.difficulty, block.number, msg.sender, _seed)
