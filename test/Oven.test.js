@@ -295,7 +295,7 @@ contract('Oven', (accounts) => {
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 
-			nutritionHash = await this.Dish.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(

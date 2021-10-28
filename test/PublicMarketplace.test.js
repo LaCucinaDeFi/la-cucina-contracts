@@ -113,7 +113,7 @@ contract('PublicMarketplace', (accounts) => {
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 
-			nutrisionHash = await this.Ingredient.getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
+			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
