@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IKitchen {
-	function dish(uint256 _dishId)
+	function dishType(uint256 _dishId)
 		external
 		returns (string memory name, uint256 totalBaseIngredients);
 
@@ -20,9 +20,9 @@ interface IKitchen {
 			string memory variationSvg
 		);
 
-	function addDish(string memory _name) external returns (uint256 dishId);
+	function addDishType(string memory _name) external returns (uint256 dishId);
 
-	function addBaseIngredientForDish(uint256 _dishId, string memory _name)
+	function addBaseIngredientForDishType(uint256 _dishId, string memory _name)
 		external
 		returns (uint256 baseIngredientId);
 
@@ -32,7 +32,7 @@ interface IKitchen {
 		string memory _svg
 	) external returns (uint256 baseVariationId);
 
-	function getCurrentDishId() external view returns (uint256);
+	function getCurrentDishTypeId() external view returns (uint256);
 
 	function getCurrentBaseIngredientId() external view returns (uint256);
 

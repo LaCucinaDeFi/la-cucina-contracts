@@ -284,10 +284,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method returns the token uri based on the chain id
 	 * @param _tokenId - indicates the token id
 	 */
-	function getTokenUri(uint256 _tokenId) public view virtual returns (string memory tokenUri) {
+	function uri(uint256 _tokenId) public view virtual override returns (string memory tokenUri) {
 		tokenUri = string(
 			abi.encodePacked(
-				uri(_tokenId),
+				'https://ipfs.infura.io/ipfs/',
 				ipfsHash[_tokenId],
 				'.ipfs.infura-ipfs.io/lacucina_secret_ingredients/',
 				LaCucinaUtils.toString(block.chainid),

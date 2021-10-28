@@ -37,10 +37,19 @@ contract DishesNFT is BaseERC721 {
 
 	/*
    =======================================================================
-   ======================== Public Variables ============================
+   ======================== Private Variables ============================
    =======================================================================
  */
 	uint256 private nonce;
+
+	/*
+   =======================================================================
+   ======================== Public Variables ============================
+   =======================================================================
+ */
+
+	uint256 public min;
+	uint256 public max;
 
 	IIngredientNFT public ingredientNft;
 	IKitchen public kitchen;
@@ -73,6 +82,8 @@ contract DishesNFT is BaseERC721 {
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		kitchen = IKitchen(_kitchenAddress);
 		nonce = 1;
+		min = 10;
+		max = 50;
 	}
 
 	/*
@@ -119,10 +130,10 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory _ingredientIds
 	) external OnlyOven returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
-		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishId(), 'Oven: INVALID_DISH_ID');
+		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'Oven: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
 
-		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dish(_dishId);
+		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dishType(_dishId);
 		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
 
 		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
@@ -133,8 +144,8 @@ contract DishesNFT is BaseERC721 {
 
 		string memory dishName = string(
 			abi.encodePacked(
-				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0),
-				' ', // 1st keyword of 1st ingredient
+				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0), // 1st keyword of 1st ingredient
+				' ',
 				ingredientNft.getIngredientKeyword(_ingredientIds[1], 1), // 2nd keyword of 2nd ingredient
 				' ',
 				_dishName
@@ -208,6 +219,22 @@ contract DishesNFT is BaseERC721 {
 		LaCucinaUtils.removeAddressFromList(exceptedAddresses, _account);
 	}
 
+	/**
+	 * @notice This method allows admin to update the min value
+	 */
+	function updateMin(uint256 _newMin) external virtual onlyAdmin {
+		require(_newMin != min, 'DishesNFT: MIN_ALREADY_SET');
+		min = _newMin;
+	}
+
+	/**
+	 * @notice This method allows admin to update the max value
+	 */
+	function updateMax(uint256 _newMax) external virtual onlyAdmin {
+		require(_newMax != max, 'DishesNFT: MAX_ALREADY_SET');
+		max = _newMax;
+	}
+
 	/*
    	=======================================================================
    	======================== Getter Methods ===============================
@@ -217,16 +244,15 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
 	 * @param nutritionsHash - indicates the nutritionHash of ingredient
-	 * @return nutritionsList - indicates the values of nutritions and strongies
+	 * @return plutamins - indicates the values of plutamin nutrition
+	 * @return strongies - indicates the values of strongies nutrition
 	 */
 	function getMultiplier(uint256 nutritionsHash)
 		public
 		view
 		virtual
-		returns (uint256[] memory nutritionsList)
+		returns (uint256 plutamins, uint256 strongies)
 	{
-		nutritionsList = new uint256[](2);
-
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
@@ -245,9 +271,13 @@ contract DishesNFT is BaseERC721 {
 					? nutritionsValue / slotMultiplier
 					: nutritionsValue;
 
-				// store 2nd and last nutrition i.e plutamins and astogrings
-				if (slot == uint8(2) || slot == uint8(6)) {
-					nutritionsList[slot] = nutrition;
+				// store 2nd and last nutrition i.e plutamins and strongies
+				if (slot == uint8(1)) {
+					plutamins = nutrition;
+				}
+
+				if (slot == uint8(6)) {
+					strongies = nutrition;
 				}
 			}
 		}
@@ -320,6 +350,19 @@ contract DishesNFT is BaseERC721 {
 		return accumulator;
 	}
 
+	/**
+	 * @notice This method allows us to create the nutritionsHash
+	 */
+	function getNutritionHash(uint256[] memory _nutritions)
+		external
+		pure
+		returns (uint256 nutrionHash)
+	{
+		for (uint256 i = 0; i < _nutritions.length; i++) {
+			nutrionHash += _nutritions[i] * 256**i;
+		}
+	}
+
 	/*
    	=======================================================================
    	======================== Internal Methods =============================
@@ -389,7 +432,7 @@ contract DishesNFT is BaseERC721 {
 		returns (
 			uint256 variationIdHash,
 			uint256 baseVariationHash,
-			uint256 multiplier
+			uint256 mScaled
 		)
 	{
 		uint256 totalIngredients = _ingredientIds.length;
@@ -409,30 +452,37 @@ contract DishesNFT is BaseERC721 {
 
 			baseVariationHash += baseVariationId * 256**baseIndex;
 		}
-
 		// get variationIdHash
 		for (uint256 i = 0; i < totalIngredients; i++) {
 			(, , uint256 totalVariations, uint256 nutritionsHash) = ingredientNft.ingredients(
 				_ingredientIds[i]
 			);
+
 			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = LaCucinaUtils.getRandomVariation(nonce, totalVariations);
+
 			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
-			uint256[] memory nutritions = getMultiplier(nutritionsHash);
+
+			(uint256 plutamin, uint256 strongie) = getMultiplier(nutritionsHash);
 
 			if (i == 0) {
-				plutamins = nutritions[0];
-				strongies = nutritions[1];
+				plutamins = plutamin;
+				strongies = strongie;
 			} else {
-				plutamins *= nutritions[0];
-				strongies += nutritions[1];
+				plutamins *= plutamin;
+				strongies += strongie;
 			}
 
 			variationIdHash += variationId * 256**i;
 		}
+
+		uint256 multiplier;
 		if (strongies != 0) multiplier = plutamins / strongies;
+
+		// normalize multiplier
+		mScaled = 1 + (9 * (multiplier - min)) / (max - min);
 	}
 
 	function _getPlaceHolder(string memory _IngredientName, string memory _variationName)

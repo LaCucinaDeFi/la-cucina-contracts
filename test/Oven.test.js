@@ -10,7 +10,6 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const fs = require('fs');
 const path = require('path');
@@ -29,7 +28,7 @@ const TalienContract = artifacts.require('Talien');
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract.only('Oven', (accounts) => {
+contract('Oven', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -38,7 +37,7 @@ contract.only('Oven', (accounts) => {
 	const fundReceiver = accounts[8];
 	const royaltyReceiver = accounts[9];
 	const royaltyFee = '100';
-
+	let nutritionHash;
 	let dishId = 1;
 
 	before(async () => {
@@ -296,14 +295,14 @@ contract.only('Oven', (accounts) => {
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 
-			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
+			nutritionHash = await this.Dish.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
 				'Caviar',
-				CaviarNutrisionHash,
+				nutritionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[caviar_1, caviar_2, caviar_3],
@@ -318,7 +317,7 @@ contract.only('Oven', (accounts) => {
 				owner,
 				10,
 				'Tuna',
-				CaviarNutrisionHash,
+				nutritionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[tuna_1, tuna_2, tuna_3],
@@ -334,7 +333,7 @@ contract.only('Oven', (accounts) => {
 				owner,
 				10,
 				'Gold',
-				CaviarNutrisionHash,
+				nutritionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[gold_1, gold_2, gold_3],
@@ -350,7 +349,7 @@ contract.only('Oven', (accounts) => {
 				owner,
 				10,
 				'Beef',
-				CaviarNutrisionHash,
+				nutritionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[beef_1, beef_2, beef_3],
@@ -366,7 +365,7 @@ contract.only('Oven', (accounts) => {
 				owner,
 				10,
 				'Truffle',
-				CaviarNutrisionHash,
+				nutritionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[truffle_1, truffle_2, truffle_3],
@@ -424,6 +423,19 @@ contract.only('Oven', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish1Tx = await this.Oven.prepareDish(1, 1, [1, 2, 3, 4, 5], {from: user1});
+
+			const currentDishId = await this.Dish.getCurrentTokenId();
+
+			//get dish details
+			const dishDetail = await this.Dish.dish(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+
+			expect(dishDetail.dishOwner).to.be.eq(user1);
+			expect(dishDetail.cooked).to.be.eq(true);
+			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
+			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('2'));
+			expect(dishDetail.flameType).bignumber.to.be.eq(new BN('1'));
+			expect(dishName).to.be.eq('Red Yellow Pizza');
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -489,10 +501,10 @@ contract.only('Oven', (accounts) => {
 			});
 		});
 
-		it('should prepare pizza using cheese and caviar only', async () => {
+		it('should prepare pizza using caviar and tuna only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 
 			// prepare the dish
 			this.prepareDish2Tx = await this.Oven.prepareDish(1, 1, [1, 2], {from: user1});
@@ -519,13 +531,13 @@ contract.only('Oven', (accounts) => {
 			});
 		});
 
-		it('should prepare pizza using caviar and tuna only', async () => {
+		it('should prepare pizza using caviar and gold only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Oven.prepareDish(1, 1, [1, 2], {from: user1});
+			await this.Oven.prepareDish(1, 1, [1, 3], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -550,8 +562,8 @@ contract.only('Oven', (accounts) => {
 		});
 		it('should prepare pizza using caviar and beef only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 4, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
 
 			// prepare the dish
 			await this.Oven.prepareDish(1, 1, [1, 4], {from: user1});
@@ -579,8 +591,8 @@ contract.only('Oven', (accounts) => {
 		});
 		it('should prepare pizza using cheese and beef only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
 			await this.Oven.prepareDish(1, 1, [1, 5], {from: user1});
@@ -606,13 +618,13 @@ contract.only('Oven', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using cheese and Truffle only', async () => {
+		it('should prepare pizza using tuna and Truffle only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Oven.prepareDish(1, 1, [1, 5], {from: user1});
+			await this.Oven.prepareDish(1, 1, [2, 5], {from: user1});
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -635,11 +647,11 @@ contract.only('Oven', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using cheese and tuna and beef only', async () => {
+		it('should prepare pizza using caviar and tuna and truffle only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 1, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
 			this.prepareDish3Tx = await this.Oven.prepareDish(1, 1, [1, 2, 5], {from: user1});
@@ -667,10 +679,10 @@ contract.only('Oven', (accounts) => {
 		});
 		it('should prepare pizza using tuna, gold, beef and truffle only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 3, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 4, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
 			this.prepareDish4Tx = await this.Oven.prepareDish(1, 1, [2, 3, 4, 5], {from: user1});
@@ -698,9 +710,9 @@ contract.only('Oven', (accounts) => {
 		});
 		it('should prepare pizza using caviar, gold,and truffle only', async () => {
 			// mint ingredients to the user1
-			await this.Ingredient.mint(user1, 2, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 4, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user1, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			await expectRevert(
 				this.Oven.prepareDish(4, 1, [2, 4, 5], {from: user1}),
@@ -883,25 +895,25 @@ contract.only('Oven', (accounts) => {
 			expect(user1BeefBalanceAfter).to.bignumber.be.eq(new BN('1'));
 			expect(user1TruffleBalanceAfter).to.bignumber.be.eq(new BN('1'));
 
-			expect(ovenCaviarBalance).to.bignumber.be.eq(new BN('7'));
+			expect(ovenCaviarBalance).to.bignumber.be.eq(new BN('6'));
 			expect(ovenTunaBalance).to.bignumber.be.eq(new BN('6'));
-			expect(ovenGoldBalance).to.bignumber.be.eq(new BN('2'));
+			expect(ovenGoldBalance).to.bignumber.be.eq(new BN('3'));
 			expect(ovenBeefBalance).to.bignumber.be.eq(new BN('4'));
 			expect(ovenTruffleBalance).to.bignumber.be.eq(new BN('6'));
 
-			expect(ovenCaviarBalanceAfter).to.bignumber.be.eq(new BN('6'));
+			expect(ovenCaviarBalanceAfter).to.bignumber.be.eq(new BN('5'));
 			expect(ovenTunaBalanceAfter).to.bignumber.be.eq(new BN('5'));
-			expect(ovenGoldBalanceAfter).to.bignumber.be.eq(new BN('1'));
+			expect(ovenGoldBalanceAfter).to.bignumber.be.eq(new BN('2'));
 			expect(ovenBeefBalanceAfter).to.bignumber.be.eq(new BN('3'));
 			expect(ovenTruffleBalanceAfter).to.bignumber.be.eq(new BN('5'));
 		});
 
 		it('should charge LAC while uncooking if user don`t have the no Talien', async () => {
 			// mint ingredients to the user2
-			await this.Ingredient.mint(user2, 2, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user2, 3, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user2, 4, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(user2, 5, 1, '0x384', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user2, 2, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user2, 3, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user2, 4, 1, '0x384', {from: owner});
+			await this.Ingredient.safeTransferFrom(owner, user2, 5, 1, '0x384', {from: owner});
 
 			// set approval to oven
 			await this.Ingredient.setApprovalForAll(this.Oven.address, true, {from: user2});

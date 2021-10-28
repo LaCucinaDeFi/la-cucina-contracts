@@ -896,7 +896,7 @@ contract('IngredientsNFT', (accounts) => {
 			const minterRole = await this.Ingredient.MINTER_ROLE();
 			await this.Ingredient.grantRole(minterRole, minter);
 
-			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
+			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
 			CaviarNutrisionHash = hash;
 
 			// add ingredient with variation
