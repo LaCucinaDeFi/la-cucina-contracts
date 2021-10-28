@@ -4,7 +4,7 @@ const path = require('path');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 
-const uri = 'https://token-cdn-domain/{id}.json';
+const uri = '';
 const {royaltyReciever, royaltyFee} = require('../configurations/config');
 
 module.exports = async function (deployer) {
