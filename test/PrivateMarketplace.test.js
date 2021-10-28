@@ -9,7 +9,7 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
+
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
@@ -121,7 +121,7 @@ contract('PrivateMarketplace', (accounts) => {
 			// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
 			// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
 
-			nutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
+			nutrisionHash = await this.Ingredient.getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// create the NFT and list for sale
 			this.saleTx = await this.privateMarketplace.createAndSellNFT(

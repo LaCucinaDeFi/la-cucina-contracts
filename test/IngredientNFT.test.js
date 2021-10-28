@@ -4,14 +4,13 @@ const {expect} = require('chai');
 const {expectRevert, BN, ether} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
-const url = 'https://';
+const url = '';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
 contract('IngredientsNFT', (accounts) => {
@@ -22,6 +21,7 @@ contract('IngredientsNFT', (accounts) => {
 	const user3 = accounts[4];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
+	let nutrisionHash;
 
 	before(async () => {
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
@@ -31,7 +31,9 @@ contract('IngredientsNFT', (accounts) => {
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq(url);
+		expect(uri).to.be.eq(
+			'https://ipfs.infura.io/ipfs/.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+		);
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -58,10 +60,8 @@ contract('IngredientsNFT', (accounts) => {
 	describe('addIngredient()', () => {
 		let currentBaseIngredientID;
 		let currentIngredientId;
-		let CaviarNutrisionHash;
 		before('add ingredients', async () => {
-			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
-			CaviarNutrisionHash = hash;
+			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
@@ -70,7 +70,7 @@ contract('IngredientsNFT', (accounts) => {
 				owner,
 				10,
 				'pepper',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				{
@@ -90,7 +90,7 @@ contract('IngredientsNFT', (accounts) => {
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.name).to.be.eq('pepper');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('0'));
-			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(CaviarNutrisionHash));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutrisionHash));
 		});
 
 		it('should revert when non-minter tries to add the ingredients', async () => {
@@ -99,7 +99,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'pepper',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					{
@@ -115,7 +115,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					{
@@ -132,7 +132,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'pepper',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					'',
 					['Red', 'Yellow', 'Green'],
 					{
@@ -145,14 +145,14 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when insufficient keywords are passed', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredient(owner, 10, 'pepper', CaviarNutrisionHash, ipfsHash, ['Red'], {
+				this.Ingredient.addIngredient(owner, 10, 'pepper', nutrisionHash, ipfsHash, ['Red'], {
 					from: owner
 				}),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 
 			await expectRevert(
-				this.Ingredient.addIngredient(owner, 10, 'pepper', CaviarNutrisionHash, ipfsHash, [], {
+				this.Ingredient.addIngredient(owner, 10, 'pepper', nutrisionHash, ipfsHash, [], {
 					from: owner
 				}),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
@@ -165,7 +165,7 @@ contract('IngredientsNFT', (accounts) => {
 					ZERO_ADDRESS,
 					10,
 					'pepper',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					{
@@ -182,7 +182,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					0,
 					'pepper',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					{
@@ -732,10 +732,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
 			);
 		});
 	});
@@ -752,7 +752,9 @@ contract('IngredientsNFT', (accounts) => {
 		it('should update base uri correctly', async () => {
 			const baseUri = await this.Ingredient.uri(1);
 
-			expect(baseUri).to.be.eq('ipfs://');
+			expect(baseUri).to.be.eq(
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+			);
 		});
 
 		it('should revert when non-admin tries to update the uri', async () => {
@@ -767,10 +769,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'ipfs://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
 			);
 		});
 	});
@@ -813,10 +815,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'ipfs://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
 			);
 		});
 	});
@@ -883,7 +885,6 @@ contract('IngredientsNFT', (accounts) => {
 
 	describe('addIngredientWithVariations()', () => {
 		let currentIngredientId;
-		let CaviarNutrisionHash;
 		before('setup contract', async () => {
 			// deploy new Ingredients NFT contract
 			this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
@@ -896,15 +897,12 @@ contract('IngredientsNFT', (accounts) => {
 			const minterRole = await this.Ingredient.MINTER_ROLE();
 			await this.Ingredient.grantRole(minterRole, minter);
 
-			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
-			CaviarNutrisionHash = hash;
-
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
 				'Caviar',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[caviar_1, caviar_2, caviar_3],
@@ -926,7 +924,7 @@ contract('IngredientsNFT', (accounts) => {
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.name).to.be.eq('Caviar');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('3'));
-			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(CaviarNutrisionHash));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutrisionHash));
 		});
 
 		it('should revert when non-minter tries to add the ingredients', async () => {
@@ -935,7 +933,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -953,7 +951,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -972,7 +970,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					'',
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -991,7 +989,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					[],
 					[caviar_1, caviar_2, caviar_3],
@@ -1008,7 +1006,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red'],
 					[caviar_1, caviar_2, caviar_3],
@@ -1027,7 +1025,7 @@ contract('IngredientsNFT', (accounts) => {
 					ZERO_ADDRESS,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -1046,7 +1044,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					0,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -1065,7 +1063,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[],
@@ -1084,7 +1082,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],
@@ -1101,7 +1099,7 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Caviar',
-					CaviarNutrisionHash,
+					nutrisionHash,
 					ipfsHash,
 					['Red', 'Yellow', 'Green'],
 					[caviar_1, caviar_2, caviar_3],

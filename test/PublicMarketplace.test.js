@@ -9,7 +9,6 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
@@ -114,14 +113,14 @@ contract('PublicMarketplace', (accounts) => {
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 
-			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
+			nutrisionHash = await this.Ingredient.getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
 				'Caviar',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[caviar_1, caviar_2, caviar_3],
@@ -136,7 +135,7 @@ contract('PublicMarketplace', (accounts) => {
 				owner,
 				10,
 				'Tuna',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[tuna_1, tuna_2, tuna_3],
@@ -152,7 +151,7 @@ contract('PublicMarketplace', (accounts) => {
 				owner,
 				10,
 				'Gold',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[gold_1, gold_2, gold_3],
@@ -168,7 +167,7 @@ contract('PublicMarketplace', (accounts) => {
 				owner,
 				10,
 				'Beef',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[beef_1, beef_2, beef_3],
@@ -184,7 +183,7 @@ contract('PublicMarketplace', (accounts) => {
 				owner,
 				10,
 				'Truffle',
-				CaviarNutrisionHash,
+				nutrisionHash,
 				ipfsHash,
 				['Red', 'Yellow', 'Green'],
 				[truffle_1, truffle_2, truffle_3],
@@ -213,8 +212,6 @@ contract('PublicMarketplace', (accounts) => {
 		let currentSaleId;
 
 		before('create and sell NFT to user1', async () => {
-			nutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25]);
-
 			// create the NFT and list for sale
 			this.saleTx = await this.privateMarketplace.createAndSellNFT(
 				ether('1'),

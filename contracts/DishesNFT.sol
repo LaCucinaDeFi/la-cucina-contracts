@@ -350,18 +350,6 @@ contract DishesNFT is BaseERC721 {
 		return accumulator;
 	}
 
-	/**
-	 * @notice This method allows us to create the nutritionsHash
-	 */
-	function getNutritionHash(uint256[] memory _nutritions)
-		external
-		pure
-		returns (uint256 nutrionHash)
-	{
-		for (uint256 i = 0; i < _nutritions.length; i++) {
-			nutrionHash += _nutritions[i] * 256**i;
-		}
-	}
 
 	/*
    	=======================================================================
