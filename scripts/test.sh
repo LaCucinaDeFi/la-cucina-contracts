@@ -60,8 +60,6 @@ else
   fi
 fi
 
-npx truffle compile
-
 if [ "$SOLIDITY_COVERAGE" = true ]; then
   npx truffle run coverage --network coverage && yarn run coverage_badge
 else

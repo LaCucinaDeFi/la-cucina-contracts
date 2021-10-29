@@ -7,6 +7,7 @@ const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 
 const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
 
+const BlockData = artifacts.require('BlockData');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
@@ -24,6 +25,9 @@ contract('IngredientsNFT', (accounts) => {
 	let nutrisionHash;
 
 	before(async () => {
+		this.BlockData = await BlockData.new();
+		this.chainId = await this.BlockData.getChainId();
+
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
@@ -31,7 +35,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq('https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/999/1');
+		expect(uri).to.be.eq(`https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/${this.chainId}/1`);
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -733,7 +737,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1'
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
 			);
 		});
 	});
@@ -751,7 +755,7 @@ contract('IngredientsNFT', (accounts) => {
 			const baseUri = await this.Ingredient.uri(1);
 
 			expect(baseUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1'
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
 			);
 		});
 
@@ -770,7 +774,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1'
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
 			);
 		});
 	});
@@ -816,7 +820,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/999/1'
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/${this.chainId}/1`
 			);
 		});
 	});

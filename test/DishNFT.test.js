@@ -24,7 +24,7 @@ const Kitchen = artifacts.require('Kitchen');
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
-contract.only('DishesNFT', (accounts) => {
+contract('DishesNFT', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -213,11 +213,9 @@ contract.only('DishesNFT', (accounts) => {
 		it('should prepare dish correctly', async () => {
 			//get current dish id
 			const currentDishIdAfter = await this.Dish.getCurrentTokenId();
-
 			const dishDetails = await this.Dish.dish(currentDishIdAfter);
-
 			//get user1`s dish balance
-			const dishBalance = await this.Dish.balanceOf(user1, currentDishIdAfter);
+			const dishBalance = await this.Dish.balanceOf(user1);
 
 			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
 
@@ -259,13 +257,13 @@ contract.only('DishesNFT', (accounts) => {
 				this.Dish.prepareDish(user1, 5, 1, time.duration.minutes('5'), [1, 2, 3, 4, 5], {
 					from: minter
 				}),
-				'Oven: INVALID_DISH_ID'
+				'DishesNFT: INVALID_DISH_ID'
 			);
 			await expectRevert(
 				this.Dish.prepareDish(user1, 0, 1, time.duration.minutes('5'), [1, 2, 3, 4, 5], {
 					from: minter
 				}),
-				'Oven: INVALID_DISH_ID'
+				'DishesNFT: INVALID_DISH_ID'
 			);
 		});
 		it('should rever when chef wants to prepare a dish with insufficient ingredients', async () => {
@@ -273,7 +271,7 @@ contract.only('DishesNFT', (accounts) => {
 				this.Dish.prepareDish(user1, 1, 1, time.duration.minutes('5'), [1], {
 					from: minter
 				}),
-				'Oven: INVALID_DISH_ID'
+				'DishesNFT: INSUFFICIENT_INGREDIENTS'
 			);
 		});
 		it('should emit when dish is prepared', async () => {
@@ -289,7 +287,7 @@ contract.only('DishesNFT', (accounts) => {
 			//get the svg of dish
 			const dishSvg = await this.Dish.serveDish(currentDishId);
 
-			const addresssPath = await path.join('dishes', 'pizzaDish.svg');
+			const addresssPath = await path.join('generated/dish', 'pizzaDish.svg');
 
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
 				if (err) throw err;
@@ -309,7 +307,7 @@ contract.only('DishesNFT', (accounts) => {
 			currentDishId = await this.Dish.getCurrentTokenId();
 
 			// get user1`s dish balance
-			userDishBalBefore = await this.Dish.balanceOf(user1, currentDishId);
+			userDishBalBefore = await this.Dish.balanceOf(user1);
 
 			// uncook dish
 			await this.Dish.uncookDish(currentDishId, {from: minter});

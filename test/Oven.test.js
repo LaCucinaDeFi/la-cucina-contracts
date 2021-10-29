@@ -493,7 +493,7 @@ contract('Oven', (accounts) => {
 			//get the svg of dish
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
-			const addresssPath = await path.join('dishes', 'pizza' + currentDishId.toString() + '.svg');
+			const addresssPath = await path.join('generated/ovens', 'pizza' + currentDishId.toString() + '.svg');
 			dishId++;
 
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
@@ -521,7 +521,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -551,7 +551,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -580,7 +580,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -609,7 +609,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -638,7 +638,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -668,7 +668,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -699,7 +699,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -716,7 +716,7 @@ contract('Oven', (accounts) => {
 
 			await expectRevert(
 				this.Oven.prepareDish(4, 1, [2, 4, 5], {from: user1}),
-				'Oven: INVALID_DISH_ID'
+				'DishesNFT: INVALID_DISH_ID'
 			);
 
 			// prepare the dish
@@ -734,7 +734,7 @@ contract('Oven', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: 100000000000});
 
 			const addresssPath = await path.join(
-				'dishes',
+				'generated/ovens',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -818,13 +818,10 @@ contract('Oven', (accounts) => {
 		let currentDishId;
 
 		before(async () => {
-			// currentDishId = await this.Dish.getCurrentTokenId();
-
 			// get user1`s dish balance
 			dish1Owner = await this.Dish.ownerOf(1);
 
 			// get user1`s ingredient balance
-
 			user1CaviarBalance = await this.Ingredient.balanceOf(user1, 1);
 			user1TunaBalance = await this.Ingredient.balanceOf(user1, 2);
 			user1GoldBalance = await this.Ingredient.balanceOf(user1, 3);
@@ -838,7 +835,7 @@ contract('Oven', (accounts) => {
 			ovenBeefBalance = await this.Ingredient.balanceOf(this.Oven.address, 4);
 			ovenTruffleBalance = await this.Ingredient.balanceOf(this.Oven.address, 5);
 
-			// // approve dish to OvenContract
+			// approve dish to OvenContract
 			await this.Dish.setApprovalForAll(this.Oven.address, true, {from: user1});
 		});
 

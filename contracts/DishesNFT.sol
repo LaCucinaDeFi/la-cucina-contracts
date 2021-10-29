@@ -130,11 +130,11 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory _ingredientIds
 	) external OnlyOven returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
-		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'Oven: INVALID_DISH_ID');
-		require(_ingredientIds.length > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
+		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'DishesNFT: INVALID_DISH_ID');
+		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
 
 		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dishType(_dishId);
-		require(totalBaseIngredients > 0, 'Oven: INSUFFICIENT_BASE_INGREDINETS');
+		require(totalBaseIngredients > 0, 'DishesNFT: INSUFFICIENT_BASE_INGREDINETS');
 
 		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
 			_dishId,
@@ -432,7 +432,7 @@ contract DishesNFT is BaseERC721 {
 			uint256 baseIngredientId = kitchen.getBaseIngredientId(_dishId, baseIndex);
 			(, uint256 baseVariationCount) = kitchen.baseIngredient(baseIngredientId);
 
-			require(baseVariationCount > 0, 'Oven: NO_BASE_VARIATIONS');
+			require(baseVariationCount > 0, 'DishesNFT: NO_BASE_VARIATIONS');
 
 			uint256 randomVarionIndex = LaCucinaUtils.getRandomVariation(nonce, baseVariationCount);
 
@@ -446,7 +446,7 @@ contract DishesNFT is BaseERC721 {
 				_ingredientIds[i]
 			);
 
-			require(totalVariations > 0, 'Oven: INSUFFICIENT_INGREDIENT_VARIATIONS');
+			require(totalVariations > 0, 'DishesNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = LaCucinaUtils.getRandomVariation(nonce, totalVariations);
