@@ -10,7 +10,7 @@ const DishesNFT = artifacts.require('DishesNFT');
 const Oven = artifacts.require('Oven');
 const SampleToken = artifacts.require('SampleToken');
 
-const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
+const TalienAddress = '0xcE5E10e69a4708716F40e1E2fC9a33D75b552E83';
 const maxIngredients = 5;
 const additionalIngredients = 2;
 const uncookingFee = ether('5');

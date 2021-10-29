@@ -26,7 +26,7 @@ contract DishesNFTV2 is DishesNFT {
 		address _kitchenAddress
 	) public virtual override initializer {
 		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
-		require(_kitchenAddress != address(0), 'DishesNFT: INVALID_PANTRY_ADDRESS');
+		require(_kitchenAddress != address(0), 'DishesNFT: INVALID_KITCHEN_ADDRESS');
 
 		__BaseERC721_init(_name, _symbol, baseTokenURI);
 

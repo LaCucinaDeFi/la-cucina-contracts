@@ -8,7 +8,7 @@ const {supportedTokens} = require('../configurations/config');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
-const TalienAddress = '0x7C8a9A5f1053f8E8f02DCC9e4a6C980112FE483F';
+const TalienAddress = '0xcE5E10e69a4708716F40e1E2fC9a33D75b552E83';
 
 module.exports = async function (deployer) {
 	/*

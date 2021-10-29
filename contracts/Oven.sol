@@ -171,7 +171,6 @@ contract Oven is
 			ingredientNft.safeTransferFrom(msg.sender, address(this), _ingredientIds[i], 1, '');
 		}
 
-	
 		// prepare the dish
 		dishId = dishesNft.prepareDish(
 			msg.sender,
@@ -206,10 +205,10 @@ contract Oven is
 
 		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
 
-		(, bool hasGenesisTalie) = doesUserHasTalien(msg.sender);
+		(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 
 		// get fees for uncooking if user don`t have genesis talien
-		if (!hasGenesisTalie) {
+		if (!hasGenesisTalien) {
 			require(lacToken.transferFrom(msg.sender, address(this), uncookingFee));
 		}
 
@@ -338,13 +337,6 @@ contract Oven is
 					'Oven: TRANSFER_FAILED'
 				);
 			}
-		} else if (newFlame.lacCharge < oldFlame.lacCharge) {
-			// slower flame
-			// return the extra LAC tokens to user
-			require(
-				lacToken.transfer(msg.sender, oldFlame.lacCharge - newFlame.lacCharge),
-				'Oven: TRANSFER_FAILED'
-			);
 		}
 
 		dishesNft.updatePrepartionTime(_dishNFTId, _flameId, newFlame.preparationDuration);
@@ -375,6 +367,35 @@ contract Oven is
 	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyAdmin {
 		require(_additionalIngredients != additionalIngredients, 'Oven: ALREADY_SET');
 		additionalIngredients = _additionalIngredients;
+	}
+
+	/**
+	 * @notice This method allows admin to claim all the tokens of specified address to given address
+	 */
+	function claimAllTokens(address _user, address _tokenAddress) external onlyAdmin {
+		require(_user != address(0), 'Oven: INVALID_ADDRESS');
+		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+
+		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
+
+		require(IBEP20(_tokenAddress).transfer(_user, tokenAmount));
+	}
+
+	/**
+	 * @notice This method allows admin to transfer specified amount of the tokens of specified address to given address
+	 */
+	function claimTokens(
+		address _user,
+		address _tokenAddress,
+		uint256 _amount
+	) external onlyAdmin {
+		require(_user != address(0), 'Oven: INVALID_ADDRESS');
+		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+
+		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
+		require(tokenAmount >= _amount, 'Oven: INSUFFICIENT_BALANCE');
+
+		require(IBEP20(_tokenAddress).transfer(_user, _amount));
 	}
 
 	/*
