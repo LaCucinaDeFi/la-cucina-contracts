@@ -11,7 +11,6 @@ const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
 const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
 const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
 const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
 
 const fs = require('fs');
 const path = require('path');
@@ -35,7 +34,7 @@ contract('DishesNFT', (accounts) => {
 
 	let dishId = 1;
 	let currentDishId;
-	let nutrisionHash;
+	let nutritionHash;
 
 	before(async () => {
 		// deploy NFT token
@@ -205,7 +204,7 @@ contract('DishesNFT', (accounts) => {
 				1,
 				1,
 				time.duration.minutes('5'),
-				[1, 2, 3, 4, 5],
+				[1, 2, 3],
 				{from: minter}
 			);
 		});
@@ -222,7 +221,7 @@ contract('DishesNFT', (accounts) => {
 			expect(dishDetails.dishOwner).to.bignumber.be.eq(user1);
 			expect(dishDetails.cooked).to.be.eq(true);
 			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
-			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('5'));
+			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.variationIdHash).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('2'));
 			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('1'));
@@ -300,7 +299,7 @@ contract('DishesNFT', (accounts) => {
 		});
 	});
 
-	describe('uncookDish()', async () => {
+	describe('uncookDish()', () => {
 		let currentDishId;
 
 		before(async () => {
@@ -315,8 +314,11 @@ contract('DishesNFT', (accounts) => {
 
 		it('should uncook dish correctly', async () => {
 			const dish = await this.Dish.dish(currentDishId);
+			const userDishBalAfter = await this.Dish.balanceOf(user1);
 
 			expect(dish.cooked).to.be.eq(false);
+			expect(userDishBalBefore).to.bignumber.be.eq(new BN('1'));
+			expect(userDishBalAfter).to.bignumber.be.eq(new BN('1'));
 		});
 
 		it('should revert when chef tries to uncook the dish with invalid dish id', async () => {
@@ -343,6 +345,141 @@ contract('DishesNFT', (accounts) => {
 				this.Dish.uncookDish(currentDishId, {from: user1}),
 				'DishesNFT: ONLY_OVEN_CAN_CALL'
 			);
+		});
+	});
+
+	describe('updatePrepartionTime()', () => {
+		let currentDishId;
+		it('should update the dish preparation time correctly', async () => {
+			currentDishId = await this.Dish.getCurrentTokenId();
+
+			await this.Dish.updatePrepartionTime(currentDishId, 2, time.duration.minutes('1'), {
+				from: minter
+			});
+
+			const dishDetails = await this.Dish.dish(currentDishId);
+
+			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('2'));
+			expect(dishDetails.completionTime).to.bignumber.be.gt(dishDetails.creationTime);
+		});
+
+		it('should revert when non oven tries to update the preparation time', async () => {
+			await expectRevert(
+				this.Dish.updatePrepartionTime(currentDishId, 2, time.duration.minutes('1'), {from: user1}),
+				'DishesNFT: ONLY_OVEN_CAN_CALL'
+			);
+		});
+	});
+
+	describe('addExceptedAddress()', () => {
+		it('should add the excepted address correctly', async () => {
+			const isMinterExceptedBefore = await this.Dish.exceptedAddresses(minter);
+
+			await this.Dish.addExceptedAddress(minter, {from: owner});
+
+			const isMinterExceptedAfter = await this.Dish.exceptedAddresses(minter);
+
+			expect(isMinterExceptedBefore).to.be.eq(false);
+			expect(isMinterExceptedAfter).to.be.eq(true);
+		});
+		it('should revert if owner tries to except address which is already excepted', async () => {
+			await expectRevert(
+				this.Dish.addExceptedAddress(minter, {from: owner}),
+				'DishesNFT: ALREADY_ADDED'
+			);
+		});
+
+		it('should revert if non-owner tries to except address', async () => {
+			await expectRevert(
+				this.Dish.addExceptedAddress(user1, {from: user3}),
+				'BaseERC721: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+		it('should allow the user to transfer dish nft to excecpted address', async () => {
+			const currentDishId = await this.Dish.getCurrentTokenId();
+			await this.Dish.safeTransferFrom(user1, minter, currentDishId, {from: user1});
+		});
+
+		it('should not allow the user to transfer dish nft to non-excecpted address', async () => {
+			const currentDishId = await this.Dish.getCurrentTokenId();
+			await expectRevert(
+				this.Dish.safeTransferFrom(minter, user1, currentDishId, {from: minter}),
+				'DishesNFT: CANNOT_TRANSFER_DISH'
+			);
+		});
+	});
+
+	describe('removeExceptedAddress()', () => {
+		it('should remove the excepted address correctly', async () => {
+			const isMinterExceptedBefore = await this.Dish.exceptedAddresses(minter);
+
+			await this.Dish.removeExceptedAddress(minter, {from: owner});
+
+			const isMinterExceptedAfter = await this.Dish.exceptedAddresses(minter);
+
+			expect(isMinterExceptedBefore).to.be.eq(true);
+			expect(isMinterExceptedAfter).to.be.eq(false);
+		});
+		it('should revert if owner tries to remove excepted address which is already removed', async () => {
+			await expectRevert(
+				this.Dish.removeExceptedAddress(minter, {from: owner}),
+				'DishesNFT: ALREADY_REMOVED'
+			);
+		});
+
+		it('should revert if non-owner tries to except address', async () => {
+			await expectRevert(
+				this.Dish.removeExceptedAddress(user1, {from: user3}),
+				'BaseERC721: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+	});
+
+	describe('updateMin()', () => {
+		it('should update the min value correctly', async () => {
+			await this.Dish.updateMin(20, {from: owner});
+
+			const min = await this.Dish.min();
+			expect(min).to.bignumber.be.eq(new BN('20'));
+		});
+		it('should revert when non-owner tries to update the min', async () => {
+			await expectRevert(
+				this.Dish.updateMin(20, {from: minter}),
+				'BaseERC721: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+
+		it('should revert when owner tries to update the min with already set value', async () => {
+			await expectRevert(this.Dish.updateMin(20, {from: owner}), 'DishesNFT: MIN_ALREADY_SET');
+		});
+	});
+
+	describe('updateMax()', () => {
+		it('should update the max value correctly', async () => {
+			await this.Dish.updateMax(60, {from: owner});
+
+			const max = await this.Dish.max();
+			expect(max).to.bignumber.be.eq(new BN('60'));
+		});
+		it('should revert when non-owner tries to update the max', async () => {
+			await expectRevert(
+				this.Dish.updateMax(20, {from: minter}),
+				'BaseERC721: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+
+		it('should revert when owner tries to update the max with already set value', async () => {
+			await expectRevert(this.Dish.updateMax(60, {from: owner}), 'DishesNFT: MAX_ALREADY_SET');
+		});
+	});
+
+	describe('getMultiplier()', () => {
+		it('should return multiplier correctly', async () => {
+			const multiplier = await this.Dish.getMultiplier(nutritionHash.toString());
+
+			expect(multiplier[0]).to.bignumber.be.eq(new BN('50'));
+
+			expect(multiplier[1]).to.bignumber.be.eq(new BN('25'));
 		});
 	});
 

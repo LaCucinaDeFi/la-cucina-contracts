@@ -34,9 +34,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    	=======================================================================
  	*/
 
-	address[] public exceptedAddresses;
-	address[] public exceptedFromAddresses;
-
 	// ingredientId => Ingredient details
 	mapping(uint256 => Ingredient) public ingredients;
 
@@ -45,6 +42,11 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 
 	// defId => Defs details
 	mapping(uint256 => Defs) public defs;
+
+	// userAddress => isExcepted?
+	mapping(address => bool) public exceptedAddresses;
+	// userAddress => isExceptedFrom?
+	mapping(address => bool) public exceptedFromAddresses;
 
 	/*
    	=======================================================================
@@ -227,15 +229,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to add.
 	 */
 	function addExceptedAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.addAddressInList(exceptedAddresses, _account);
-	}
-
-	/**
-	 * @notice This method allows admin to except the from addresses so that user can receive the multiple same nft tokens.
-	 * @param _account indicates the address to add.
-	 */
-	function addExceptedFromAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.addAddressInList(exceptedFromAddresses, _account);
+		require(!exceptedAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
+		exceptedAddresses[_account] = true;
 	}
 
 	/**
@@ -243,7 +238,17 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.removeAddressFromList(exceptedAddresses, _account);
+		require(exceptedAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
+		exceptedAddresses[_account] = false;
+	}
+
+	/**
+	 * @notice This method allows admin to except the from addresses so that user can receive the multiple same nft tokens.
+	 * @param _account indicates the address to add.
+	 */
+	function addExceptedFromAddress(address _account) external virtual onlyAdmin {
+		require(!exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
+		exceptedFromAddresses[_account] = true;
 	}
 
 	/**
@@ -251,7 +256,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedFromAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.removeAddressFromList(exceptedFromAddresses, _account);
+		require(exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
+		exceptedFromAddresses[_account] = false;
 	}
 
 	/*
@@ -315,22 +321,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
     */
 	function getCurrentDefs() external view virtual returns (uint256) {
 		return defsCounter.current();
-	}
-
-	/**
-	 * @notice This method tells whether the given address is allowed to hold multiple nfts or not.
-	 */
-	function isExceptedAddress(address _account) external view virtual returns (bool) {
-		(bool isExcepted, ) = LaCucinaUtils.isAddressExists(exceptedAddresses, _account);
-		return isExcepted;
-	}
-
-	/**
-	 * @notice This method tells whether the given address is allowed to hold multiple nfts from excepted address or not.
-	 */
-	function isExceptedFromAddress(address _account) external view virtual returns (bool) {
-		(bool isExcepted, ) = LaCucinaUtils.isAddressExists(exceptedFromAddresses, _account);
-		return isExcepted;
 	}
 
 	/**
@@ -423,11 +413,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256[] memory amounts,
 		bytes memory data
 	) internal virtual override(BaseERC1155) {
-		(bool isExceptedFrom, ) = LaCucinaUtils.isAddressExists(exceptedFromAddresses, from);
-		(bool isExcepted, ) = LaCucinaUtils.isAddressExists(exceptedAddresses, to);
-
-		if (!isExcepted && to != address(0)) {
-			if (!isExceptedFrom) {
+		if (!exceptedAddresses[to] && to != address(0)) {
+			if (!exceptedFromAddresses[from]) {
 				for (uint256 i = 0; i < ids.length; i++) {
 					require(balanceOf(to, ids[i]) == 0, 'ERC1155NFT: TOKEN_ALREADY_EXIST');
 				}
