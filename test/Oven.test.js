@@ -13,7 +13,7 @@ const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
 
 const fs = require('fs');
 const path = require('path');
-const {MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
+const {MAX_UINT256, ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 const {Talien} = require('./helper/talien');
 
 const Oven = artifacts.require('Oven');
@@ -990,6 +990,98 @@ contract('Oven', (accounts) => {
 			await expectRevert(
 				this.Dish.serveDish(1, {from: user1}),
 				'DishesNFT: CANNOT_SERVE_UNCOOKED_DISH'
+			);
+		});
+	});
+
+	describe('claimAllTokens()', () => {
+		it('should claim tokens send to oven contract', async () => {
+			const ovenTokenBalBefore = await this.SampleToken.balanceOf(this.Oven.address);
+			const owenerTokenBalBefore = await this.SampleToken.balanceOf(owner);
+
+			// claim all tokens
+			await this.Oven.claimAllTokens(owner, this.SampleToken.address, {from: owner});
+
+			const ovenTokenBalAfter = await this.SampleToken.balanceOf(this.Oven.address);
+			const owenerTokenBalAfter = await this.SampleToken.balanceOf(owner);
+
+			expect(ovenTokenBalBefore).to.bignumber.be.gt(new BN('0'));
+			expect(owenerTokenBalBefore).to.bignumber.be.eq(new BN('0'));
+
+			expect(ovenTokenBalAfter).to.bignumber.be.eq(new BN('0'));
+			expect(owenerTokenBalAfter).to.bignumber.be.eq(ovenTokenBalBefore);
+		});
+
+		it('should revert when non-admin tries to claim all the tokens', async () => {
+			await expectRevert(
+				this.Oven.claimAllTokens(owner, this.SampleToken.address, {from: minter}),
+				'Oven: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+
+		it('should revert when admin tries to claim all the tokens to zero user address', async () => {
+			await expectRevert(
+				this.Oven.claimAllTokens(ZERO_ADDRESS, this.SampleToken.address, {from: owner}),
+				'Oven: INVALID_USER_ADDRESS'
+			);
+		});
+		it('should revert when admin tries to claim all the tokens to zero token address', async () => {
+			await expectRevert(
+				this.Oven.claimAllTokens(owner, ZERO_ADDRESS, {from: owner}),
+				'Oven: INVALID_TOKEN_ADDRESS'
+			);
+		});
+	});
+
+	describe('claimTokens()', () => {
+		it('should claim specified amount of tokens send to oven contract', async () => {
+			//transfer tokens to oven
+			await this.SampleToken.transfer(this.Oven.address, ether('5'), {from: user1});
+
+			const ovenTokenBalBefore = await this.SampleToken.balanceOf(this.Oven.address);
+			const owenerTokenBalBefore = await this.SampleToken.balanceOf(owner);
+
+			// claim all tokens
+			await this.Oven.claimTokens(owner, this.SampleToken.address, ether('4'), {from: owner});
+
+			const ovenTokenBalAfter = await this.SampleToken.balanceOf(this.Oven.address);
+			const owenerTokenBalAfter = await this.SampleToken.balanceOf(owner);
+
+			expect(ovenTokenBalBefore).to.bignumber.be.eq(ether('5'));
+			expect(owenerTokenBalBefore).to.bignumber.be.gt(new BN('0'));
+
+			expect(ovenTokenBalAfter).to.bignumber.be.eq(ether('1'));
+			expect(owenerTokenBalAfter).to.bignumber.be.eq(owenerTokenBalBefore.add(ether('4')));
+		});
+
+		it('should revert when non-admin tries to claim given no. of the tokens', async () => {
+			await expectRevert(
+				this.Oven.claimTokens(owner, this.SampleToken.address, ether('4'), {from: minter}),
+				'Oven: ONLY_ADMIN_CAN_CALL'
+			);
+		});
+
+		it('should revert when admin tries to claim  given no. of the tokens to zero user address', async () => {
+			await expectRevert(
+				this.Oven.claimTokens(ZERO_ADDRESS, this.SampleToken.address, ether('4'), {from: owner}),
+				'Oven: INVALID_USER_ADDRESS'
+			);
+		});
+		it('should revert when admin tries to claim  given no. of the tokens to zero token address', async () => {
+			await expectRevert(
+				this.Oven.claimTokens(owner, ZERO_ADDRESS, ether('4'), {from: owner}),
+				'Oven: INVALID_TOKEN_ADDRESS'
+			);
+		});
+
+		it('should revert when admin tries to claim invalid amount of tokens', async () => {
+			await expectRevert(
+				this.Oven.claimTokens(owner, this.SampleToken.address, ether('0'), {from: owner}),
+				'Oven: INSUFFICIENT_BALANCE'
+			);
+			await expectRevert(
+				this.Oven.claimTokens(owner, this.SampleToken.address, ether('2'), {from: owner}),
+				'Oven: INSUFFICIENT_BALANCE'
 			);
 		});
 	});

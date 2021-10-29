@@ -373,7 +373,7 @@ contract Oven is
 	 * @notice This method allows admin to claim all the tokens of specified address to given address
 	 */
 	function claimAllTokens(address _user, address _tokenAddress) external onlyAdmin {
-		require(_user != address(0), 'Oven: INVALID_ADDRESS');
+		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
 
 		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
@@ -389,11 +389,11 @@ contract Oven is
 		address _tokenAddress,
 		uint256 _amount
 	) external onlyAdmin {
-		require(_user != address(0), 'Oven: INVALID_ADDRESS');
+		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
 
 		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
-		require(tokenAmount >= _amount, 'Oven: INSUFFICIENT_BALANCE');
+		require(_amount > 0 && tokenAmount >= _amount, 'Oven: INSUFFICIENT_BALANCE');
 
 		require(IBEP20(_tokenAddress).transfer(_user, _amount));
 	}
