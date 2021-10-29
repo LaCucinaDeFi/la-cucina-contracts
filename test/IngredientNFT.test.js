@@ -311,7 +311,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -322,17 +322,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedAddress(user1, {from: owner}),
-				'LaCucinaUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -343,7 +336,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user2);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user2);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -354,17 +347,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedFromAddress(user2, {from: owner}),
-				'LaCucinaUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -373,16 +359,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user3, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
-			);
-		});
-
-		it('should revert when owner tries to remove zero address ', async () => {
-			await expectRevert(
-				this.Ingredient.removeExceptedAddress('0x0000000000000000000000000000000000000000', {
-					from: owner
-				}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -397,7 +374,7 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.removeExceptedAddress(user1, {from: owner});
 			await this.Ingredient.removeExceptedAddress(owner, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -405,7 +382,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user1, {from: owner}),
-				'LaCucinaUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});
@@ -414,14 +391,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user3, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
-			);
-		});
-
-		it('should revert when owner tries to remove zero address ', async () => {
-			await expectRevert(
-				this.Ingredient.removeExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -435,7 +405,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should remove user from excepted addresses list correctly', async () => {
 			await this.Ingredient.removeExceptedFromAddress(user2, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -443,7 +413,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user2, {from: owner}),
-				'LaCucinaUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});

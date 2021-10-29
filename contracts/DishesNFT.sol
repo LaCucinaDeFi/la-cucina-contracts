@@ -54,12 +54,12 @@ contract DishesNFT is BaseERC721 {
 	IIngredientNFT public ingredientNft;
 	IKitchen public kitchen;
 
-	address[] public exceptedAddresses;
-
 	// dishID => dish
 	mapping(uint256 => Dish) public dish;
 	// dishID => dishName
 	mapping(uint256 => string) public dishNames;
+	// userAddress => isExcepted?
+	mapping(address => bool) public exceptedAddresses;
 
 	/*
    	=======================================================================
@@ -208,7 +208,8 @@ contract DishesNFT is BaseERC721 {
 	 * @param _account indicates the address to add.
 	 */
 	function addExceptedAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.addAddressInList(exceptedAddresses, _account);
+		require(!exceptedAddresses[_account], 'DishesNFT: ALREADY_ADDED');
+		exceptedAddresses[_account] = true;
 	}
 
 	/**
@@ -216,7 +217,8 @@ contract DishesNFT is BaseERC721 {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedAddress(address _account) external virtual onlyAdmin {
-		LaCucinaUtils.removeAddressFromList(exceptedAddresses, _account);
+		require(exceptedAddresses[_account], 'DishesNFT: ALREADY_REMOVED');
+		exceptedAddresses[_account] = false;
 	}
 
 	/**
@@ -349,7 +351,6 @@ contract DishesNFT is BaseERC721 {
 
 		return accumulator;
 	}
-
 
 	/*
    	=======================================================================
@@ -497,9 +498,7 @@ contract DishesNFT is BaseERC721 {
 	) internal virtual override(BaseERC721) {
 		// ensure dish is not transferable
 		if (from != address(0) && to != address(0)) {
-			(bool isToExcepted, ) = LaCucinaUtils.isAddressExists(exceptedAddresses, to);
-
-			require(isToExcepted, 'DishesNFT: CANNOT_TRANSFER_DISH');
+			require(exceptedAddresses[to], 'DishesNFT: CANNOT_TRANSFER_DISH');
 		}
 
 		super._beforeTokenTransfer(from, to, tokenId);
