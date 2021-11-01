@@ -25,6 +25,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string name;
 		uint256 totalBaseIngredients;
 		uint256[] baseIngredientIds;
+		uint256[] x;
+		uint256[] y;
 	}
 
 	/*
@@ -77,7 +79,10 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	}
 
 	modifier onlyValidDishTypeId(uint256 _dishTypeId) {
-		require(_dishTypeId > 0 && _dishTypeId <= dishTypeCounter.current(), 'Kitchen: INVALID_DISH_ID');
+		require(
+			_dishTypeId > 0 && _dishTypeId <= dishTypeCounter.current(),
+			'Kitchen: INVALID_DISH_ID'
+		);
 		_;
 	}
 
@@ -99,13 +104,20 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 * @param _name - indicates the namce of the dishType
 	 * @return dishTypeId - indicates the generated id of the dishType
 	 */
-	function addDishType(string memory _name) external onlyAdmin returns (uint256 dishTypeId) {
+	function addDishType(
+		string memory _name,
+		uint256[] memory _x,
+		uint256[] memory _y
+	) external onlyAdmin returns (uint256 dishTypeId) {
 		require(bytes(_name).length > 0, 'Kitchen: INVALID_DISH_NAME');
+		require(_x.length == 7 && _x.length == _y.length, 'Kitchen: INVALID_COORDINATES');
 
 		dishTypeCounter.increment();
 		dishTypeId = dishTypeCounter.current();
 
 		dishType[dishTypeId].name = _name;
+		dishType[dishTypeId].x = _x;
+		dishType[dishTypeId].y = _y;
 	}
 
 	/**
@@ -221,6 +233,26 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 */
 	function getCurrentBaseVariationId() external view returns (uint256) {
 		return baseVariationCounter.current();
+	}
+
+	function getXCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		onlyValidDishTypeId(_dishTypeId)
+		returns (uint256)
+	{
+		require(_index < dishType[_dishTypeId].x.length, 'Kitchen: INVALID_INDEX');
+		return dishType[_dishTypeId].x[_index];
+	}
+
+	function getYCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		onlyValidDishTypeId(_dishTypeId)
+		returns (uint256)
+	{
+		require(_index < dishType[_dishTypeId].y.length, 'Kitchen: INVALID_INDEX');
+		return dishType[_dishTypeId].y[_index];
 	}
 
 	/**

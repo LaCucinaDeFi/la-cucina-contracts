@@ -302,8 +302,7 @@ contract DishesNFT is BaseERC721 {
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
 		string memory ingredientPlaceholders;
-		string memory defs;
-		defs = LaCucinaUtils.strConcat(defs, string('<defs>'));
+		string[] memory defs = new string[](dishToServe.totalIngredients);
 
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -311,6 +310,8 @@ contract DishesNFT is BaseERC721 {
 		uint256 slotMultiplier;
 		uint256 variationIdValue;
 		uint256 variationId;
+
+		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
 
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
@@ -328,25 +329,19 @@ contract DishesNFT is BaseERC721 {
 					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 				);
 
+				variationIdList[slot] = variationId;
+
 				(, , string memory svg) = ingredientNft.defs(variationId);
-				defs = LaCucinaUtils.strConcat(defs, svg);
 
-				(uint256 ingredientId, string memory variationName, ) = ingredientNft.defs(variationId);
-
-				(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
-
-				string memory placeHolder = _getPlaceHolder(ingredientName, variationName);
-
-				ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
+				defs[slot] = svg;
 			}
 		}
 
-		defs = LaCucinaUtils.strConcat(defs, string('</defs>'));
-
-		// get ingredient variation defs
-		accumulator = LaCucinaUtils.strConcat(accumulator, defs);
 		// get the placeholders for ingredients
-		accumulator = LaCucinaUtils.strConcat(accumulator, ingredientPlaceholders);
+		accumulator = LaCucinaUtils.strConcat(
+			accumulator,
+			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
+		);
 		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 
 		return accumulator;
@@ -398,14 +393,8 @@ contract DishesNFT is BaseERC721 {
 
 				// add base variation to defs
 				accumulator = LaCucinaUtils.strConcat(accumulator, variationSvg);
-
-				basePlaceHolders = LaCucinaUtils.strConcat(
-					basePlaceHolders,
-					_getPlaceHolder(baseName, baseVariationName)
-				);
 			}
 		}
-		accumulator = LaCucinaUtils.strConcat(accumulator, basePlaceHolders);
 
 		return accumulator;
 	}
@@ -473,21 +462,52 @@ contract DishesNFT is BaseERC721 {
 		mScaled = 1 + (9 * (multiplier - min)) / (max - min);
 	}
 
-	function _getPlaceHolder(string memory _IngredientName, string memory _variationName)
-		public
-		pure
-		returns (string memory)
-	{
-		return
-			string(
-				abi.encodePacked(
-					'<svg preserveAspectRatio="xMidYMid meet" x="0" y="0" viewBox="0 0 300 300" width="100%"  height="100%"><use href="#',
-					_IngredientName,
-					'_',
-					_variationName,
-					'"/></svg>'
-				)
-			);
+	function _getPlaceHolder(
+		uint256 dishTypeId,
+		uint256[] memory variationIdList,
+		string[] memory defs
+	) public view returns (string memory ingredientPlaceholders) {
+		uint256 ingredientId;
+		string memory variationName;
+		uint256 defId;
+		for (uint256 position = 0; position < 7; position++) {
+			// todo- need to finalize the logic for allocating the positions to ingredients
+			if (variationIdList.length == 2) {
+				if (position % 2 == 0) {
+					// get first ingredient
+					(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
+						variationIdList[0]
+					);
+					ingredientId = _ingredientId;
+					variationName = _variationName;
+					defId = 0;
+				} else {
+					// get second ingredient
+					(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
+						variationIdList[1]
+					);
+					ingredientId = _ingredientId;
+					variationName = _variationName;
+					defId = 1;
+				}
+
+				(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
+				uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
+				uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
+				string memory placeHolder = string(
+					abi.encodePacked(
+						'<svg xmlns="http://www.w3.org/2000/svg"  x="',
+						LaCucinaUtils.toString(x),
+						'" y="',
+						LaCucinaUtils.toString(y),
+						'" width="36" height="34.1" xml:space="preserve">'
+					)
+				);
+				placeHolder = string(abi.encodePacked(placeHolder, defs[defId]));
+				placeHolder = string(abi.encodePacked(placeHolder, '</svg>'));
+				ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
+			}
+		}
 	}
 
 	function _beforeTokenTransfer(
