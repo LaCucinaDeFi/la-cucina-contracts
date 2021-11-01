@@ -362,10 +362,10 @@ contract DishesNFT is BaseERC721 {
 		view
 		returns (string memory accumulator)
 	{
-		//add defs
+		// add defs
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			string('<svg xmlns="http://www.w3.org/2000/svg" width="268.5" height="184.3"><defs>')
+			string('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="400">')
 		);
 
 		uint256 slotConst = 256;
@@ -405,7 +405,6 @@ contract DishesNFT is BaseERC721 {
 				);
 			}
 		}
-		accumulator = LaCucinaUtils.strConcat(accumulator, string('</defs>'));
 		accumulator = LaCucinaUtils.strConcat(accumulator, basePlaceHolders);
 
 		return accumulator;
