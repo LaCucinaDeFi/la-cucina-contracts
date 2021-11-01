@@ -298,7 +298,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				'/lacucina_secret_ingredients/',
 				LaCucinaUtils.toString(block.chainid),
 				'/',
-				LaCucinaUtils.toString(_tokenId)
+				LaCucinaUtils.toString(_tokenId),
+				'.json'
 			)
 		);
 	}
@@ -342,10 +343,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	}
 
 	/*
-   =======================================================================
-   ======================== Internal Methods =============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+ 	*/
 
 	function _addIngredient(
 		string memory _name,

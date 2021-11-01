@@ -25,4 +25,14 @@ const royaltyReciever = {
 
 const royaltyFee = '100'; // 10%
 
-module.exports = { supportedTokens, royaltyReciever, royaltyFee };
+const talienContract = {
+  1: '',
+  3: '',
+  4: '',
+  42: '',
+  56: '0xb5939E2596b275e18DEe85cC24D585cC91a3CAdd', // TODO: Update for mainnet
+  97: '0xb5939E2596b275e18DEe85cC24D585cC91a3CAdd',
+  1111: '0xb5939E2596b275e18DEe85cC24D585cC91a3CAdd',
+}
+
+module.exports = { supportedTokens, royaltyReciever, royaltyFee, talienContract };
