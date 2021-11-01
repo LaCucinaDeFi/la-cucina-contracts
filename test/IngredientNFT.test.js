@@ -35,7 +35,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq(`https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/${this.chainId}/1`);
+		expect(uri).to.be.eq(`https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/${this.chainId}/1.json`);
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -707,7 +707,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
 			);
 		});
 	});
@@ -725,7 +725,7 @@ contract('IngredientsNFT', (accounts) => {
 			const baseUri = await this.Ingredient.uri(1);
 
 			expect(baseUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
 			);
 		});
 
@@ -744,7 +744,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1`
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
 			);
 		});
 	});
@@ -790,7 +790,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/${this.chainId}/1`
+				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/${this.chainId}/1.json`
 			);
 		});
 	});
