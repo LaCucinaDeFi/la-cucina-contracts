@@ -4,6 +4,12 @@ const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
+const papayas = require('../data/ingredients/papaya');
+const caviar = require('../data/ingredients/caviar');
+const leaves = require('../data/ingredients/leaves');
+const venom = require('../data/ingredients/venom');
+const antEggs = require('../data/ingredients/antEggs');
+
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
@@ -16,6 +22,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('PublicMarketplace', (accounts) => {
 	const owner = accounts[0];

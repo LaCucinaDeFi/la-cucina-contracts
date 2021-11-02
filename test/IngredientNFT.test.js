@@ -98,9 +98,9 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: user1
 					}
@@ -114,9 +114,9 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -131,9 +131,9 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'Papaya',
-                    nutritionHash,
-                    '',
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					nutritionHash,
+					'',
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -145,27 +145,21 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when insufficient keywords are passed', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredient(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword],
-                    {from: owner}
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword],
+					{from: owner}
+				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 
 			await expectRevert(
-				this.Ingredient.addIngredient(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [],
-                    {from: owner}
-                ),
+				this.Ingredient.addIngredient(owner, 10, 'Papaya', nutritionHash, ipfsHash, [], {
+					from: owner
+				}),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 		});
@@ -176,9 +170,9 @@ contract('IngredientsNFT', (accounts) => {
 					ZERO_ADDRESS,
 					10,
 					'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -193,9 +187,9 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					0,
 					'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -324,7 +318,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -335,17 +329,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedAddress(user1, {from: owner}),
-				'LaCucinaUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -356,7 +343,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user2);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user2);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -367,17 +354,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedFromAddress(user2, {from: owner}),
-				'LaCucinaUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -386,7 +366,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user3, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -395,7 +375,7 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.removeExceptedAddress('0x0000000000000000000000000000000000000000', {
 					from: owner
 				}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -410,7 +390,7 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.removeExceptedAddress(user1, {from: owner});
 			await this.Ingredient.removeExceptedAddress(owner, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -418,7 +398,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user1, {from: owner}),
-				'LaCucinaUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});
@@ -427,14 +407,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user3, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
-			);
-		});
-
-		it('should revert when owner tries to remove zero address ', async () => {
-			await expectRevert(
-				this.Ingredient.removeExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'LaCucinaUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -448,7 +421,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should remove user from excepted addresses list correctly', async () => {
 			await this.Ingredient.removeExceptedFromAddress(user2, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -456,7 +429,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user2, {from: owner}),
-				'LaCucinaUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});
@@ -909,20 +882,20 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.grantRole(minterRole, minter);
 
 			// add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Papaya',
-                nutritionHash,
-                ipfsHash,
-                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                [papayas[0].name, papayas[1].name, papayas[2].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 		});
@@ -934,7 +907,7 @@ contract('IngredientsNFT', (accounts) => {
 			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.name).to.be.eq('Caviar');
+			expect(ingredient.name).to.be.eq('Papaya');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('3'));
 			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutritionHash));
 		});
@@ -942,58 +915,58 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-minter tries to add the ingredients', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: user2,
+						gas: GAS_LIMIT
+					}
+				),
 				'BaseERC1155: ONLY_MINTER_CAN_CALL'
 			);
 		});
 		it('should revert when owner tries to add ingredient without name', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    '',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INVALID_INGREDIENT_NAME'
 			);
 		});
 
-		it('should revert when owner tries to add ingredient without name', async () => {
+		it('should revert when owner tries to add ingredient without ipfs hash', async () => {
 			await expectRevert(
-				await this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    '',
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					'',
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INVALID_IPFS_HASH'
 			);
 		});
@@ -1001,37 +974,37 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when insufficient keywords are passed', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 		});
@@ -1039,19 +1012,19 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to add the ingredients and mints it to zero address', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    ZERO_ADDRESS,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					ZERO_ADDRESS,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INVALID_USER'
 			);
 		});
@@ -1059,19 +1032,19 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to add the ingredients and mints zero tokens', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    0,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					0,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientNFT: INVALID_AMOUNT'
 			);
 		});
@@ -1079,19 +1052,19 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to add the ingredients with insufficient variations', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [],
-                    [papayas[0].name, papayas[1].name, papayas[2].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientsNFT: INSUFFICIENT_VARIATIONS'
 			);
 		});
@@ -1099,37 +1072,37 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to add the ingredients with insufficient variation names', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [papayas[0].name, papayas[1].name],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
 			);
 
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
-                    owner,
-                    10,
-                    'Papaya',
-                    nutritionHash,
-                    ipfsHash,
-                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                    [],
-                    {
-                        from: owner,
-                        gas: GAS_LIMIT
-                    }
-                ),
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
 				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
 			);
 		});

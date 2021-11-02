@@ -38,11 +38,11 @@ contract('Kitchen', (accounts) => {
 
 			// add the dish
 			this.addDishTx = await this.Kitchen.addDishType(
-                'Pizza',
-                [205, 250, 270, 170, 210, 160, 120], 
-                [190, 195, 220, 225, 240, 260, 280],
-                {from: owner}
-            );
+				'Pizza',
+				[205, 250, 270, 170, 210, 160, 120],
+				[190, 195, 220, 225, 240, 260, 280],
+				{from: owner}
+			);
 			//  console.log('addDishTx: ',this.addDishTx);
 		});
 
@@ -59,19 +59,57 @@ contract('Kitchen', (accounts) => {
 
 		it('should revert whene non-owner tries to add the dishType', async () => {
 			await expectRevert(
-				this.Kitchen.addDishType('Pizza',
-                [205, 250, 270, 170, 210, 160, 120], 
-                [190, 195, 220, 225, 240, 260, 280],
-                {from: user1}),
+				this.Kitchen.addDishType(
+					'Pizza',
+					[205, 250, 270, 170, 210, 160, 120],
+					[190, 195, 220, 225, 240, 260, 280],
+					{from: user1}
+				),
 				'Kitchen: ONLY_ADMIN_CAN_CALL'
 			);
 		});
 
+		it('should revert whene owner tries to add the dishType with invalid coordinates', async () => {
+			await expectRevert(
+				this.Kitchen.addDishType(
+					'Pizza',
+					[205, 250, 270, 170, 210, 120],
+					[190, 195, 220, 225, 240, 260, 280],
+					{from: user1}
+				),
+				'Kitchen: INVALID_COORDINATES'
+			);
+			await expectRevert(
+				this.Kitchen.addDishType(
+					'Pizza',
+					[205, 250, 270, 170, 210, 250, 120],
+					[190, 195, 220, 225, 260, 280],
+					{from: user1}
+				),
+				'Kitchen: INVALID_COORDINATES'
+			);
+
+			await expectRevert(
+				this.Kitchen.addDishType(
+					'Pizza',
+					[205, 250, 270, 170, 210, 250, 120, 120],
+					[190, 195, 220, 225, 260, 280, 340, 230],
+					{from: user1}
+				),
+				'Kitchen: INVALID_COORDINATES'
+			);
+		});
+
 		it('should revert whene owner tries to add the dishType without name', async () => {
-			await expectRevert(this.Kitchen.addDishType('', 
-            [205, 250, 270, 170, 210, 160, 120], 
-            [190, 195, 220, 225, 240, 260, 280],
-            {from: owner}), 'Kitchen: INVALID_DISH_NAME');
+			await expectRevert(
+				this.Kitchen.addDishType(
+					'',
+					[205, 250, 270, 170, 210, 160, 120],
+					[190, 195, 220, 225, 240, 260, 280],
+					{from: owner}
+				),
+				'Kitchen: INVALID_DISH_NAME'
+			);
 		});
 
 		it('should revert whene owner tries to get the base ingredient without adding base ingredient to dishType', async () => {
@@ -160,7 +198,7 @@ contract('Kitchen', (accounts) => {
 				cheeses[0].svg,
 				{
 					from: owner,
-                    gas: GAS_LIMIT
+					gas: GAS_LIMIT
 				}
 			);
 			//  console.log('variationTx: ',this.addVariationTx);

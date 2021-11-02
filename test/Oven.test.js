@@ -31,7 +31,7 @@ const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 const GAS_LIMIT = 85000000;
 
-contract.only('Oven', (accounts) => {
+contract('Oven', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
