@@ -75,7 +75,7 @@ contract('Kitchen', (accounts) => {
 					'Pizza',
 					[205, 250, 270, 170, 210, 120],
 					[190, 195, 220, 225, 240, 260, 280],
-					{from: user1}
+					{from: owner}
 				),
 				'Kitchen: INVALID_COORDINATES'
 			);
@@ -84,7 +84,7 @@ contract('Kitchen', (accounts) => {
 					'Pizza',
 					[205, 250, 270, 170, 210, 250, 120],
 					[190, 195, 220, 225, 260, 280],
-					{from: user1}
+					{from: owner}
 				),
 				'Kitchen: INVALID_COORDINATES'
 			);
@@ -94,7 +94,7 @@ contract('Kitchen', (accounts) => {
 					'Pizza',
 					[205, 250, 270, 170, 210, 250, 120, 120],
 					[190, 195, 220, 225, 260, 280, 340, 230],
-					{from: user1}
+					{from: owner}
 				),
 				'Kitchen: INVALID_COORDINATES'
 			);
