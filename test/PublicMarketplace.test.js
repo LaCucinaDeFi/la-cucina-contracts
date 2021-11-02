@@ -34,7 +34,7 @@ contract('PublicMarketplace', (accounts) => {
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
-	let nutrisionHash;
+	let nutritionHash;
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
 		// deploy Lac token
 		this.sampleToken = await SampleToken.new();
@@ -113,86 +113,86 @@ contract('PublicMarketplace', (accounts) => {
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 
-			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: owner
 				}
 			);
 
 			// add ingredient with variation
-			await this.Ingredient.addIngredientWithVariations(
-				owner,
-				10,
-				'Tuna',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[tuna_1, tuna_2, tuna_3],
-				['One', 'Two', 'Three'],
-				{
-					from: owner,
-					gas: 10000000000
-				}
-			);
+            await this.Ingredient.addIngredientWithVariations(
+                owner,
+                10,
+                'Caviar',
+                nutritionHash,
+                ipfsHash,
+                [caviar[0].keyword, caviar[0].keyword],
+                [caviar[0].svg],
+                [caviar[0].name],
+                {
+                    from: owner,
+                    gas: GAS_LIMIT
+                }
+            );
 
-			// add ingredient with variation
-			await this.Ingredient.addIngredientWithVariations(
-				owner,
-				10,
-				'Gold',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[gold_1, gold_2, gold_3],
-				['One', 'Two', 'Three'],
-				{
-					from: owner,
-					gas: 10000000000
-				}
-			);
+            // add ingredient with variation
+            await this.Ingredient.addIngredientWithVariations(
+                owner,
+                10,
+                'Leaves',
+                nutritionHash,
+                ipfsHash,
+                [leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
+                [leaves[0].svg, leaves[1].svg, leaves[2].svg],
+                [leaves[0].name, leaves[1].name, leaves[2].name],
+                {
+                    from: owner,
+                    gas: GAS_LIMIT
+                }
+            );
 
-			// add ingredient with variation
-			await this.Ingredient.addIngredientWithVariations(
-				owner,
-				10,
-				'Beef',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[beef_1, beef_2, beef_3],
-				['One', 'Two', 'Three'],
-				{
-					from: owner,
-					gas: 10000000000
-				}
-			);
+            // add ingredient with variation
+            await this.Ingredient.addIngredientWithVariations(
+                owner,
+                10,
+                'Venom',
+                nutritionHash,
+                ipfsHash,
+                [venom[0].keyword, venom[1].keyword, venom[2].keyword],
+                [venom[0].svg, venom[1].svg, venom[2].svg],
+                [venom[0].name, venom[1].name, venom[2].name],
+                {
+                    from: owner,
+                    gas: GAS_LIMIT
+                }
+            );
 
-			// add ingredient with variation
-			await this.Ingredient.addIngredientWithVariations(
-				owner,
-				10,
-				'Truffle',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[truffle_1, truffle_2, truffle_3],
-				['One', 'Two', 'Three'],
-				{
-					from: owner,
-					gas: 10000000000
-				}
-			);
+            // add ingredient with variation
+            await this.Ingredient.addIngredientWithVariations(
+                owner,
+                10,
+                'Ant_Eggs',
+                nutritionHash,
+                ipfsHash,
+                [antEggs[0].keyword, antEggs[0].keyword],
+                [antEggs[0].svg],
+                [antEggs[0].name],
+                {
+                    from: owner,
+                    gas: GAS_LIMIT
+                }
+            );
 
 			currentNftId = await this.Ingredient.getCurrentNftId();
 		});
@@ -217,12 +217,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1052,12 +1052,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1196,12 +1196,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1333,12 +1333,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1403,12 +1403,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}

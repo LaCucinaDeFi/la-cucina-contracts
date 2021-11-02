@@ -3,10 +3,12 @@ const {expect} = require('chai');
 const {expectRevert, BN} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {cheese_1} = require('./svgs/Cheese');
+const cheeses = require('../data/cheese');
 
 const Kitchen = artifacts.require('Kitchen');
 const KitchenV2 = artifacts.require('KitchenV2');
+
+const GAS_LIMIT = 85000000;
 
 contract('Kitchen', (accounts) => {
 	const owner = accounts[0];
@@ -35,7 +37,12 @@ contract('Kitchen', (accounts) => {
 			currentDishId = await this.Kitchen.getCurrentDishTypeId();
 
 			// add the dish
-			this.addDishTx = await this.Kitchen.addDishType('Pizza', {from: owner});
+			this.addDishTx = await this.Kitchen.addDishType(
+                'Pizza',
+                [205, 250, 270, 170, 210, 160, 120], 
+                [190, 195, 220, 225, 240, 260, 280],
+                {from: owner}
+            );
 			//  console.log('addDishTx: ',this.addDishTx);
 		});
 
@@ -52,13 +59,19 @@ contract('Kitchen', (accounts) => {
 
 		it('should revert whene non-owner tries to add the dishType', async () => {
 			await expectRevert(
-				this.Kitchen.addDishType('Pizza', {from: user1}),
+				this.Kitchen.addDishType('Pizza',
+                [205, 250, 270, 170, 210, 160, 120], 
+                [190, 195, 220, 225, 240, 260, 280],
+                {from: user1}),
 				'Kitchen: ONLY_ADMIN_CAN_CALL'
 			);
 		});
 
 		it('should revert whene owner tries to add the dishType without name', async () => {
-			await expectRevert(this.Kitchen.addDishType('', {from: owner}), 'Kitchen: INVALID_DISH_NAME');
+			await expectRevert(this.Kitchen.addDishType('', 
+            [205, 250, 270, 170, 210, 160, 120], 
+            [190, 195, 220, 225, 240, 260, 280],
+            {from: owner}), 'Kitchen: INVALID_DISH_NAME');
 		});
 
 		it('should revert whene owner tries to get the base ingredient without adding base ingredient to dishType', async () => {
@@ -144,9 +157,10 @@ contract('Kitchen', (accounts) => {
 			this.addVariationTx = await this.Kitchen.addBaseIngredientVariation(
 				currentBaseIngredientId,
 				'Golden',
-				cheese_1,
+				cheeses[0].svg,
 				{
-					from: owner
+					from: owner,
+                    gas: GAS_LIMIT
 				}
 			);
 			//  console.log('variationTx: ',this.addVariationTx);
@@ -159,7 +173,7 @@ contract('Kitchen', (accounts) => {
 			const variation = await this.Kitchen.baseVariation(variationId);
 
 			expect(variation.name).to.be.eq('Golden');
-			expect(variation.svg).to.be.eq(cheese_1);
+			expect(variation.svg).to.be.eq(cheeses[0].svg);
 			expect(baseIngredient.totalVariations).to.bignumber.be.eq(new BN('1'));
 			expect(currentVariationId).to.bignumber.be.eq(new BN('0'));
 			expect(variationId).to.bignumber.be.eq(new BN('1'));
@@ -169,7 +183,7 @@ contract('Kitchen', (accounts) => {
 
 		it('should revert whene non-owner tries to add the variation for the base ingredient', async () => {
 			await expectRevert(
-				this.Kitchen.addBaseIngredientVariation(currentBaseIngredientId, 'Golden', cheese_1, {
+				this.Kitchen.addBaseIngredientVariation(currentBaseIngredientId, 'Golden', cheeses[0].svg, {
 					from: user1
 				}),
 				'Kitchen: ONLY_ADMIN_CAN_CALL'
@@ -178,13 +192,13 @@ contract('Kitchen', (accounts) => {
 
 		it('should revert whene owner tries to add the variation with invalid baseIngredient id', async () => {
 			await expectRevert(
-				this.Kitchen.addBaseIngredientVariation(0, 'Golden', cheese_1, {
+				this.Kitchen.addBaseIngredientVariation(0, 'Golden', cheeses[0].svg, {
 					from: owner
 				}),
 				'Kitchen: INVALID_BASE_INGREDIENT_ID'
 			);
 			await expectRevert(
-				this.Kitchen.addBaseIngredientVariation(5, 'Golden', cheese_1, {
+				this.Kitchen.addBaseIngredientVariation(5, 'Golden', cheeses[0].svg, {
 					from: owner
 				}),
 				'Kitchen: INVALID_BASE_INGREDIENT_ID'
@@ -193,7 +207,7 @@ contract('Kitchen', (accounts) => {
 
 		it('should revert whene owner tries to add the base ingredient without name', async () => {
 			await expectRevert(
-				this.Kitchen.addBaseIngredientVariation(currentBaseIngredientId, '', cheese_1, {
+				this.Kitchen.addBaseIngredientVariation(currentBaseIngredientId, '', cheeses[0].svg, {
 					from: owner
 				}),
 				'Kitchen: INVALID_VARIATION_NAME'

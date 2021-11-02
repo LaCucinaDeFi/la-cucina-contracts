@@ -360,7 +360,7 @@ contract DishesNFT is BaseERC721 {
 		// add defs
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			string('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="400">')
+			string('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">')
 		);
 
 		uint256 slotConst = 256;
@@ -467,46 +467,34 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory variationIdList,
 		string[] memory defs
 	) public view returns (string memory ingredientPlaceholders) {
+
 		uint256 ingredientId;
 		string memory variationName;
 		uint256 defId;
-		for (uint256 position = 0; position < 7; position++) {
-			// todo- need to finalize the logic for allocating the positions to ingredients
-			if (variationIdList.length == 2) {
-				if (position % 2 == 0) {
-					// get first ingredient
-					(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
-						variationIdList[0]
-					);
-					ingredientId = _ingredientId;
-					variationName = _variationName;
-					defId = 0;
-				} else {
-					// get second ingredient
-					(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
-						variationIdList[1]
-					);
-					ingredientId = _ingredientId;
-					variationName = _variationName;
-					defId = 1;
-				}
 
-				(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
-				uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
-				uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
-				string memory placeHolder = string(
-					abi.encodePacked(
-						'<svg xmlns="http://www.w3.org/2000/svg"  x="',
-						LaCucinaUtils.toString(x),
-						'" y="',
-						LaCucinaUtils.toString(y),
-						'" width="36" height="34.1" xml:space="preserve">'
-					)
-				);
-				placeHolder = string(abi.encodePacked(placeHolder, defs[defId]));
-				placeHolder = string(abi.encodePacked(placeHolder, '</svg>'));
-				ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
-			}
+		for (uint256 position = 0; position < 7; position++) {
+			(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
+				variationIdList[position % variationIdList.length]
+			);
+			ingredientId = _ingredientId;
+			variationName = _variationName;
+			defId = position % variationIdList.length;
+
+			(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
+			uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
+			uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
+			string memory placeHolder = string(
+				abi.encodePacked(
+					'<svg xmlns="http://www.w3.org/2000/svg" x="',
+					LaCucinaUtils.toString(x),
+					'" y="',
+					LaCucinaUtils.toString(y),
+					'" width="50" height="50" xml:space="preserve">'
+				)
+			);
+			placeHolder = string(abi.encodePacked(placeHolder, defs[defId]));
+			placeHolder = string(abi.encodePacked(placeHolder, '</svg>'));
+			ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
 		}
 	}
 
