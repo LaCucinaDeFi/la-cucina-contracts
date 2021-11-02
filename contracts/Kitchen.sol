@@ -34,6 +34,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Public Variables ============================
    	=======================================================================
  	*/
+	uint256 public totalCoordinates;
 
 	// dishTypeId => DishType
 	mapping(uint256 => DishType) public dishType;
@@ -65,6 +66,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		__ReentrancyGuard_init();
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+		totalCoordinates = 7;
 	}
 
 	/*
@@ -101,7 +104,9 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
  	*/
 	/**
 	 * @notice This method allows admin to add the dishType name in which baseIngredients will be added
-	 * @param _name - indicates the namce of the dishType
+	 * @param _name - indicates the name of the dishType
+	 * @param _x - indicates the list of x coordinates for positioning the ingredient
+	 * @param _y - indicates the list of y coordinates for positioning the ingredient
 	 * @return dishTypeId - indicates the generated id of the dishType
 	 */
 	function addDishType(
@@ -110,7 +115,10 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		uint256[] memory _y
 	) external onlyAdmin returns (uint256 dishTypeId) {
 		require(bytes(_name).length > 0, 'Kitchen: INVALID_DISH_NAME');
-		require(_x.length == 7 && _x.length == _y.length, 'Kitchen: INVALID_COORDINATES');
+		require(
+			_x.length == totalCoordinates && _x.length == _y.length,
+			'Kitchen: INVALID_COORDINATES'
+		);
 
 		dishTypeCounter.increment();
 		dishTypeId = dishTypeCounter.current();
@@ -171,6 +179,14 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 
 		baseIngredient[_baseIngredientId].totalVariations += 1;
 		baseIngredient[_baseIngredientId].variationIds.push(baseVariationId);
+	}
+
+	/**
+	 * @notice This method allows admin to update the total number of coordinates
+	 */
+	function updateTotalCoordinates(uint256 _newTotal) external onlyAdmin {
+		require(_newTotal != totalCoordinates && _newTotal > 0, 'Kitchen: INVALID_COORDINATES');
+		totalCoordinates = _newTotal;
 	}
 
 	/*
@@ -235,6 +251,9 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		return baseVariationCounter.current();
 	}
 
+	/**
+	 * @notice This method returns the x coordinate located at index for ingredient
+	 */
 	function getXCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
 		external
 		view
@@ -245,6 +264,9 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		return dishType[_dishTypeId].x[_index];
 	}
 
+	/**
+	 * @notice This method returns the y coordinate located at index for ingredient
+	 */
 	function getYCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
 		external
 		view

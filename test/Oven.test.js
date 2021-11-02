@@ -42,7 +42,6 @@ contract.only('Oven', (accounts) => {
 	const royaltyFee = '100';
 	let nutritionHash;
 	let dishId = 1;
-    
 
 	before('Deploy Contracts', async () => {
 		this.SampleToken = await SampleToken.new();
@@ -275,138 +274,144 @@ contract.only('Oven', (accounts) => {
 
 			// add dish in kitchen
 			this.addDishTx = await this.Kitchen.addDishType(
-                'Pizza',
-                [205, 250, 270, 170, 210, 160, 120], 
-                [190, 195, 220, 225, 240, 260, 280],
-                {from: owner}
-            );
+				'Pizza',
+				[205, 250, 270, 170, 210, 160, 120],
+				[190, 195, 220, 225, 240, 260, 280],
+				{from: owner}
+			);
 			currentDishId = await this.Kitchen.getCurrentDishTypeId();
 
 			// add base Ingredients for dish
-            const addDough = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Dough', {from: owner});
-            const addSauce = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Sauce', {from: owner});
-            const addCheese = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Cheese', {from: owner});
+			const addDough = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Dough', {
+				from: owner
+			});
+			const addSauce = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Sauce', {
+				from: owner
+			});
+			const addCheese = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Cheese', {
+				from: owner
+			});
 
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
 		});
 
-        // ************************** IMPORTANT ************************** //
-        // add variations for base ingredients
-        // here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
-        // NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
-        // ************************** IMPORTANT ************************** //
-        before('Add base variations for Pizza Dough', async () => {
-            for (let dough of doughs) {
-                await this.Kitchen.addBaseIngredientVariation(1, dough.name, dough.svg, {
-                    from: owner,
-                    gas: GAS_LIMIT
-                });
-            }
-        });
+		// ************************** IMPORTANT ************************** //
+		// add variations for base ingredients
+		// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
+		// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
+		// ************************** IMPORTANT ************************** //
+		before('Add base variations for Pizza Dough', async () => {
+			for (let dough of doughs) {
+				await this.Kitchen.addBaseIngredientVariation(1, dough.name, dough.svg, {
+					from: owner,
+					gas: GAS_LIMIT
+				});
+			}
+		});
 
-        before('Add base variations for Pizza Sauce', async () => {
-            for (let sauce of sauces) {
-                await this.Kitchen.addBaseIngredientVariation(2, sauce.name, sauce.svg, {
-                    from: owner,
-                    gas: GAS_LIMIT
-                });
-            }
-        });
+		before('Add base variations for Pizza Sauce', async () => {
+			for (let sauce of sauces) {
+				await this.Kitchen.addBaseIngredientVariation(2, sauce.name, sauce.svg, {
+					from: owner,
+					gas: GAS_LIMIT
+				});
+			}
+		});
 
-        before('Add base variations for Pizza Cheese', async () => {
-            for (let cheese of cheeses) {
-                await this.Kitchen.addBaseIngredientVariation(3, cheese.name, cheese.svg, {
-                    from: owner,
-                    gas: GAS_LIMIT
-                });
-            }
-        });
+		before('Add base variations for Pizza Cheese', async () => {
+			for (let cheese of cheeses) {
+				await this.Kitchen.addBaseIngredientVariation(3, cheese.name, cheese.svg, {
+					from: owner,
+					gas: GAS_LIMIT
+				});
+			}
+		});
 
-        before('add ingredients', async () => {
-            // add ingredients
-            nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
-            // add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Papaya',
-                nutritionHash,
-                ipfsHash,
-                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
-                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
-                [papayas[0].name, papayas[1].name, papayas[2].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
-    
-            // add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Caviar',
-                nutritionHash,
-                ipfsHash,
-                [caviar[0].keyword, caviar[0].keyword],
-                [caviar[0].svg],
-                [caviar[0].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
-    
-            // add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Leaves',
-                nutritionHash,
-                ipfsHash,
-                [leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
-                [leaves[0].svg, leaves[1].svg, leaves[2].svg],
-                [leaves[0].name, leaves[1].name, leaves[2].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
-    
-            // add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Venom',
-                nutritionHash,
-                ipfsHash,
-                [venom[0].keyword, venom[1].keyword, venom[2].keyword],
-                [venom[0].svg, venom[1].svg, venom[2].svg],
-                [venom[0].name, venom[1].name, venom[2].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
-    
-            // add ingredient with variation
-            await this.Ingredient.addIngredientWithVariations(
-                owner,
-                10,
-                'Ant_Eggs',
-                nutritionHash,
-                ipfsHash,
-                [antEggs[0].keyword, antEggs[0].keyword],
-                [antEggs[0].svg],
-                [antEggs[0].name],
-                {
-                    from: owner,
-                    gas: GAS_LIMIT
-                }
-            );
+		before('add ingredients', async () => {
+			// add ingredients
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
-            // transfer ingredients to the user1
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Caviar',
+				nutritionHash,
+				ipfsHash,
+				[caviar[0].keyword, caviar[0].keyword],
+				[caviar[0].svg],
+				[caviar[0].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Leaves',
+				nutritionHash,
+				ipfsHash,
+				[leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
+				[leaves[0].svg, leaves[1].svg, leaves[2].svg],
+				[leaves[0].name, leaves[1].name, leaves[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Venom',
+				nutritionHash,
+				ipfsHash,
+				[venom[0].keyword, venom[1].keyword, venom[2].keyword],
+				[venom[0].svg, venom[1].svg, venom[2].svg],
+				[venom[0].name, venom[1].name, venom[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Ant_Eggs',
+				nutritionHash,
+				ipfsHash,
+				[antEggs[0].keyword, antEggs[0].keyword],
+				[antEggs[0].svg],
+				[antEggs[0].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
+
+			// transfer ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
@@ -427,7 +432,7 @@ contract.only('Oven', (accounts) => {
 
 			//get current dish id
 			currentDishIdBefore = await this.Dish.getCurrentTokenId();
-        })
+		});
 
 		it('should revert if user tries to prepare dish with 4 ingredients without having Talien', async () => {
 			await expectRevert(
@@ -463,7 +468,7 @@ contract.only('Oven', (accounts) => {
 			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
 			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('3'));
 			expect(dishDetail.flameType).bignumber.to.be.eq(new BN('1'));
-			expect(dishName).to.be.eq(`${papayas[0].keyword} ${caviar[1].keyword} Pizza`);
+			expect(dishName).to.be.eq(`${papayas[0].keyword} ${caviar[0].keyword} Pizza`);
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -521,7 +526,10 @@ contract.only('Oven', (accounts) => {
 			//get the svg of dish
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
-			const addresssPath = await path.join('generated/ovens', 'pizza' + currentDishId.toString() + '.svg');
+			const addresssPath = await path.join(
+				'generated/ovens',
+				'pizza' + currentDishId.toString() + '.svg'
+			);
 			dishId++;
 
 			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
@@ -744,7 +752,7 @@ contract.only('Oven', (accounts) => {
 
 			await expectRevert(
 				this.Oven.prepareDish(4, 1, [2, 4, 5], {from: user1}),
-				'Oven: INVALID_DISH_ID'
+				'DishesNFT: INVALID_DISH_ID'
 			);
 
 			// prepare the dish

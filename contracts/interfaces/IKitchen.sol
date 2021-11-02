@@ -54,4 +54,6 @@ interface IKitchen {
 		external
 		view
 		returns (uint256);
+
+	function totalCoordinates() external view returns (uint256);
 }

@@ -170,7 +170,6 @@ contract DishesNFT is BaseERC721 {
 		);
 
 		dishNames[dishNFTId] = dishName;
-		nonce++;
 
 		emit DishPrepared(dishNFTId);
 	}
@@ -301,9 +300,6 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
-		string memory ingredientPlaceholders;
-		string[] memory defs = new string[](dishToServe.totalIngredients);
-
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
@@ -312,6 +308,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 variationId;
 
 		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
+		string[] memory defs = new string[](dishToServe.totalIngredients);
 
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
@@ -320,7 +317,7 @@ contract DishesNFT is BaseERC721 {
 			variationIdValue = dishToServe.variationIdHash & bitMask;
 
 			if (variationIdValue > 0) {
-				variationId = (slot > 0) // Extract IngredientID from slotted value
+				variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
 					? variationIdValue / slotMultiplier
 					: variationIdValue;
 
@@ -329,10 +326,9 @@ contract DishesNFT is BaseERC721 {
 					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 				);
 
-				variationIdList[slot] = variationId;
-
 				(, , string memory svg) = ingredientNft.defs(variationId);
 
+				variationIdList[slot] = variationId;
 				defs[slot] = svg;
 			}
 		}
@@ -369,7 +365,6 @@ contract DishesNFT is BaseERC721 {
 		uint256 baseVariationValue;
 		uint256 slotMultiplier;
 		uint256 baseVariationId;
-		string memory basePlaceHolders;
 
 		for (uint8 slot = 0; slot < uint8(_totalBaseIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
@@ -386,10 +381,7 @@ contract DishesNFT is BaseERC721 {
 					'DishesNFT: INVALID_BASE_VARIATION_ID'
 				);
 
-				(uint256 baseId, string memory baseVariationName, string memory variationSvg) = kitchen
-					.baseVariation(baseVariationId);
-
-				(string memory baseName, ) = kitchen.baseIngredient(baseId);
+				(, , string memory variationSvg) = kitchen.baseVariation(baseVariationId);
 
 				// add base variation to defs
 				accumulator = LaCucinaUtils.strConcat(accumulator, variationSvg);
@@ -405,7 +397,6 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory _ingredientIds
 	)
 		internal
-		view
 		returns (
 			uint256 variationIdHash,
 			uint256 baseVariationHash,
@@ -428,6 +419,7 @@ contract DishesNFT is BaseERC721 {
 			uint256 baseVariationId = kitchen.getBaseVariationId(baseIngredientId, randomVarionIndex);
 
 			baseVariationHash += baseVariationId * 256**baseIndex;
+			nonce++;
 		}
 		// get variationIdHash
 		for (uint256 i = 0; i < totalIngredients; i++) {
@@ -453,6 +445,7 @@ contract DishesNFT is BaseERC721 {
 			}
 
 			variationIdHash += variationId * 256**i;
+			nonce++;
 		}
 
 		uint256 multiplier;
@@ -467,20 +460,16 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory variationIdList,
 		string[] memory defs
 	) public view returns (string memory ingredientPlaceholders) {
-
 		uint256 ingredientId;
-		string memory variationName;
 		uint256 defId;
 
-		for (uint256 position = 0; position < 7; position++) {
-			(uint256 _ingredientId, string memory _variationName, ) = ingredientNft.defs(
+		for (uint256 position = 0; position < kitchen.totalCoordinates(); position++) {
+			(uint256 _ingredientId, , ) = ingredientNft.defs(
 				variationIdList[position % variationIdList.length]
 			);
 			ingredientId = _ingredientId;
-			variationName = _variationName;
 			defId = position % variationIdList.length;
 
-			(, string memory ingredientName, , ) = ingredientNft.ingredients(ingredientId);
 			uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
 			uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
 			string memory placeHolder = string(
