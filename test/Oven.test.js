@@ -706,7 +706,7 @@ contract.only('Oven', (accounts) => {
 			});
 		});
 		it('should prepare pizza using tuna, gold, beef and truffle only', async () => {
-			// mint ingredients to the user1
+			// mint ingredients to the user1prepa
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
