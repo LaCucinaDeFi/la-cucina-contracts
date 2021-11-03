@@ -25,7 +25,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 flameType;
 		uint256 creationTime;
 		uint256 completionTime;
-		uint256 multiplier;
+		int256 multiplier;
 	}
 
 	/*
@@ -36,20 +36,20 @@ contract DishesNFT is BaseERC721 {
 	bytes32 public constant OVEN_ROLE = keccak256('OVEN_ROLE');
 
 	/*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
 	uint256 private nonce;
 
 	/*
-   =======================================================================
-   ======================== Public Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Variables ============================
+   	=======================================================================
+ 	*/
 
-	uint256 public min;
-	uint256 public max;
+	int256 public min;
+	int256 public max;
 
 	IIngredientNFT public ingredientNft;
 	IKitchen public kitchen;
@@ -82,8 +82,8 @@ contract DishesNFT is BaseERC721 {
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		kitchen = IKitchen(_kitchenAddress);
 		nonce = 1;
-		min = 10;
-		max = 50;
+		min = -0.2638 ether;
+		max = 7.4531 ether;
 	}
 
 	/*
@@ -136,7 +136,7 @@ contract DishesNFT is BaseERC721 {
 		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dishType(_dishId);
 		require(totalBaseIngredients > 0, 'DishesNFT: INSUFFICIENT_BASE_INGREDINETS');
 
-		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, uint256 multiplier) = _getHash(
+		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, int256 multiplier) = _getHash(
 			_dishId,
 			totalBaseIngredients,
 			_ingredientIds
@@ -223,17 +223,17 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method allows admin to update the min value
 	 */
-	function updateMin(uint256 _newMin) external virtual onlyAdmin {
+	function updateMin(int256 _newMin) external virtual onlyAdmin {
 		require(_newMin != min, 'DishesNFT: MIN_ALREADY_SET');
-		min = _newMin;
+		min = _newMin * 1 ether;
 	}
 
 	/**
 	 * @notice This method allows admin to update the max value
 	 */
-	function updateMax(uint256 _newMax) external virtual onlyAdmin {
+	function updateMax(int256 _newMax) external virtual onlyAdmin {
 		require(_newMax != max, 'DishesNFT: MAX_ALREADY_SET');
-		max = _newMax;
+		max = _newMax * 1 ether;
 	}
 
 	/*
@@ -347,7 +347,7 @@ contract DishesNFT is BaseERC721 {
    	=======================================================================
    	======================== Internal Methods =============================
    	=======================================================================
- 		*/
+	*/
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
@@ -400,7 +400,7 @@ contract DishesNFT is BaseERC721 {
 		returns (
 			uint256 variationIdHash,
 			uint256 baseVariationHash,
-			uint256 mScaled
+			int256 mScaled
 		)
 	{
 		uint256 totalIngredients = _ingredientIds.length;
@@ -448,11 +448,14 @@ contract DishesNFT is BaseERC721 {
 			nonce++;
 		}
 
-		uint256 multiplier;
-		if (strongies != 0) multiplier = plutamins / strongies;
-
+		int256 multiplier;
+		if (strongies != 0) multiplier = int256(plutamins) / int256(strongies);
+		multiplier = multiplier * 1 ether;
+		if (multiplier > max) multiplier = max;
+		if (multiplier < min) multiplier = min;
 		// normalize multiplier
-		mScaled = 1 + (9 * (multiplier - min)) / (max - min);
+		mScaled = 1 ether + (9 ether * (multiplier - min)) / (max - min);
+		mScaled = mScaled / 1 ether;
 	}
 
 	function _getPlaceHolder(
