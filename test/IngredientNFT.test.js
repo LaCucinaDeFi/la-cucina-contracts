@@ -5,14 +5,14 @@ const {expectRevert, BN, ether} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
+const papayas = require('../data/ingredients/papaya');
 
-const BlockData = artifacts.require('BlockData');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
 const url = '';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('IngredientsNFT', (accounts) => {
 	const owner = accounts[0];
@@ -22,12 +22,9 @@ contract('IngredientsNFT', (accounts) => {
 	const user3 = accounts[4];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
-	let nutrisionHash;
+	let nutritionHash;
 
 	before(async () => {
-		this.BlockData = await BlockData.new();
-		this.chainId = await this.BlockData.getChainId();
-
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
@@ -35,7 +32,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq(`https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/${this.chainId}/1.json`);
+		expect(uri).to.be.eq('https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/999/1.json');
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -63,7 +60,7 @@ contract('IngredientsNFT', (accounts) => {
 		let currentBaseIngredientID;
 		let currentIngredientId;
 		before('add ingredients', async () => {
-			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add owner as excepted address
 			await this.Ingredient.addExceptedAddress(owner);
@@ -71,10 +68,10 @@ contract('IngredientsNFT', (accounts) => {
 			this.addIngredientTX = await this.Ingredient.addIngredient(
 				owner,
 				10,
-				'pepper',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 				{
 					from: owner
 				}
@@ -90,9 +87,9 @@ contract('IngredientsNFT', (accounts) => {
 			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.name).to.be.eq('pepper');
+			expect(ingredient.name).to.be.eq('Papaya');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('0'));
-			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutrisionHash));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutritionHash));
 		});
 
 		it('should revert when non-minter tries to add the ingredients', async () => {
@@ -100,10 +97,10 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredient(
 					owner,
 					10,
-					'pepper',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: user1
 					}
@@ -117,9 +114,9 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'',
-					nutrisionHash,
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -133,10 +130,10 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredient(
 					owner,
 					10,
-					'pepper',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					'',
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -147,14 +144,20 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when insufficient keywords are passed', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredient(owner, 10, 'pepper', nutrisionHash, ipfsHash, ['Red'], {
-					from: owner
-				}),
+				this.Ingredient.addIngredient(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword],
+					{from: owner}
+				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 
 			await expectRevert(
-				this.Ingredient.addIngredient(owner, 10, 'pepper', nutrisionHash, ipfsHash, [], {
+				this.Ingredient.addIngredient(owner, 10, 'Papaya', nutritionHash, ipfsHash, [], {
 					from: owner
 				}),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
@@ -166,10 +169,10 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredient(
 					ZERO_ADDRESS,
 					10,
-					'pepper',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -183,10 +186,10 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredient(
 					owner,
 					0,
-					'pepper',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
 						from: owner
 					}
@@ -212,7 +215,7 @@ contract('IngredientsNFT', (accounts) => {
 			this.addVariationTx = await this.Ingredient.addVariation(
 				currentIngredientId,
 				'One',
-				caviar_1,
+				papayas[0].svg,
 				{from: owner}
 			);
 			//	console.log('add ingredient variation: ', this.addVariationTx);
@@ -232,14 +235,14 @@ contract('IngredientsNFT', (accounts) => {
 			expect(totalVariationsBefore).to.bignumber.be.eq(new BN('0'));
 			expect(totalDefsNow).to.bignumber.be.eq(new BN('1'));
 			expect(totalVariationsNow).to.bignumber.be.eq(new BN('1'));
-			expect(variation.svg).to.be.eq(caviar_1);
+			expect(variation.svg).to.be.eq(papayas[0].svg);
 			expect(variation.name).to.be.eq('One');
 			expect(variation.ingredientId).to.bignumber.be.eq(currentIngredientId);
 		});
 
 		it('should revert when non-owner tries to add the variation', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(currentIngredientId, 'One', caviar_1, {
+				this.Ingredient.addVariation(currentIngredientId, 'One', papayas[0].svg, {
 					from: minter
 				}),
 				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
@@ -254,18 +257,18 @@ contract('IngredientsNFT', (accounts) => {
 		});
 		it('should revert when owner tries to add ingredient without variation name', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(currentIngredientId, '', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(currentIngredientId, '', papayas[0].svg, {from: owner}),
 				'IngredientNFT: INVALID_NAME'
 			);
 		});
 
 		it('should revert when owner tries to add ingredient with invalid ingredient id', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(0, 'One', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(0, 'One', papayas[0].svg, {from: owner}),
 				'BaseERC1155: INVALID_NFT_ID'
 			);
 			await expectRevert(
-				this.Ingredient.addVariation(50, 'One', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(50, 'One', papayas[0].svg, {from: owner}),
 				'BaseERC1155: INVALID_NFT_ID'
 			);
 		});
@@ -363,6 +366,15 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user3, {from: owner}),
+				'IngredientNFT: ALREADY_REMOVED'
+			);
+		});
+
+		it('should revert when owner tries to remove zero address ', async () => {
+			await expectRevert(
+				this.Ingredient.removeExceptedAddress('0x0000000000000000000000000000000000000000', {
+					from: owner
+				}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
@@ -466,7 +478,7 @@ contract('IngredientsNFT', (accounts) => {
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 			defId = await this.Ingredient.getVariationIdByIndex(currentIngredientId, 0);
 
-			await this.Ingredient.updateIngredientVariation(defId, 'Two', caviar_2, {
+			await this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
 				from: owner
 			});
 		});
@@ -476,13 +488,13 @@ contract('IngredientsNFT', (accounts) => {
 
 			expect(currentIngredientId).to.bignumber.be.eq(currentIngredientId);
 			expect(ingredientDef.ingredientId).to.bignumber.be.eq(currentIngredientId);
-			expect(ingredientDef.svg).to.be.eq(caviar_2);
+			expect(ingredientDef.svg).to.be.eq(papayas[1].svg);
 			expect(ingredientDef.name).to.be.eq('Two');
 		});
 
 		it('should revert when non-owner tries to update the ingredients variation', async () => {
 			await expectRevert(
-				this.Ingredient.updateIngredientVariation(defId, 'Two', caviar_2, {
+				this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
 					from: minter
 				}),
 				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
@@ -491,7 +503,7 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when owner tries to update ingredient variation without name', async () => {
 			await expectRevert(
-				this.Ingredient.updateIngredientVariation(defId, '', caviar_2, {
+				this.Ingredient.updateIngredientVariation(defId, '', papayas[1].svg, {
 					from: owner
 				}),
 				'IngredientNFT: INVALID_NAME'
@@ -707,7 +719,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -725,7 +737,7 @@ contract('IngredientsNFT', (accounts) => {
 			const baseUri = await this.Ingredient.uri(1);
 
 			expect(baseUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 
@@ -744,7 +756,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -790,7 +802,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/${this.chainId}/1.json`
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -873,14 +885,15 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
-					from: owner
+					from: owner,
+					gas: GAS_LIMIT
 				}
 			);
 
@@ -894,9 +907,9 @@ contract('IngredientsNFT', (accounts) => {
 			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.name).to.be.eq('Caviar');
+			expect(ingredient.name).to.be.eq('Papaya');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('3'));
-			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutrisionHash));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutritionHash));
 		});
 
 		it('should revert when non-minter tries to add the ingredients', async () => {
@@ -904,14 +917,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: user1
+						from: user2,
+						gas: GAS_LIMIT
 					}
 				),
 				'BaseERC1155: ONLY_MINTER_CAN_CALL'
@@ -923,32 +937,34 @@ contract('IngredientsNFT', (accounts) => {
 					owner,
 					10,
 					'',
-					nutrisionHash,
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INVALID_INGREDIENT_NAME'
 			);
 		});
 
-		it('should revert when owner tries to add ingredient without name', async () => {
+		it('should revert when owner tries to add ingredient without ipfs hash', async () => {
 			await expectRevert(
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					'',
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INVALID_IPFS_HASH'
@@ -960,14 +976,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
 					[],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
@@ -977,14 +994,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
@@ -996,14 +1014,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					ZERO_ADDRESS,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INVALID_USER'
@@ -1015,14 +1034,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					0,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientNFT: INVALID_AMOUNT'
@@ -1034,14 +1054,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					[],
-					['One', 'Two', 'Three'],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientsNFT: INSUFFICIENT_VARIATIONS'
@@ -1053,14 +1074,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two'],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
@@ -1070,14 +1092,15 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addIngredientWithVariations(
 					owner,
 					10,
-					'Caviar',
-					nutrisionHash,
+					'Papaya',
+					nutritionHash,
 					ipfsHash,
-					['Red', 'Yellow', 'Green'],
-					[caviar_1, caviar_2, caviar_3],
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[],
 					{
-						from: owner
+						from: owner,
+						gas: GAS_LIMIT
 					}
 				),
 				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'

@@ -44,4 +44,16 @@ interface IKitchen {
 		external
 		view
 		returns (uint256);
+
+	function getXCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		returns (uint256);
+
+	function getYCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		returns (uint256);
+
+	function totalCoordinates() external view returns (uint256);
 }

@@ -4,13 +4,15 @@ const {expectRevert, BN, expectEvent, time} = require('@openzeppelin/test-helper
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 
-const {slice_1, slice_2, slice_3} = require('./svgs/Slice');
-const {cheese_1, cheese_2, cheese_3} = require('./svgs/Cheese');
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
-const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
-const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
-const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
-const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
+const doughs = require('../data/dough');
+const sauces = require('../data/sauce');
+const cheeses = require('../data/cheese');
+
+const papayas = require('../data/ingredients/papaya');
+const caviar = require('../data/ingredients/caviar');
+const leaves = require('../data/ingredients/leaves');
+const venom = require('../data/ingredients/venom');
+const antEggs = require('../data/ingredients/antEggs');
 
 const fs = require('fs');
 const path = require('path');
@@ -22,6 +24,7 @@ const Kitchen = artifacts.require('Kitchen');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('DishesNFT', (accounts) => {
 	const owner = accounts[0];
@@ -36,7 +39,7 @@ contract('DishesNFT', (accounts) => {
 	let currentDishId;
 	let nutritionHash;
 
-	before(async () => {
+	before('Deploy contracts', async () => {
 		// deploy NFT token
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
@@ -54,31 +57,82 @@ contract('DishesNFT', (accounts) => {
 			}
 		);
 
-		// add dish in kitchen
-		await this.Kitchen.addDishType('Pizza', {from: owner});
-		currentDishId = await this.Kitchen.getCurrentDishTypeId();
-
-		// add base Ingredients for dish
-		await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Slice', {from: owner});
-		await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Cheese', {from: owner});
-
-		// add variations for base ingredients
-		// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
-		// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
-		await this.Kitchen.addBaseIngredientVariation(1, 'One', slice_1, {from: owner});
-		await this.Kitchen.addBaseIngredientVariation(1, 'Two', slice_2, {from: owner});
-		await this.Kitchen.addBaseIngredientVariation(1, 'Three', slice_3, {from: owner});
-
-		await this.Kitchen.addBaseIngredientVariation(2, 'One', cheese_1, {from: owner});
-		await this.Kitchen.addBaseIngredientVariation(2, 'Two', cheese_2, {from: owner});
-		await this.Kitchen.addBaseIngredientVariation(2, 'Three', cheese_3, {from: owner});
-
-		// add ingredients
+		// add minter in ingredient contract
+		const minterRole = await this.Ingredient.MINTER_ROLE();
+		await this.Ingredient.grantRole(minterRole, minter, {from: owner});
 
 		// add owner as excepted address
 		await this.Ingredient.addExceptedAddress(owner);
+	});
 
+	before('Add Dish Type and base ingredient for Pizza', async () => {
+		// add dish in kitchen
+		// [(205, 190), (250, 195), (270, 220), (170, 225), (210, 240), (160, 260), (120, 280)]
+		const dishType = await this.Kitchen.addDishType(
+			'Pizza', 
+			[205, 250, 270, 170, 210, 160, 120], 
+			[190, 195, 220, 225, 240, 260, 280], 
+			{
+			from: owner
+		});
+		currentDishId = await this.Kitchen.getCurrentDishTypeId();
+
+		// add base Ingredients for dish
+		const addDough = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Dough', {from: owner});
+		const addSauce = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Sauce', {from: owner});
+		const addCheese = await this.Kitchen.addBaseIngredientForDishType(currentDishId, 'Cheese', {from: owner});
+	})
+
+	// ************************** IMPORTANT ************************** //
+	// add variations for base ingredients
+	// here variation name should be strictly like this. variationName = IngredientName_variationName. ex. Slice_1, Cheese_2
+	// NOTE: svg id and the IngredientName_variationName should be same. <g id= "Slice_One">, <g id = "Cheese_Two">
+	// ************************** IMPORTANT ************************** //
+	before('Add base variations for Pizza Dough', async () => {
+		for (let dough of doughs) {
+			await this.Kitchen.addBaseIngredientVariation(1, dough.name, dough.svg, {
+				from: owner,
+				gas: GAS_LIMIT
+			});
+		}
+	});
+
+	before('Add base variations for Pizza Sauce', async () => {
+		for (let sauce of sauces) {
+			await this.Kitchen.addBaseIngredientVariation(2, sauce.name, sauce.svg, {
+				from: owner,
+				gas: GAS_LIMIT
+			});
+		}
+	});
+
+	before('Add base variations for Pizza Cheese', async () => {
+		for (let cheese of cheeses) {
+			await this.Kitchen.addBaseIngredientVariation(3, cheese.name, cheese.svg, {
+				from: owner,
+				gas: GAS_LIMIT
+			});
+		}
+	});
+
+	before('add ingredients', async () => {
+		// add ingredients
 		nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+		// add ingredient with variation
+		await this.Ingredient.addIngredientWithVariations(
+			owner,
+			10,
+			'Papaya',
+			nutritionHash,
+			ipfsHash,
+			[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+			[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+			[papayas[0].name, papayas[1].name, papayas[2].name],
+			{
+				from: owner,
+				gas: GAS_LIMIT
+			}
+		);
 
 		// add ingredient with variation
 		await this.Ingredient.addIngredientWithVariations(
@@ -87,11 +141,12 @@ contract('DishesNFT', (accounts) => {
 			'Caviar',
 			nutritionHash,
 			ipfsHash,
-			['Red', 'Yellow', 'Green'],
-			[caviar_1, caviar_2, caviar_3],
-			['One', 'Two', 'Three'],
+			[caviar[0].keyword, caviar[0].keyword],
+			[caviar[0].svg],
+			[caviar[0].name],
 			{
-				from: owner
+				from: owner,
+				gas: GAS_LIMIT
 			}
 		);
 
@@ -99,15 +154,15 @@ contract('DishesNFT', (accounts) => {
 		await this.Ingredient.addIngredientWithVariations(
 			owner,
 			10,
-			'Tuna',
+			'Leaves',
 			nutritionHash,
 			ipfsHash,
-			['Red', 'Yellow', 'Green'],
-			[tuna_1, tuna_2, tuna_3],
-			['One', 'Two', 'Three'],
+			[leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
+			[leaves[0].svg, leaves[1].svg, leaves[2].svg],
+			[leaves[0].name, leaves[1].name, leaves[2].name],
 			{
 				from: owner,
-				gas: 10000000000
+				gas: GAS_LIMIT
 			}
 		);
 
@@ -115,15 +170,15 @@ contract('DishesNFT', (accounts) => {
 		await this.Ingredient.addIngredientWithVariations(
 			owner,
 			10,
-			'Gold',
+			'Venom',
 			nutritionHash,
 			ipfsHash,
-			['Red', 'Yellow', 'Green'],
-			[gold_1, gold_2, gold_3],
-			['One', 'Two', 'Three'],
+			[venom[0].keyword, venom[1].keyword, venom[2].keyword],
+			[venom[0].svg, venom[1].svg, venom[2].svg],
+			[venom[0].name, venom[1].name, venom[2].name],
 			{
 				from: owner,
-				gas: 10000000000
+				gas: GAS_LIMIT
 			}
 		);
 
@@ -131,38 +186,18 @@ contract('DishesNFT', (accounts) => {
 		await this.Ingredient.addIngredientWithVariations(
 			owner,
 			10,
-			'Beef',
+			'Ant_Eggs',
 			nutritionHash,
 			ipfsHash,
-			['Red', 'Yellow', 'Green'],
-			[beef_1, beef_2, beef_3],
-			['One', 'Two', 'Three'],
+			[antEggs[0].keyword, antEggs[0].keyword],
+			[antEggs[0].svg],
+			[antEggs[0].name],
 			{
 				from: owner,
-				gas: 10000000000
+				gas: GAS_LIMIT
 			}
 		);
-
-		// add ingredient with variation
-		await this.Ingredient.addIngredientWithVariations(
-			owner,
-			10,
-			'Truffle',
-			nutritionHash,
-			ipfsHash,
-			['Red', 'Yellow', 'Green'],
-			[truffle_1, truffle_2, truffle_3],
-			['One', 'Two', 'Three'],
-			{
-				from: owner,
-				gas: 10000000000
-			}
-		);
-
-		// add minter in ingredient contract
-		const minterRole = await this.Ingredient.MINTER_ROLE();
-		await this.Ingredient.grantRole(minterRole, minter, {from: owner});
-	});
+	})
 
 	describe('initialize()', () => {
 		it('should initialize contracts correctly', async () => {
@@ -223,7 +258,7 @@ contract('DishesNFT', (accounts) => {
 			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.variationIdHash).to.bignumber.be.gt(new BN('0'));
-			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('2'));
+			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.creationTime).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.completionTime).to.bignumber.be.gt(dishDetails.creationTime);

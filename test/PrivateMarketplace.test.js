@@ -4,18 +4,13 @@ const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
-const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
-const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
-const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
-const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
 const TalienContract = artifacts.require('Talien');
 
 const {Talien} = require('./helper/talien');
+const papayas = require('../data/ingredients/papaya');
 
 const SampleToken = artifacts.require('SampleToken');
 
@@ -32,7 +27,7 @@ contract('PrivateMarketplace', (accounts) => {
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
-	let nutrisionHash;
+	let nutritionHash;
 
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
 		// deploy Lac token
@@ -121,19 +116,19 @@ contract('PrivateMarketplace', (accounts) => {
 			// here ingredient name should be strictly like this. variationName = name_variationId. ex. Caviar_1, Tuna_2
 			// NOTE: svg id and the name_variationId should be same. <g id= "Caviar_1">, <g id = "Tuna_2">
 
-			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// create the NFT and list for sale
 			this.saleTx = await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -173,12 +168,12 @@ contract('PrivateMarketplace', (accounts) => {
 					ether('1'),
 					this.sampleToken.address,
 					10,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: user1
 					}
@@ -192,12 +187,12 @@ contract('PrivateMarketplace', (accounts) => {
 					ether('1'),
 					ZERO_ADDRESS,
 					10,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -211,12 +206,12 @@ contract('PrivateMarketplace', (accounts) => {
 					ether('1'),
 					this.sampleToken.address,
 					0,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -230,12 +225,12 @@ contract('PrivateMarketplace', (accounts) => {
 					ether('0'),
 					this.sampleToken.address,
 					10,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -258,12 +253,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -302,12 +297,12 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					String(time.duration.days('2')),
 					false,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: user1
 					}
@@ -323,12 +318,12 @@ contract('PrivateMarketplace', (accounts) => {
 					ZERO_ADDRESS,
 					String(time.duration.days('2')),
 					false,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -344,12 +339,12 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					String(time.duration.days('2')),
 					false,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -364,12 +359,12 @@ contract('PrivateMarketplace', (accounts) => {
 					this.sampleToken.address,
 					'0',
 					false,
-					'Caviar',
-					nutrisionHash,
-					ipfsHash,
-					['Key1', 'Key2', 'Key3'],
-					[caviar_1, caviar_2, caviar_3],
-					['One', 'Two', 'Three'],
+					'Papaya',
+                    nutritionHash,
+                    ipfsHash,
+                    [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                    [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                    [papayas[0].name, papayas[1].name, papayas[2].name],
 					{
 						from: minter
 					}
@@ -395,12 +390,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				1,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -576,12 +571,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -620,12 +615,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -685,12 +680,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -733,12 +728,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -792,12 +787,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -867,12 +862,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				2,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -986,12 +981,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1039,12 +1034,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1201,12 +1196,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1322,12 +1317,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				true,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1391,12 +1386,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1469,12 +1464,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1506,12 +1501,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1559,12 +1554,12 @@ contract('PrivateMarketplace', (accounts) => {
 				this.sampleToken.address,
 				time.duration.days('2'),
 				false,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1599,12 +1594,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1620,12 +1615,12 @@ contract('PrivateMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
-				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+                'Papaya',
+                nutritionHash,
+                ipfsHash,
+                [papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+                [papayas[0].svg, papayas[1].svg, papayas[2].svg],
+                [papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
