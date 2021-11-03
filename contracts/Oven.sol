@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
@@ -22,10 +23,10 @@ contract Oven is
 	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*
-   =======================================================================
-   ======================== Structures ===================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Structures ===================================
+   	=======================================================================
+ 	*/
 
 	struct FlameDetail {
 		string flameType;
@@ -33,17 +34,17 @@ contract Oven is
 		uint256 lacCharge;
 	}
 	/*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
 	CountersUpgradeable.Counter private flamesCounter;
 
 	/*
-   =======================================================================
-   ======================== Public Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Variables ============================
+   	=======================================================================
+ 	*/
 	IIngredientNFT public ingredientNft;
 	IDishesNFT public dishesNft;
 	IBEP20 public lacToken;
@@ -64,10 +65,10 @@ contract Oven is
 	mapping(uint256 => FlameDetail) public flames;
 
 	/*
-   =======================================================================
-   ======================== Constructor/Initializer ======================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Constructor/Initializer ======================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
@@ -122,10 +123,10 @@ contract Oven is
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Methods ===============================
+   	=======================================================================
+ 	*/
 	/**
 	 * @notice This method allows users to prepare a dish using more than 1 ingredients.
 	 * @param _dishId - indicates base dish id
@@ -198,15 +199,16 @@ contract Oven is
 			,
 			,
 			,
+			,
 
 		) = dishesNft.dish(_dishId);
 
 		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
 
-		(, bool hasGenesisTalie) = doesUserHasTalien(msg.sender);
+		(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 
 		// get fees for uncooking if user don`t have genesis talien
-		if (!hasGenesisTalie) {
+		if (!hasGenesisTalien) {
 			require(lacToken.transferFrom(msg.sender, address(this), uncookingFee));
 		}
 
@@ -316,6 +318,7 @@ contract Oven is
 			,
 			uint256 oldFlameId,
 			,
+			,
 
 		) = dishesNft.dish(_dishNFTId);
 
@@ -334,13 +337,6 @@ contract Oven is
 					'Oven: TRANSFER_FAILED'
 				);
 			}
-		} else if (newFlame.lacCharge < oldFlame.lacCharge) {
-			// slower flame
-			// return the extra LAC tokens to user
-			require(
-				lacToken.transfer(msg.sender, oldFlame.lacCharge - newFlame.lacCharge),
-				'Oven: TRANSFER_FAILED'
-			);
 		}
 
 		dishesNft.updatePrepartionTime(_dishNFTId, _flameId, newFlame.preparationDuration);
@@ -373,11 +369,40 @@ contract Oven is
 		additionalIngredients = _additionalIngredients;
 	}
 
+	/**
+	 * @notice This method allows admin to claim all the tokens of specified address to given address
+	 */
+	function claimAllTokens(address _user, address _tokenAddress) external onlyAdmin {
+		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
+		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+
+		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
+
+		require(IBEP20(_tokenAddress).transfer(_user, tokenAmount));
+	}
+
+	/**
+	 * @notice This method allows admin to transfer specified amount of the tokens of specified address to given address
+	 */
+	function claimTokens(
+		address _user,
+		address _tokenAddress,
+		uint256 _amount
+	) external onlyAdmin {
+		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
+		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+
+		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
+		require(_amount > 0 && tokenAmount >= _amount, 'Oven: INSUFFICIENT_BALANCE');
+
+		require(IBEP20(_tokenAddress).transfer(_user, _amount));
+	}
+
 	/*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Getter Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice This method tells whether dish is ready to uncook or not.
@@ -390,7 +415,7 @@ contract Oven is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
-		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (block.timestamp > completionTime) {
 			return true;
@@ -437,7 +462,7 @@ contract Oven is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{
-		(, , , , , , , , , uint256 completionTime) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (completionTime > block.timestamp) {
 			return completionTime - block.timestamp;

@@ -10,16 +10,17 @@ interface IDishesNFT is IERC721Upgradeable {
 		external
 		view
 		returns (
-		address dishOwner,
-		bool cooked,
-		uint256 dishId,
-		uint256 totalIngredients,
-		uint256 variationIdHash, // indicates hash of the indexes of ingredient variations
-		uint256 totalBaseIngredients,
-		uint256 baseVariationHash,
-		uint256 flameType,
-		uint256 creationTime,
-		uint256 completionTime
+			address dishOwner,
+			bool cooked,
+			uint256 dishId,
+			uint256 totalIngredients,
+			uint256 variationIdHash, // indicates hash of the indexes of ingredient variations
+			uint256 totalBaseIngredients,
+			uint256 baseVariationHash,
+			uint256 flameType,
+			uint256 creationTime,
+			uint256 completionTime,
+			uint256 multiplier
 		);
 
 	function prepareDish(

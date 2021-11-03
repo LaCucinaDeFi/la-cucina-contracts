@@ -2,17 +2,17 @@
 
 pragma solidity ^0.8.0;
 
-import './library/RecipeBase.sol';
+import './library/LaCucinaUtils.sol';
 import './BaseERC1155WithRoyalties.sol';
 
 contract IngredientsNFT is BaseERC1155WithRoyalties {
-	using Counters for Counters.Counter;
+	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*
-   =======================================================================
-   ======================== Structures ===================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Structures ===================================
+   	=======================================================================
+ 	*/
 	struct Defs {
 		uint256 ingredientId;
 		string name;
@@ -25,16 +25,14 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 totalVariations;
 		uint256 nutritionsHash;
 		uint256[] defIds;
+		string[] keywords;
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Variables ============================
-   =======================================================================
- */
-
-	address[] public exceptedAddresses;
-	address[] public exceptedFromAddresses;
+   	=======================================================================
+   	======================== Public Variables ============================
+   	=======================================================================
+ 	*/
 
 	// ingredientId => Ingredient details
 	mapping(uint256 => Ingredient) public ingredients;
@@ -42,21 +40,26 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	// ingredientId => ipfs hash details
 	mapping(uint256 => string) public ipfsHash;
 
-	//defId => Defs details
+	// defId => Defs details
 	mapping(uint256 => Defs) public defs;
 
-	/*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
-	Counters.Counter private defsCounter;
+	// userAddress => isExcepted?
+	mapping(address => bool) public exceptedAddresses;
+	// userAddress => isExceptedFrom?
+	mapping(address => bool) public exceptedFromAddresses;
 
 	/*
-   =======================================================================
-   ======================== Constructor/Initializer ======================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
+	CountersUpgradeable.Counter private defsCounter;
+
+	/*
+   	=======================================================================
+   	======================== Constructor/Initializer ======================
+   	=======================================================================
+ 	*/
 
 	function initialize(
 		string memory _baseTokenURI,
@@ -67,56 +70,86 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	}
 
 	/*
-   =======================================================================
-   ======================== Events =======================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Events =======================================
+   	=======================================================================
+ 	*/
 	event IngredientAdded(uint256 ingredientId);
 	event IngredientVariationAdded(uint256 ingredientId, uint256 variationId);
 	event IngredientUpdated(uint256 ingredientId);
 	event IngredientVariationUpdated(uint256 defId);
 
 	/*
-   =======================================================================
-   ======================== Modifiers ====================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Modifiers ====================================
+   	=======================================================================
+ 	*/
 	modifier onlyValidDefId(uint256 _defId) {
 		require(_defId > 0 && _defId <= defsCounter.current(), 'IngredientsNFT: INVALID_DEF_ID');
 		_;
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 *  @notice This method allows admin to add the ingredient details for preparing a dish.
+	 * 	@param _user - indicates the  user address to which the ingredients will be minted
+	 *  @param _amount - indicates the amount of ingredients to mint
 	 *  @param _name - indicates the name of the ingredient
 	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
+	 * 	@param _keywords - indicates the list of keywords for the dish name
 	 *  @return ingredientId - new ingredient id
 	 */
 	function addIngredient(
+		address _user,
+		uint256 _amount,
 		string memory _name,
 		uint256 _nutritionsHash,
-		string memory _ipfsHash
-	) external virtual onlyAdmin returns (uint256 ingredientId) {
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
-		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
+		string memory _ipfsHash,
+		string[] memory _keywords
+	) external virtual returns (uint256 ingredientId) {
+		ingredientId = _addIngredient(_name, _nutritionsHash, _ipfsHash, _keywords, _amount, _user);
+	}
 
-		// generate ingredient Id
-		tokenCounter.increment();
-		ingredientId = tokenCounter.current();
-		uint256[] memory defIds;
+	/**
+	 *  @notice This method allows admin to add the ingredient details for preparing a dish.
+	 * 	@param _user - indicates the  user address to which the ingredients will be minted
+	 *  @param _amount - indicates the amount of ingredients to mint
+	 *  @param _name - indicates the name of the ingredient
+	 *  @param _nutritionsHash - indicates the nutritions
+	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
+	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 *  @param _svgs - indicates the different variation svgs of ingredients
+	 *  @param _variationNames - indicates the list of names of variations
+	 *  @return ingredientId - new ingredient id
+	 */
+	function addIngredientWithVariations(
+		address _user,
+		uint256 _amount,
+		string memory _name,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		string[] memory _svgs,
+		string[] memory _variationNames
+	) external virtual returns (uint256 ingredientId) {
+		uint256 totalVariations = _svgs.length;
+		require(_svgs.length > 0, 'IngredientsNFT: INSUFFICIENT_VARIATIONS');
+		require(_svgs.length == _variationNames.length, 'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES');
 
-		// store ingredient details
-		ingredients[ingredientId] = Ingredient(ingredientId, _name, 0, _nutritionsHash, defIds);
-		ipfsHash[ingredientId] = _ipfsHash;
+		ingredientId = _addIngredient(_name, _nutritionsHash, _ipfsHash, _keywords, _amount, _user);
 
-		emit IngredientAdded(ingredientId);
+		// add variations
+		for (uint256 i = 0; i < totalVariations; i++) {
+			_addVariation(ingredientId, _variationNames[i], _svgs[i]);
+		}
+		// set total variations
+		ingredients[ingredientId].totalVariations = totalVariations;
 	}
 
 	/**
@@ -126,25 +159,14 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _svg - indicates the svg for ingredient variation
 	 * @return defsId - indicates the defId of the variation
 	 */
-	function addIngredientVariation(
+	function addVariation(
 		uint256 _ingredientId,
 		string memory _name,
 		string memory _svg
 	) external virtual onlyAdmin onlyValidNftId(_ingredientId) returns (uint256 defsId) {
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
-
-		// increment defs counter
-		defsCounter.increment();
-
-		defsId = defsCounter.current();
-		defs[defsId] = Defs(_ingredientId, _name, _svg);
-
+		defsId = _addVariation(_ingredientId, _name, _svg);
 		// increse total variations
 		ingredients[_ingredientId].totalVariations += 1;
-		ingredients[_ingredientId].defIds.push(defsId);
-
-		emit IngredientVariationAdded(_ingredientId, defsId);
 	}
 
 	/**
@@ -207,15 +229,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to add.
 	 */
 	function addExceptedAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.addAddressInList(exceptedAddresses, _account);
-	}
-
-	/**
-	 * @notice This method allows admin to except the from addresses so that user can receive the multiple same nft tokens.
-	 * @param _account indicates the address to add.
-	 */
-	function addExceptedFromAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.addAddressInList(exceptedFromAddresses, _account);
+		require(!exceptedAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
+		exceptedAddresses[_account] = true;
 	}
 
 	/**
@@ -223,7 +238,17 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.removeAddressFromList(exceptedAddresses, _account);
+		require(exceptedAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
+		exceptedAddresses[_account] = false;
+	}
+
+	/**
+	 * @notice This method allows admin to except the from addresses so that user can receive the multiple same nft tokens.
+	 * @param _account indicates the address to add.
+	 */
+	function addExceptedFromAddress(address _account) external virtual onlyAdmin {
+		require(!exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
+		exceptedFromAddresses[_account] = true;
 	}
 
 	/**
@@ -231,60 +256,15 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _account indicates the address to remove.
 	 */
 	function removeExceptedFromAddress(address _account) external virtual onlyAdmin {
-		RecipeBase.removeAddressFromList(exceptedFromAddresses, _account);
+		require(exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
+		exceptedFromAddresses[_account] = false;
 	}
 
 	/*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
-
-	/**
-	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
-	 * @param _ingredientId - indicates the ingredient id
-	 * @return multiplier - indicates the multiplier calculated using nutritions
-	 */
-	function getMultiplier(uint256 _ingredientId)
-		public
-		view
-		virtual
-		onlyValidNftId(_ingredientId)
-		returns (uint256 multiplier)
-	{
-		uint256 nutritionsHash = ingredients[_ingredientId].nutritionsHash;
-
-		uint256[] memory nutritionsList = new uint256[](8);
-
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
-		uint256 bitMask;
-		uint256 slotMultiplier;
-		uint256 nutritionsValue;
-		uint256 nutrition;
-
-		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 0; slot < uint8(8); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			nutritionsValue = nutritionsHash & bitMask;
-
-			if (nutritionsValue > 0) {
-				nutrition = (slot > 0) // Extract nutrition from slotted value
-					? nutritionsValue / slotMultiplier
-					: nutritionsValue;
-
-				// store nutrition
-				nutritionsList[slot] = nutrition;
-			}
-		}
-
-		// multiply first two nutritions
-		multiplier = nutritionsList[0] * nutritionsList[1];
-
-		// divide multiplier by next two nutritions
-		multiplier /= nutritionsList[2] * nutritionsList[3];
-	}
+   	=======================================================================
+   	======================== Getter Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice This method allows us to get the ingredient variation id from the list of variations.
@@ -310,17 +290,31 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method returns the token uri based on the chain id
 	 * @param _tokenId - indicates the token id
 	 */
-	function getTokenUri(uint256 _tokenId) public view virtual returns (string memory tokenUri) {
+	function uri(uint256 _tokenId) public view virtual override returns (string memory tokenUri) {
 		tokenUri = string(
 			abi.encodePacked(
-				uri(_tokenId),
+				'https://ipfs.infura.io/ipfs/',
 				ipfsHash[_tokenId],
-				'.ipfs.infura-ipfs.io/lacucina_secret_ingredients/',
-				RecipeBase.toString(block.chainid),
+				'/lacucina_secret_ingredients/',
+				LaCucinaUtils.toString(block.chainid),
 				'/',
-				RecipeBase.toString(_tokenId)
+				LaCucinaUtils.toString(_tokenId),
+				'.json'
 			)
 		);
+	}
+
+	/**
+	 * @notice This method allows us to create the nutritionsHash
+	 */
+	function getNutritionHash(uint256[] memory _nutritions)
+		external
+		pure
+		returns (uint256 nutrionHash)
+	{
+		for (uint256 i = 0; i < _nutritions.length; i++) {
+			nutrionHash += _nutritions[i] * 256**i;
+		}
 	}
 
 	/**
@@ -331,26 +325,84 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	}
 
 	/**
-	 * @notice This method tells whether the given address is allowed to hold multiple nfts or not.
+	 * @notice This method allows us to get the ingredient keyword with the index
+	 * @param _ingredientId - ingredient id
+	 * @param _index - index of the keyword
+	 * @return keyword from the keyword list
 	 */
-	function isExceptedAddress(address _account) external view virtual returns (bool) {
-		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedAddresses, _account);
-		return isExcepted;
-	}
-
-	/**
-	 * @notice This method tells whether the given address is allowed to hold multiple nfts from excepted address or not.
-	 */
-	function isExceptedFromAddress(address _account) external view virtual returns (bool) {
-		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedFromAddresses, _account);
-		return isExcepted;
+	function getIngredientKeyword(uint256 _ingredientId, uint256 _index)
+		external
+		view
+		virtual
+		onlyValidNftId(_ingredientId)
+		returns (string memory)
+	{
+		Ingredient memory ingredient = ingredients[_ingredientId];
+		require(_index < ingredient.keywords.length, 'IngredientsNFT: INVALID_INDEX');
+		return ingredient.keywords[_index];
 	}
 
 	/*
-   =======================================================================
-   ======================== Internal Methods =============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+ 	*/
+
+	function _addIngredient(
+		string memory _name,
+		uint256 _nutritionsHash,
+		string memory _ipfsHash,
+		string[] memory _keywords,
+		uint256 _amount,
+		address _user
+	) internal virtual onlyMinter returns (uint256 ingredientId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
+		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
+		require(_keywords.length > 1, 'IngredientNFT: INSUFFICIENT_KEYWORDS');
+		require(_amount > 0, 'IngredientNFT: INVALID_AMOUNT');
+		require(_user != address(0), 'IngredientNFT: INVALID_USER');
+
+		// generate ingredient Id
+		tokenCounter.increment();
+		ingredientId = tokenCounter.current();
+		uint256[] memory defIds;
+
+		// store ingredient details
+		ingredients[ingredientId] = Ingredient(
+			ingredientId,
+			_name,
+			0,
+			_nutritionsHash,
+			defIds,
+			_keywords
+		);
+		ipfsHash[ingredientId] = _ipfsHash;
+
+		// mint ingredients to account
+		_mint(_user, ingredientId, _amount, '');
+
+		emit IngredientAdded(ingredientId);
+	}
+
+	function _addVariation(
+		uint256 _ingredientId,
+		string memory _name,
+		string memory _svg
+	) internal virtual returns (uint256 defsId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
+		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
+
+		// increment defs counter
+		defsCounter.increment();
+
+		defsId = defsCounter.current();
+		defs[defsId] = Defs(_ingredientId, _name, _svg);
+
+		ingredients[_ingredientId].defIds.push(defsId);
+
+		emit IngredientVariationAdded(_ingredientId, defsId);
+	}
+
 	/**
 	 * @dev See {IERC165-_beforeTokenTransfer}.
 	 */
@@ -362,11 +414,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256[] memory amounts,
 		bytes memory data
 	) internal virtual override(BaseERC1155) {
-		(bool isExceptedFrom, ) = RecipeBase.isAddressExists(exceptedFromAddresses, from);
-		(bool isExcepted, ) = RecipeBase.isAddressExists(exceptedAddresses, to);
-
-		if (!isExcepted && to != address(0)) {
-			if (!isExceptedFrom) {
+		if (!exceptedAddresses[to] && to != address(0)) {
+			if (!exceptedFromAddresses[from]) {
 				for (uint256 i = 0; i < ids.length; i++) {
 					require(balanceOf(to, ids[i]) == 0, 'ERC1155NFT: TOKEN_ALREADY_EXIST');
 				}

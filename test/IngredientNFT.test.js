@@ -4,15 +4,15 @@ const {expect} = require('chai');
 const {expectRevert, BN, ether} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
 
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
+const papayas = require('../data/ingredients/papaya');
 
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
-const url = 'https://';
+const url = '';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('IngredientsNFT', (accounts) => {
 	const owner = accounts[0];
@@ -22,6 +22,7 @@ contract('IngredientsNFT', (accounts) => {
 	const user3 = accounts[4];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
+	let nutritionHash;
 
 	before(async () => {
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
@@ -31,7 +32,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq(url);
+		expect(uri).to.be.eq('https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/999/1.json');
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -58,15 +59,19 @@ contract('IngredientsNFT', (accounts) => {
 	describe('addIngredient()', () => {
 		let currentBaseIngredientID;
 		let currentIngredientId;
-		let CaviarNutrisionHash;
 		before('add ingredients', async () => {
-			const hash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
-			CaviarNutrisionHash = hash;
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+
+			// add owner as excepted address
+			await this.Ingredient.addExceptedAddress(owner);
 
 			this.addIngredientTX = await this.Ingredient.addIngredient(
-				'pepper',
-				CaviarNutrisionHash,
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 				{
 					from: owner
 				}
@@ -77,42 +82,124 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should add ingredient details correctly', async () => {
 			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
+			const ownerBalance = await this.Ingredient.balanceOf(owner, currentIngredientId);
 
+			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
-			expect(ingredient.name).to.be.eq('pepper');
+			expect(ingredient.name).to.be.eq('Papaya');
 			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('0'));
-			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(CaviarNutrisionHash));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutritionHash));
 		});
 
-		it('should revert when non-owner tries to add the ingredients', async () => {
+		it('should revert when non-minter tries to add the ingredients', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredient('pepper', CaviarNutrisionHash, ipfsHash, {
-					from: minter
-				}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				this.Ingredient.addIngredient(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					{
+						from: user1
+					}
+				),
+				'BaseERC1155: ONLY_MINTER_CAN_CALL'
 			);
 		});
 		it('should revert when owner tries to add ingredient without name', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredient('', CaviarNutrisionHash, ipfsHash, {
-					from: owner
-				}),
+				this.Ingredient.addIngredient(
+					owner,
+					10,
+					'',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					{
+						from: owner
+					}
+				),
 				'IngredientNFT: INVALID_INGREDIENT_NAME'
 			);
 		});
 
 		it('should revert when owner tries to add ingredient without name', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, '', {
+				this.Ingredient.addIngredient(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					'',
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					{
+						from: owner
+					}
+				),
+				'IngredientNFT: INVALID_IPFS_HASH'
+			);
+		});
+
+		it('should revert when insufficient keywords are passed', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword],
+					{from: owner}
+				),
+				'IngredientNFT: INSUFFICIENT_KEYWORDS'
+			);
+
+			await expectRevert(
+				this.Ingredient.addIngredient(owner, 10, 'Papaya', nutritionHash, ipfsHash, [], {
 					from: owner
 				}),
-				'IngredientNFT: INVALID_IPFS_HASH'
+				'IngredientNFT: INSUFFICIENT_KEYWORDS'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients and mints it to zero address', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient(
+					ZERO_ADDRESS,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					{
+						from: owner
+					}
+				),
+				'IngredientNFT: INVALID_USER'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients and mints zero tokens', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredient(
+					owner,
+					0,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					{
+						from: owner
+					}
+				),
+				'IngredientNFT: INVALID_AMOUNT'
 			);
 		});
 	});
 
-	describe('addIngredientVariation()', () => {
+	describe('addVariation()', () => {
 		let currentIngredientId;
 		let totalDefsBefore;
 		let totalVariationsBefore;
@@ -125,10 +212,10 @@ contract('IngredientsNFT', (accounts) => {
 			totalVariationsBefore = ingredient.totalVariations;
 
 			// add variation
-			this.addVariationTx = await this.Ingredient.addIngredientVariation(
+			this.addVariationTx = await this.Ingredient.addVariation(
 				currentIngredientId,
 				'One',
-				caviar_1,
+				papayas[0].svg,
 				{from: owner}
 			);
 			//	console.log('add ingredient variation: ', this.addVariationTx);
@@ -141,19 +228,21 @@ contract('IngredientsNFT', (accounts) => {
 			const variation = await this.Ingredient.defs(totalDefsNow);
 
 			const totalVariationsNow = ingredient.totalVariations;
+			const totalSupplyOfIngredient = await this.Ingredient.totalSupply(currentIngredientId);
 
+			expect(totalSupplyOfIngredient).to.be.bignumber.eq(new BN('10'));
 			expect(totalDefsBefore).to.bignumber.be.eq(new BN('0'));
 			expect(totalVariationsBefore).to.bignumber.be.eq(new BN('0'));
 			expect(totalDefsNow).to.bignumber.be.eq(new BN('1'));
 			expect(totalVariationsNow).to.bignumber.be.eq(new BN('1'));
-			expect(variation.svg).to.be.eq(caviar_1);
+			expect(variation.svg).to.be.eq(papayas[0].svg);
 			expect(variation.name).to.be.eq('One');
 			expect(variation.ingredientId).to.bignumber.be.eq(currentIngredientId);
 		});
 
 		it('should revert when non-owner tries to add the variation', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredientVariation(currentIngredientId, 'One', caviar_1, {
+				this.Ingredient.addVariation(currentIngredientId, 'One', papayas[0].svg, {
 					from: minter
 				}),
 				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
@@ -162,95 +251,50 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when owner tries to add ingredient without svg', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredientVariation(currentIngredientId, 'one', '', {from: owner}),
+				this.Ingredient.addVariation(currentIngredientId, 'one', '', {from: owner}),
 				'IngredientNFT: INVALID_SVG'
 			);
 		});
 		it('should revert when owner tries to add ingredient without variation name', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredientVariation(currentIngredientId, '', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(currentIngredientId, '', papayas[0].svg, {from: owner}),
 				'IngredientNFT: INVALID_NAME'
 			);
 		});
 
 		it('should revert when owner tries to add ingredient with invalid ingredient id', async () => {
 			await expectRevert(
-				this.Ingredient.addIngredientVariation(0, 'One', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(0, 'One', papayas[0].svg, {from: owner}),
 				'BaseERC1155: INVALID_NFT_ID'
 			);
 			await expectRevert(
-				this.Ingredient.addIngredientVariation(50, 'One', caviar_1, {from: owner}),
+				this.Ingredient.addVariation(50, 'One', papayas[0].svg, {from: owner}),
 				'BaseERC1155: INVALID_NFT_ID'
-			);
-		});
-	});
-
-	describe('mint()', () => {
-		let currentIngredientId;
-		let user1IngredientsBefore;
-		before('mint ingredients to users', async () => {
-			currentIngredientId = await this.Ingredient.getCurrentNftId();
-
-			// grant minter role to minter
-			const minterRole = await this.Ingredient.MINTER_ROLE();
-			await this.Ingredient.grantRole(minterRole, minter, {from: owner});
-
-			user1IngredientsBefore = await this.Ingredient.balanceOf(user1, currentIngredientId);
-
-			// mint ingredients to user
-			await this.Ingredient.mint(user1, currentIngredientId, 1, '0x284', {from: minter});
-		});
-
-		it('should mint the ingredients to users correctly', async () => {
-			const user1IngredientsAfter = await this.Ingredient.balanceOf(user1, currentIngredientId);
-			const totalSupplyOfIngredient = await this.Ingredient.totalSupply(currentIngredientId);
-
-			expect(user1IngredientsBefore).to.be.bignumber.eq(new BN('0'));
-			expect(user1IngredientsAfter).to.be.bignumber.eq(new BN('1'));
-			expect(totalSupplyOfIngredient).to.be.bignumber.eq(new BN('1'));
-		});
-
-		it('should revert when non-minter tries to mint the ingredients to user', async () => {
-			await expectRevert(
-				this.Ingredient.mint(user1, currentIngredientId, 1, '0x384', {from: user2}),
-				'BaseERC1155: ONLY_MINTER_CAN_CALL'
-			);
-		});
-
-		it('should revert when minter tries to mint the multiple ingredients to user', async () => {
-			await expectRevert(
-				this.Ingredient.mint(accounts[4], currentIngredientId, 2, '0x384', {from: minter}),
-				'ERC1155NFT: USER_CAN_TRANSFER_ONLY_ONE_TOKEN'
-			);
-		});
-
-		it('should revert when minter tries to mint the ingredients to user with invalid ingredient id', async () => {
-			await expectRevert(
-				this.Ingredient.mint(user1, 3, 1, '0x384', {from: minter}),
-				'ERC1155: INVALID_NFT_ID'
 			);
 		});
 	});
 
 	describe('burn()', () => {
 		let currentIngredientId;
-		let user1IngredientsBefore;
+		let ownerIngredientsBefore;
 		before('burn ingredients from users', async () => {
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 
-			user1IngredientsBefore = await this.Ingredient.balanceOf(user1, currentIngredientId);
+			ownerIngredientsBefore = await this.Ingredient.balanceOf(owner, currentIngredientId);
 
 			// burn ingredients to user
-			await this.Ingredient.burn(user1, currentIngredientId, 1, {from: minter});
+			await this.Ingredient.burn(owner, currentIngredientId, 2, {
+				from: minter
+			});
 		});
 
 		it('should burn the ingredients from users correctly', async () => {
-			const user1IngredientsAfter = await this.Ingredient.balanceOf(user1, currentIngredientId);
+			const ownerIngredientsAfter = await this.Ingredient.balanceOf(owner, currentIngredientId);
 			const totalSupplyOfIngredient = await this.Ingredient.totalSupply(currentIngredientId);
 
-			expect(user1IngredientsBefore).to.be.bignumber.eq(new BN('1'));
-			expect(user1IngredientsAfter).to.be.bignumber.eq(new BN('0'));
-			expect(totalSupplyOfIngredient).to.be.bignumber.eq(new BN('0'));
+			expect(ownerIngredientsBefore).to.be.bignumber.eq(new BN('10'));
+			expect(ownerIngredientsAfter).to.be.bignumber.eq(new BN('8'));
+			expect(totalSupplyOfIngredient).to.be.bignumber.eq(new BN('8'));
 		});
 
 		it('should revert when non-minter tries to burn the ingredients from user', async () => {
@@ -274,7 +318,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -285,17 +329,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedAddress(ZERO_ADDRESS, {from: owner}),
-				'BaseUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedAddress(user1, {from: owner}),
-				'BaseUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -306,7 +343,7 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should add user1 as excepted address', async () => {
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user2);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user2);
 			expect(isUser1Excepted).to.be.eq(true);
 		});
 
@@ -317,17 +354,10 @@ contract('IngredientsNFT', (accounts) => {
 			);
 		});
 
-		it('should revert when owner tries to add zero address as excepted address', async () => {
-			await expectRevert(
-				this.Ingredient.addExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'BaseUtils: CANNOT_EXCEPT_ZERO_ADDRESS'
-			);
-		});
-
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedFromAddress(user2, {from: owner}),
-				'BaseUtils: ADDRESS_ALREADY_EXISTS'
+				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
 	});
@@ -336,7 +366,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user3, {from: owner}),
-				'BaseUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -345,7 +375,7 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.removeExceptedAddress('0x0000000000000000000000000000000000000000', {
 					from: owner
 				}),
-				'BaseUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -358,8 +388,9 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should remove user from excepted addresses list correctly', async () => {
 			await this.Ingredient.removeExceptedAddress(user1, {from: owner});
+			await this.Ingredient.removeExceptedAddress(owner, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -367,7 +398,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user1, {from: owner}),
-				'BaseUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});
@@ -376,14 +407,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user3, {from: owner}),
-				'BaseUtils: ITEM_DOES_NOT_EXISTS'
-			);
-		});
-
-		it('should revert when owner tries to remove zero address ', async () => {
-			await expectRevert(
-				this.Ingredient.removeExceptedFromAddress(ZERO_ADDRESS, {from: owner}),
-				'BaseUtils: ITEM_DOES_NOT_EXISTS'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 
@@ -397,7 +421,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should remove user from excepted addresses list correctly', async () => {
 			await this.Ingredient.removeExceptedFromAddress(user2, {from: owner});
 
-			const isUser1Excepted = await this.Ingredient.isExceptedFromAddress(user1);
+			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user1);
 
 			expect(isUser1Excepted).to.be.eq(false);
 		});
@@ -405,7 +429,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user2, {from: owner}),
-				'BaseUtils: EMPTY_LIST'
+				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
 	});
@@ -454,7 +478,7 @@ contract('IngredientsNFT', (accounts) => {
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 			defId = await this.Ingredient.getVariationIdByIndex(currentIngredientId, 0);
 
-			await this.Ingredient.updateIngredientVariation(defId, 'Two', caviar_2, {
+			await this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
 				from: owner
 			});
 		});
@@ -464,13 +488,13 @@ contract('IngredientsNFT', (accounts) => {
 
 			expect(currentIngredientId).to.bignumber.be.eq(currentIngredientId);
 			expect(ingredientDef.ingredientId).to.bignumber.be.eq(currentIngredientId);
-			expect(ingredientDef.svg).to.be.eq(caviar_2);
+			expect(ingredientDef.svg).to.be.eq(papayas[1].svg);
 			expect(ingredientDef.name).to.be.eq('Two');
 		});
 
 		it('should revert when non-owner tries to update the ingredients variation', async () => {
 			await expectRevert(
-				this.Ingredient.updateIngredientVariation(defId, 'Two', caviar_2, {
+				this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
 					from: minter
 				}),
 				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
@@ -479,7 +503,7 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when owner tries to update ingredient variation without name', async () => {
 			await expectRevert(
-				this.Ingredient.updateIngredientVariation(defId, '', caviar_2, {
+				this.Ingredient.updateIngredientVariation(defId, '', papayas[1].svg, {
 					from: owner
 				}),
 				'IngredientNFT: INVALID_NAME'
@@ -504,9 +528,12 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.addExceptedAddress(minter);
 
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
-
-			await this.Ingredient.mint(user1, currentIngredientId, 1, '0x384', {from: minter});
-			await this.Ingredient.mint(minter, currentIngredientId, 1, '0x354', {from: minter});
+			await this.Ingredient.safeTransferFrom(owner, user1, currentIngredientId, 1, '0x837', {
+				from: owner
+			});
+			await this.Ingredient.safeTransferFrom(owner, minter, currentIngredientId, 1, '0x837', {
+				from: owner
+			});
 
 			user2BalanceBefore = await this.Ingredient.balanceOf(user2, currentIngredientId);
 
@@ -524,12 +551,9 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should revert when user tries to recieve multiple nfts of same nft type', async () => {
-			// mint ingredient to user1 again
-			await this.Ingredient.mint(user1, currentIngredientId, 1, '0x384', {from: minter});
-
 			await expectRevert(
-				this.Ingredient.safeTransferFrom(user1, user2, currentIngredientId, 1, '0x837', {
-					from: user1
+				this.Ingredient.safeTransferFrom(owner, user2, currentIngredientId, 1, '0x837', {
+					from: owner
 				}),
 				'ERC1155NFT: TOKEN_ALREADY_EXIST'
 			);
@@ -603,7 +627,7 @@ contract('IngredientsNFT', (accounts) => {
 				from: user2
 			});
 
-			const user1Balance = await this.Ingredient.balanceOf(user1, currentIngredientId);
+			const user1Balance = await this.Ingredient.balanceOf(user2, currentIngredientId);
 			expect(user1Balance).to.bignumber.be.eq(new BN('1'));
 		});
 
@@ -612,7 +636,9 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.pause({from: minter});
 
 			await expectRevert(
-				this.Ingredient.mint(accounts[4], currentIngredientId, 1, '0x384', {from: minter}),
+				this.Ingredient.safeTransferFrom(user2, accounts[8], currentIngredientId, 1, '0x837', {
+					from: user2
+				}),
 				'ERC1155Pausable: token transfer while paused'
 			);
 		});
@@ -690,10 +716,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -710,7 +736,9 @@ contract('IngredientsNFT', (accounts) => {
 		it('should update base uri correctly', async () => {
 			const baseUri = await this.Ingredient.uri(1);
 
-			expect(baseUri).to.be.eq('ipfs://');
+			expect(baseUri).to.be.eq(
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
+			);
 		});
 
 		it('should revert when non-admin tries to update the uri', async () => {
@@ -725,10 +753,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'ipfs://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -771,10 +799,10 @@ contract('IngredientsNFT', (accounts) => {
 		});
 
 		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.getTokenUri(currentNftId);
+			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'ipfs://bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd.ipfs.infura-ipfs.io/lacucina_secret_ingredients/999/1'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/999/1.json'
 			);
 		});
 	});
@@ -835,6 +863,247 @@ contract('IngredientsNFT', (accounts) => {
 			await expectRevert(
 				this.Ingredient.updateRoyaltyFee('251', {from: owner}),
 				'BaseERC1155WithRoyaltiesNFTWithRoyalties: INVALID_ROYALTY_FEE'
+			);
+		});
+	});
+
+	describe('addIngredientWithVariations()', () => {
+		let currentIngredientId;
+		before('setup contract', async () => {
+			// deploy new Ingredients NFT contract
+			this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
+				initializer: 'initialize'
+			});
+			// add owner as excepted address
+			await this.Ingredient.addExceptedAddress(owner);
+
+			// grant minter role
+			const minterRole = await this.Ingredient.MINTER_ROLE();
+			await this.Ingredient.grantRole(minterRole, minter);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
+
+			currentIngredientId = await this.Ingredient.getCurrentNftId();
+		});
+
+		it('should add ingredient details correctly', async () => {
+			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
+			const ownerBalance = await this.Ingredient.balanceOf(owner, currentIngredientId);
+
+			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
+			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
+			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
+			expect(ingredient.name).to.be.eq('Papaya');
+			expect(ingredient.totalVariations).to.bignumber.be.eq(new BN('3'));
+			expect(BigInt(ingredient.nutritionsHash)).to.be.eq(BigInt(nutritionHash));
+		});
+
+		it('should revert when non-minter tries to add the ingredients', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: user2,
+						gas: GAS_LIMIT
+					}
+				),
+				'BaseERC1155: ONLY_MINTER_CAN_CALL'
+			);
+		});
+		it('should revert when owner tries to add ingredient without name', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INVALID_INGREDIENT_NAME'
+			);
+		});
+
+		it('should revert when owner tries to add ingredient without ipfs hash', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					'',
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INVALID_IPFS_HASH'
+			);
+		});
+
+		it('should revert when insufficient keywords are passed', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INSUFFICIENT_KEYWORDS'
+			);
+
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INSUFFICIENT_KEYWORDS'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients and mints it to zero address', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					ZERO_ADDRESS,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INVALID_USER'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients and mints zero tokens', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					0,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientNFT: INVALID_AMOUNT'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients with insufficient variations', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[],
+					[papayas[0].name, papayas[1].name, papayas[2].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientsNFT: INSUFFICIENT_VARIATIONS'
+			);
+		});
+
+		it('should revert when owner tries to add the ingredients with insufficient variation names', async () => {
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[papayas[0].name, papayas[1].name],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
+			);
+
+			await expectRevert(
+				this.Ingredient.addIngredientWithVariations(
+					owner,
+					10,
+					'Papaya',
+					nutritionHash,
+					ipfsHash,
+					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+					[],
+					{
+						from: owner,
+						gas: GAS_LIMIT
+					}
+				),
+				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
 			);
 		});
 	});

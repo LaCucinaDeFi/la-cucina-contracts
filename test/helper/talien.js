@@ -1,14 +1,14 @@
 const {deployProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {bg01, bg02, bg03} = require('../../data/background');
-const {greenBody} = require('../../data/bodies');
-const {cowboy} = require('../../data/clothes');
-const {angryEyes, regularEyes} = require('../../data/eyes');
-const {cowboyHat} = require('../../data/headAccessory');
-const {blueHead} = require('../../data/heads');
-const {knife, sword} = require('../../data/holdingAccessory');
-const {bigMouthBlue, biteLipMouthBlue, piercedMouthBlue} = require('../../data/mouth');
-const {silver_badge, golden_badge, platinum_badge} = require('../../data/badge');
+const {bg01, bg02, bg03} = require('../../data/talien/background');
+const {greenBody} = require('../../data/talien/bodies');
+const {cowboy} = require('../../data/talien/clothes');
+const {angryEyes, regularEyes} = require('../../data/talien/eyes');
+const {cowboyHat} = require('../../data/talien/headAccessory');
+const {blueHead} = require('../../data/talien/heads');
+const {knife, sword} = require('../../data/talien/holdingAccessory');
+const {bigMouthBlue, biteLipMouthBlue, piercedMouthBlue} = require('../../data/talien/mouth');
+const {silver_badge, golden_badge, platinum_badge} = require('../../data/talien/badge');
 const url = 'https://token-cdn-domain/{id}.json';
 
 class Talien {

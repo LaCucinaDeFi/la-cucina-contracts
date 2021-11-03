@@ -4,12 +4,11 @@ const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
-const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
-const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
-const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
-const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
-const {getNutritionsHash} = require('./helper/NutrisionHash');
+const papayas = require('../data/ingredients/papaya');
+const caviar = require('../data/ingredients/caviar');
+const leaves = require('../data/ingredients/leaves');
+const venom = require('../data/ingredients/venom');
+const antEggs = require('../data/ingredients/antEggs');
 
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
@@ -23,6 +22,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('PublicMarketplace', (accounts) => {
 	const owner = accounts[0];
@@ -35,7 +35,7 @@ contract('PublicMarketplace', (accounts) => {
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
-
+	let nutritionHash;
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
 		// deploy Lac token
 		this.sampleToken = await SampleToken.new();
@@ -111,35 +111,90 @@ contract('PublicMarketplace', (accounts) => {
 
 	describe('initialize()', () => {
 		before('add ingredients', async () => {
-			const CaviarNutrisionHash = await getNutritionsHash([14, 50, 20, 4, 6, 39, 25, 8]);
+			// add owner as excepted address
+			await this.Ingredient.addExceptedAddress(owner);
 
-			await this.Ingredient.addIngredient('Caviar', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Tuna', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Gold', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Beef', CaviarNutrisionHash, ipfsHash);
-			await this.Ingredient.addIngredient('Truffle', CaviarNutrisionHash, ipfsHash);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
-			// add ingredient variations
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
+				{
+					from: owner
+				}
+			);
 
-			this.add2Tx = await this.Ingredient.addIngredientVariation(1, 'One', caviar_1);
-			await this.Ingredient.addIngredientVariation(1, 'Two', caviar_2);
-			await this.Ingredient.addIngredientVariation(1, 'Three', caviar_3);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Caviar',
+				nutritionHash,
+				ipfsHash,
+				[caviar[0].keyword, caviar[0].keyword],
+				[caviar[0].svg],
+				[caviar[0].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
-			await this.Ingredient.addIngredientVariation(2, 'One', tuna_1);
-			await this.Ingredient.addIngredientVariation(2, 'Two', tuna_2);
-			await this.Ingredient.addIngredientVariation(2, 'Three', tuna_3);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Leaves',
+				nutritionHash,
+				ipfsHash,
+				[leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
+				[leaves[0].svg, leaves[1].svg, leaves[2].svg],
+				[leaves[0].name, leaves[1].name, leaves[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
-			await this.Ingredient.addIngredientVariation(3, 'One', gold_1);
-			await this.Ingredient.addIngredientVariation(3, 'Two', gold_2);
-			await this.Ingredient.addIngredientVariation(3, 'Three', gold_3);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Venom',
+				nutritionHash,
+				ipfsHash,
+				[venom[0].keyword, venom[1].keyword, venom[2].keyword],
+				[venom[0].svg, venom[1].svg, venom[2].svg],
+				[venom[0].name, venom[1].name, venom[2].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
-			await this.Ingredient.addIngredientVariation(4, 'One', beef_1);
-			await this.Ingredient.addIngredientVariation(4, 'Two', beef_2);
-			await this.Ingredient.addIngredientVariation(4, 'Three', beef_3);
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Ant_Eggs',
+				nutritionHash,
+				ipfsHash,
+				[antEggs[0].keyword, antEggs[0].keyword],
+				[antEggs[0].svg],
+				[antEggs[0].name],
+				{
+					from: owner,
+					gas: GAS_LIMIT
+				}
+			);
 
-			this.add3Tx = await this.Ingredient.addIngredientVariation(5, 'One', truffle_1);
-			await this.Ingredient.addIngredientVariation(5, 'Two', truffle_2);
-			await this.Ingredient.addIngredientVariation(5, 'Three', truffle_3);
 			currentNftId = await this.Ingredient.getCurrentNftId();
 		});
 		it('should initialize the min duration correctly', async () => {
@@ -159,15 +214,21 @@ contract('PublicMarketplace', (accounts) => {
 
 		before('create and sell NFT to user1', async () => {
 			// create the NFT and list for sale
-			await this.privateMarketplace.createAndSellNFT(
+			this.saleTx = await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
-				currentNftId,
 				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
 			);
+			currentNftId = await this.Ingredient.getCurrentNftId();
 
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
 
@@ -211,7 +272,7 @@ contract('PublicMarketplace', (accounts) => {
 			expect(sale.seller).to.be.eq(user1);
 			expect(sale.buyer).to.be.eq(ZERO_ADDRESS);
 			expect(sale.currency).to.be.eq(this.sampleToken.address);
-			expect(sale.nftId).to.bignumber.be.eq(new BN('5'));
+			expect(sale.nftId).to.bignumber.be.eq(currentNftId);
 			expect(sale.totalCopies).to.bignumber.be.eq(new BN('1'));
 			expect(sale.remainingCopies).to.bignumber.be.eq(new BN('1'));
 			expect(sale.sellingPrice).to.bignumber.be.eq(new BN(ether('2')));
@@ -991,12 +1052,18 @@ contract('PublicMarketplace', (accounts) => {
 			await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
-				currentNftId,
 				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
 			);
+			currentNftId = await this.Ingredient.getCurrentNftId();
 
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
 
@@ -1129,12 +1196,18 @@ contract('PublicMarketplace', (accounts) => {
 			await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
-				currentNftId,
 				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
 			);
+			currentNftId = await this.Ingredient.getCurrentNftId();
 
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
 			royaltyReceiverBalBefore = await this.sampleToken.balanceOf(royaltyReceiver);
@@ -1159,8 +1232,6 @@ contract('PublicMarketplace', (accounts) => {
 			await this.publicMarketplace.placeBid(currentAuctionId, ether('2'), {from: user2});
 
 			currentBidId = await this.publicMarketplace.getCurrentBidId();
-			// stash tokens
-			await this.Ingredient.safeTransferFrom(user2, stash, currentNftId, 1, '0x384', {from: user2});
 
 			user2NFTBalanceBefore = await this.Ingredient.balanceOf(user2, currentNftId);
 			contractNFTBalanceBefore = await this.Ingredient.balanceOf(
@@ -1195,9 +1266,9 @@ contract('PublicMarketplace', (accounts) => {
 
 			expect(auction.status).to.bignumber.be.eq(new BN('0'));
 			expect(user2NFTBalanceBefore).to.bignumber.be.eq(new BN('0'));
-			expect(contractNFTBalanceBefore).to.bignumber.be.eq(new BN('4'));
+			expect(contractNFTBalanceBefore).to.bignumber.be.eq(new BN('1'));
 			expect(user2NFTBalanceAfter).to.bignumber.be.eq(new BN('1'));
-			expect(contractNFTBalanceAfter).to.bignumber.be.eq(new BN('3'));
+			expect(contractNFTBalanceAfter).to.bignumber.be.eq(new BN('0'));
 			expect(contractBalanceBefore).to.bignumber.be.gt(contractBalanceAfter);
 		});
 		it('should transfer the royalty amount to royalty receiver correctly', async () => {
@@ -1262,12 +1333,18 @@ contract('PublicMarketplace', (accounts) => {
 			await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
-				currentNftId,
 				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
 			);
+			currentNftId = await this.Ingredient.getCurrentNftId();
 
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
 
@@ -1326,13 +1403,19 @@ contract('PublicMarketplace', (accounts) => {
 			await this.privateMarketplace.createAndSellNFT(
 				ether('1'),
 				this.sampleToken.address,
-				currentNftId,
 				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
 			);
 
+			currentNftId = await this.Ingredient.getCurrentNftId();
 			currentPrivateSaleId = await this.privateMarketplace.getCurrentSaleId();
 
 			// buy nft from sale
@@ -1374,8 +1457,6 @@ contract('PublicMarketplace', (accounts) => {
 			const currentSaleIdBefore = await this.publicMarketplace.getCurrentSaleId();
 
 			await this.sampleToken.approve(this.privateMarketplace.address, MAX_UINT256, {from: user2});
-			// stash tokens
-			await this.Ingredient.safeTransferFrom(user2, stash, currentNftId, 1, '0x384', {from: user2});
 
 			// buy nft from sale
 			await this.privateMarketplace.buyNFT(currentPrivateSaleId, {from: user2});

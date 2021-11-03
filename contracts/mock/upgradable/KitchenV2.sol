@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../DishesNFT.sol';
+import '../../Kitchen.sol';
 
-contract DishesNFTV2 is DishesNFT {
+contract KitchenV2 is Kitchen {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -18,20 +18,14 @@ contract DishesNFTV2 is DishesNFT {
    =======================================================================
  */
 
-	function initialize(
-		string memory _name,
-		string memory _symbol,
-		string memory baseTokenURI,
-		address _ingredientAddress,
-		address _kitchenAddress
-	) public virtual override initializer {
-		require(_ingredientAddress != address(0), 'DishesNFT: INVALID_INGREDIENT_ADDRESS');
-		require(_kitchenAddress != address(0), 'DishesNFT: INVALID_KITCHEN_ADDRESS');
+	/**
+	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
+	 */
+	function initialize() external virtual override initializer {
+		__AccessControl_init();
+		__ReentrancyGuard_init();
 
-		__BaseERC721_init(_name, _symbol, baseTokenURI);
-
-		ingredientNft = IIngredientNFT(_ingredientAddress);
-		kitchen = IKitchen(_kitchenAddress);
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 	}
 
 	/*
@@ -40,8 +34,8 @@ contract DishesNFTV2 is DishesNFT {
    =======================================================================
  */
 
-	function addBurner(address _burner) public virtual onlyAdmin {
-		require(_burner != address(0), 'DishesNFTV2: ZERO_ADDRESS_FOUND');
+	function addBurner(address _burner) public virtual {
+		require(_burner != address(0), 'KitchenV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}
 

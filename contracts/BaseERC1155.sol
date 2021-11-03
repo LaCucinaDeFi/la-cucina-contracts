@@ -7,7 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Paus
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
 
 /**
@@ -32,37 +32,37 @@ contract BaseERC1155 is
 	ERC1155SupplyUpgradeable,
 	IVersionedContract
 {
-	using Counters for Counters.Counter;
+	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*
-   =======================================================================
-   ======================== Constants ====================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Constants ====================================
+   	=======================================================================
+ 	*/
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
 	bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
 	/*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
-	Counters.Counter internal tokenCounter;
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
+	CountersUpgradeable.Counter internal tokenCounter;
 
 	/*
-   =======================================================================
-   ======================== Public Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Variables ============================
+   	=======================================================================
+ 	*/
 
 	/// @dev tokenId -> totalSupply
 	mapping(uint256 => uint256) public tokenTotalSupply;
 
 	/*
-   =======================================================================
-   ======================== Initializer ==================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Initializer ==================================
+   	=======================================================================
+	*/
 
 	/**
 	 * @dev Grants `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, and `PAUSER_ROLE` to the account that
@@ -87,10 +87,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Modifiers ====================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Modifiers ====================================
+   	=======================================================================
+ 	*/
 
 	modifier onlyAdmin() {
 		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'BaseERC1155: ONLY_ADMIN_CAN_CALL');
@@ -108,28 +108,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Methods ===============================
-   =======================================================================
- */
-
-	/**
-	 * @dev Creates `amount` new tokens for `to`, of token type `id`.
-	 *
-	 * See {ERC1155-_mint}.
-	 *
-	 * Requirements:
-	 *
-	 * - the caller must have the `MINTER_ROLE`.
-	 */
-	function mint(
-		address to,
-		uint256 id,
-		uint256 amount,
-		bytes memory data
-	) public virtual onlyMinter onlyValidNftId(id) {
-		_mint(to, id, amount, data);
-	}
+   	=======================================================================
+   	======================== Public Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice This function allows minter to burn the tokens
@@ -149,6 +131,7 @@ contract BaseERC1155 is
 	 * @notice This method allows admin to update base token uri
 	 * @param _newUri - indicates the new uri
 	 */
+	//todo- do we need this? 
 	function updateUri(string memory _newUri) external virtual onlyAdmin {
 		require(bytes(_newUri).length > 0, 'BaseERC1155: INVALID_URI');
 		_setURI(_newUri);
@@ -189,10 +172,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Getter Methods ===============================
+   	=======================================================================
+ 	*/
 	/**
 	 * @notice This method retursn the current nft ID
 	 */
@@ -232,10 +215,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Internal Methods =============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @dev See {ERC1155-_mint}.

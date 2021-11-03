@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-library TalienUtils {
+library LaCucinaUtils {
 	/**
 	 * @dev Converts a `uint256` to its ASCII `string` decimal representation.
 	 */
@@ -42,17 +42,122 @@ library TalienUtils {
 		result = string(abi.encodePacked(bytes(_a), bytes(_b)));
 	}
 
+	/**
+	 * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
+	 * @param _address indicates the address to add.
+	 */
+	function addAddressInList(address[] storage _list, address _address) internal {
+		require(_address != address(0), 'LaCucinaUtils: CANNOT_EXCEPT_ZERO_ADDRESS');
+
+		(bool isExists, ) = isAddressExists(_list, _address);
+		require(!isExists, 'LaCucinaUtils: ADDRESS_ALREADY_EXISTS');
+
+		_list.push(_address);
+	}
+
+	/**
+	 * @notice This method allows user to remove the particular address from the address list
+	 */
+	function removeAddressFromList(address[] storage _list, address _item) internal {
+		uint256 listItems = _list.length;
+		require(listItems > 0, 'LaCucinaUtils: EMPTY_LIST');
+
+		// check and remove if the last item is item to be removed.
+		if (_list[listItems - 1] == _item) {
+			_list.pop();
+			return;
+		}
+
+		(bool isExists, uint256 index) = isAddressExists(_list, _item);
+		require(isExists, 'LaCucinaUtils: ITEM_DOES_NOT_EXISTS');
+
+		// move supported token to last
+		if (listItems > 1) {
+			address temp = _list[listItems - 1];
+			_list[index] = temp;
+		}
+
+		//remove supported token
+		_list.pop();
+	}
+
+	/**
+	 * @notice This method allows to check if particular address exists in list or not
+	 * @param _list indicates list of addresses
+	 * @param _item indicates address
+	 * @return isExists - returns true if item exists otherwise returns false. index - index of the existing item from the list.
+	 */
+	function isAddressExists(address[] storage _list, address _item)
+		internal
+		view
+		returns (bool isExists, uint256 index)
+	{
+		for (uint256 i = 0; i < _list.length; i++) {
+			if (_list[i] == _item) {
+				isExists = true;
+				index = i;
+				break;
+			}
+		}
+	}
+
+	/**
+	 * @notice This method allows user to remove the particular number from the numbers list
+	 */
+	function removeNumberFromList(uint256[] storage _list, uint256 _item) internal {
+		uint256 listItems = _list.length;
+		require(listItems > 0, 'LaCucinaUtils: EMPTY_LIST');
+
+		// check and remove if the last item is item to be removed.
+		if (_list[listItems - 1] == _item) {
+			_list.pop();
+			return;
+		}
+
+		(bool isExists, uint256 index) = isNumberExists(_list, _item);
+		require(isExists, 'LaCucinaUtils: ITEM_DOES_NOT_EXISTS');
+
+		// move supported token to last
+		if (listItems > 1) {
+			uint256 temp = _list[listItems - 1];
+			_list[index] = temp;
+		}
+
+		//remove supported token
+		_list.pop();
+	}
+
+	/**
+	 * @notice This method allows to check if particular address exists in list or not
+	 * @param _list - indicates list of numbers
+	 * @param _item - indicates number
+	 * @return isExists - returns true if item exists otherwise returns false. index - index of the existing item from the list.
+	 */
+	function isNumberExists(uint256[] storage _list, uint256 _item)
+		internal
+		view
+		returns (bool isExists, uint256 index)
+	{
+		for (uint256 i = 0; i < _list.length; i++) {
+			if (_list[i] == _item) {
+				isExists = true;
+				index = i;
+				break;
+			}
+		}
+	}
+
 	function getRandomVariation(uint256 _seed, uint256 _max)
 		internal
 		view
 		returns (uint256 randomVariation)
 	{
 		randomVariation = random(_seed, _max);
-		require(randomVariation < _max, 'ProfilePictures: INVALID_VARIATION');
+		require(randomVariation < _max, 'LaCucinaUtils: INVALID_VARIATION');
 	}
 
 	function random(uint256 _seed, uint256 _max) internal view returns (uint256) {
-		require(_max > 0, 'ProfilePictures: INVALID_MAX');
+		require(_max > 0, 'LaCucinaUtils: INVALID_MAX');
 		uint256 randomnumber = uint256(
 			keccak256(
 				abi.encodePacked(block.timestamp, block.difficulty, block.number, msg.sender, _seed)
