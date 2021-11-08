@@ -111,7 +111,7 @@ contract BaseMarketplace is
  */
 	event NewNFTListing(address indexed seller, uint256 indexed saleId);
 	event NFTAuction(address indexed seller, uint256 indexed auctionId);
-	event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint256 saleId);
+	event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint256 saleId, uint256 date);
 	event BuyAuctionNFT(address indexed buyer, uint256 indexed nftId, uint256 auctionId);
 	event PlaceBid(
 		uint256 indexed auctionId,
