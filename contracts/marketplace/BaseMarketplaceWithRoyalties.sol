@@ -62,7 +62,7 @@ contract BaseMarketplaceWithRoyalties is BaseMarketplace {
 			_sale.sellTimeStamp = block.timestamp;
 		}
 
-		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId);
+		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId, block.timestamp);
 	}
 
 	/**
