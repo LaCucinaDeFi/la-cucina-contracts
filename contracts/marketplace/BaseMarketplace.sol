@@ -128,6 +128,7 @@ contract BaseMarketplace is
 	function __Marketplace_init(address _nftContractAddress) internal virtual initializer {
 		__AccessControl_init();
 		__ReentrancyGuard_init();
+		__ERC1155Receiver_init();
 
 		require(_nftContractAddress != address(0), 'Market: INVALID_NFT_CONTRACT');
 

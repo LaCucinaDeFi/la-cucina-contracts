@@ -90,6 +90,8 @@ contract Oven is
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
+		__ERC1155Receiver_init();
+		__ERC721Holder_init();
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
