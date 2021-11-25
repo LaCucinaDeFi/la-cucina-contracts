@@ -892,9 +892,9 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should give early access to vip members for buying ingredients', async () => {
-			// approve tokens to Oven
+			// approve tokens to Cooker
 			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
-			// approve tokens to Oven
+			// approve tokens to Cooker
 			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user3});
 
 			// get talien for user1
@@ -907,7 +907,7 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should revert when user with normal talien tries to get early access to ingredients', async () => {
-			// approve tokens to Oven
+			// approve tokens to Cooker
 			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user2});
 
 			// update generation

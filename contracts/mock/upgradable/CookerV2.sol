@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import '../../Oven.sol';
+import '../../Cooker.sol';
 
-contract OvenV2 is Oven {
+contract CookerV2 is Cooker {
 	/*
    =======================================================================
    ======================== Public Variables =============================
@@ -30,11 +30,11 @@ contract OvenV2 is Oven {
 		uint256 _maxIngredients,
 		uint256 _additionalIngredients
 	) external virtual override initializer {
-		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
-		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
-		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
-		require(_talien != address(0), 'Oven: INVALID_TALIEN_ADDRESS');
-		require(_maxIngredients > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
+		require(_ingredientNft != address(0), 'Cooker: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNft != address(0), 'Cooker: INVALID_DISHES_ADDRESS');
+		require(_lacToken != address(0), 'Cooker: INVALID_LAC_ADDRESS');
+		require(_talien != address(0), 'Cooker: INVALID_TALIEN_ADDRESS');
+		require(_maxIngredients > 1, 'Cooker: INSUFFICIENT_INGREDIENTS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();

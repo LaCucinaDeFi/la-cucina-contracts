@@ -13,7 +13,7 @@ import './interfaces/IVersionedContract.sol';
 import './interfaces/IBEP20.sol';
 import './interfaces/ITalien.sol';
 
-contract Oven is
+contract Cooker is
 	AccessControlUpgradeable,
 	ReentrancyGuardUpgradeable,
 	IVersionedContract,
@@ -82,11 +82,11 @@ contract Oven is
 		uint256 _maxIngredients,
 		uint256 _additionalIngredients
 	) external virtual initializer {
-		require(_ingredientNft != address(0), 'Oven: INVALID_INGREDIENT_ADDRESS');
-		require(_dishesNft != address(0), 'Oven: INVALID_DISHES_ADDRESS');
-		require(_lacToken != address(0), 'Oven: INVALID_LAC_ADDRESS');
-		require(_talien != address(0), 'Oven: INVALID_TALIEN_ADDRESS');
-		require(_maxIngredients > 1, 'Oven: INSUFFICIENT_INGREDIENTS');
+		require(_ingredientNft != address(0), 'Cooker: INVALID_INGREDIENT_ADDRESS');
+		require(_dishesNft != address(0), 'Cooker: INVALID_DISHES_ADDRESS');
+		require(_lacToken != address(0), 'Cooker: INVALID_LAC_ADDRESS');
+		require(_talien != address(0), 'Cooker: INVALID_TALIEN_ADDRESS');
+		require(_maxIngredients > 1, 'Cooker: INSUFFICIENT_INGREDIENTS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
@@ -110,17 +110,17 @@ contract Oven is
  	=======================================================================
  	*/
 	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), 'Oven: ONLY_ADMIN_CAN_CALL');
+		require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), 'Cooker: ONLY_ADMIN_CAN_CALL');
 		_;
 	}
 
 	modifier onlyValidFlameId(uint256 _flameId) {
-		require(_flameId > 0 && _flameId <= flamesCounter.current(), 'Oven: INVALID_FLAME');
+		require(_flameId > 0 && _flameId <= flamesCounter.current(), 'Cooker: INVALID_FLAME');
 		_;
 	}
 
 	modifier onlyValidDishNFTId(uint256 _dishNFTId) {
-		require(_dishNFTId > 0 && _dishNFTId <= dishesNft.getCurrentTokenId(), 'Oven: INVALID_DISH_ID');
+		require(_dishNFTId > 0 && _dishNFTId <= dishesNft.getCurrentTokenId(), 'Cooker: INVALID_DISH_ID');
 		_;
 	}
 
@@ -136,7 +136,7 @@ contract Oven is
 	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
 	 * @return dishId - indicates the new dish id
 	 */
-	function prepareDish(
+	function cookDish(
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256[] memory _ingredientIds
@@ -148,13 +148,13 @@ contract Oven is
 
 		require(
 			totalIngredients > 1 && totalIngredients <= maxAllowedIngredients,
-			'Oven: INVALID_NUMBER_OF_INGREDIENTS'
+			'Cooker: INVALID_NUMBER_OF_INGREDIENTS'
 		);
 
 		(bool hasTalien, ) = doesUserHasTalien(msg.sender);
 
 		if (!hasTalien) {
-			require(totalIngredients <= maxIngredients, 'Oven: USER_DONT_HAVE_TALIEN');
+			require(totalIngredients <= maxIngredients, 'Cooker: USER_DONT_HAVE_TALIEN');
 		}
 
 		if (flame.lacCharge > 0) // get the LAC tokens from user
@@ -166,7 +166,7 @@ contract Oven is
 		for (uint256 i = 0; i < totalIngredients; i++) {
 			require(
 				_ingredientIds[i] > 0 && _ingredientIds[i] <= currentIngredientId,
-				'Oven: INVALID_INGREDIENT_ID'
+				'Cooker: INVALID_INGREDIENT_ID'
 			);
 
 			// get the Ingredient NFT from user
@@ -174,7 +174,7 @@ contract Oven is
 		}
 
 		// prepare the dish
-		dishId = dishesNft.prepareDish(
+		dishId = dishesNft.cookDish(
 			msg.sender,
 			_dishId,
 			_flameId,
@@ -188,7 +188,7 @@ contract Oven is
 	 * @param _dishId - indicates the id of dish to be uncooked.
 	 */
 	function uncookDish(uint256 _dishId) external {
-		require(isDishReadyToUncook(_dishId), 'Oven: CANNOT_UNCOOK_WHILE_PREPARING');
+		require(isDishReadyToUncook(_dishId), 'Cooker: CANNOT_UNCOOK_WHILE_PREPARING');
 
 		// get details of dish
 		(
@@ -205,7 +205,7 @@ contract Oven is
 
 		) = dishesNft.dish(_dishId);
 
-		require(dishOwner == msg.sender, 'Oven: ONLY_DISH_OWNER_CAN_UNCOOK');
+		require(dishOwner == msg.sender, 'Cooker: ONLY_DISH_OWNER_CAN_UNCOOK');
 
 		(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 
@@ -241,13 +241,13 @@ contract Oven is
 
 				require(
 					variation > 0 && variation <= ingredientNft.getCurrentDefs(),
-					'Oven: INVALID_INGREDIENT_VARIATION'
+					'Cooker: INVALID_INGREDIENT_VARIATION'
 				);
 
 				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
 				require(
 					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
-					'Oven: INVALID_INGREDIENT_ID'
+					'Cooker: INVALID_INGREDIENT_ID'
 				);
 				// transfer the ingredient nft to user
 				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
@@ -267,7 +267,7 @@ contract Oven is
 		uint256 _preparationTime,
 		uint256 _lacCharge
 	) external onlyAdmin returns (uint256 flameId) {
-		require(bytes(_flameType).length > 0, 'Oven: INVALID_FLAME_TYPE');
+		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		// increase flame counter
 		flamesCounter.increment();
@@ -289,7 +289,7 @@ contract Oven is
 		uint256 _preparationTime,
 		uint256 _lacCharge
 	) external onlyAdmin onlyValidFlameId(_flameId) {
-		require(bytes(_flameType).length > 0, 'Oven: INVALID_FLAME_TYPE');
+		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		flames[_flameId] = FlameDetail(_flameType, _preparationTime, _lacCharge);
 	}
@@ -307,7 +307,7 @@ contract Oven is
 		onlyValidDishNFTId(_dishNFTId)
 		onlyValidFlameId(_flameId)
 	{
-		require(!isDishReadyToUncook(_dishNFTId), 'Oven: CANNOT_UPDATE_FLAME');
+		require(!isDishReadyToUncook(_dishNFTId), 'Cooker: CANNOT_UPDATE_FLAME');
 
 		// get details of dish
 		(
@@ -324,8 +324,8 @@ contract Oven is
 
 		) = dishesNft.dish(_dishNFTId);
 
-		require(msg.sender == dishOwner, 'Oven: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
-		require(_flameId != oldFlameId, 'Oven: FLAME_ALREADY_SET');
+		require(msg.sender == dishOwner, 'Cooker: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
+		require(_flameId != oldFlameId, 'Cooker: FLAME_ALREADY_SET');
 
 		FlameDetail storage oldFlame = flames[oldFlameId];
 		FlameDetail storage newFlame = flames[_flameId];
@@ -336,7 +336,7 @@ contract Oven is
 			if (newFlame.lacCharge > 0) {
 				require(
 					lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge),
-					'Oven: TRANSFER_FAILED'
+					'Cooker: TRANSFER_FAILED'
 				);
 			}
 		}
@@ -349,7 +349,7 @@ contract Oven is
 	 * @param _newFee - indicates the new uncooking fee to set
 	 */
 	function updateUncookingFee(uint256 _newFee) external onlyAdmin {
-		require(_newFee != uncookingFee, 'Oven: INVALID_FEE');
+		require(_newFee != uncookingFee, 'Cooker: INVALID_FEE');
 		uncookingFee = _newFee;
 	}
 
@@ -358,7 +358,7 @@ contract Oven is
 	 * @param _maxIngredients - indicates the new uncooking fee to set
 	 */
 	function updateMaxIngredients(uint256 _maxIngredients) external onlyAdmin {
-		require(_maxIngredients > 1 && _maxIngredients != maxIngredients, 'Oven: INVALID_INGREDIENTS');
+		require(_maxIngredients > 1 && _maxIngredients != maxIngredients, 'Cooker: INVALID_INGREDIENTS');
 		maxIngredients = _maxIngredients;
 	}
 
@@ -367,7 +367,7 @@ contract Oven is
 	 * @param _additionalIngredients - indicates the additional number of ingrediens that vip user can prepare a dish with
 	 */
 	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyAdmin {
-		require(_additionalIngredients != additionalIngredients, 'Oven: ALREADY_SET');
+		require(_additionalIngredients != additionalIngredients, 'Cooker: ALREADY_SET');
 		additionalIngredients = _additionalIngredients;
 	}
 
@@ -375,8 +375,8 @@ contract Oven is
 	 * @notice This method allows admin to claim all the tokens of specified address to given address
 	 */
 	function claimAllTokens(address _user, address _tokenAddress) external onlyAdmin {
-		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
-		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
+		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
 		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
 
@@ -391,11 +391,11 @@ contract Oven is
 		address _tokenAddress,
 		uint256 _amount
 	) external onlyAdmin {
-		require(_user != address(0), 'Oven: INVALID_USER_ADDRESS');
-		require(_tokenAddress != address(0), 'Oven: INVALID_TOKEN_ADDRESS');
+		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
+		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
 		uint256 tokenAmount = IBEP20(_tokenAddress).balanceOf(address(this));
-		require(_amount > 0 && tokenAmount >= _amount, 'Oven: INSUFFICIENT_BALANCE');
+		require(_amount > 0 && tokenAmount >= _amount, 'Cooker: INSUFFICIENT_BALANCE');
 
 		require(IBEP20(_tokenAddress).transfer(_user, _amount));
 	}

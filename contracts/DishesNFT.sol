@@ -91,15 +91,15 @@ contract DishesNFT is BaseERC721 {
    	======================== Events =======================================
    	=======================================================================
  	*/
-	event DishPrepared(uint256 dishId);
-	event DishUncooked(uint256 dishId);
+	event Cook(uint256 dishId);
+	event Uncook(uint256 dishId);
 
 	/*
    	=======================================================================
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-	modifier OnlyOven() {
+	modifier OnlyCooker() {
 		require(hasRole(OVEN_ROLE, msg.sender), 'DishesNFT: ONLY_OVEN_CAN_CALL');
 		_;
 	}
@@ -122,13 +122,13 @@ contract DishesNFT is BaseERC721 {
 	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
 	 * @return dishNFTId - indicates the new dish id
 	 */
-	function prepareDish(
+	function cookDish(
 		address _user,
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime,
 		uint256[] memory _ingredientIds
-	) external OnlyOven returns (uint256 dishNFTId) {
+	) external OnlyCooker returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
 		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'DishesNFT: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
@@ -171,21 +171,21 @@ contract DishesNFT is BaseERC721 {
 
 		dishNames[dishNFTId] = dishName;
 
-		emit DishPrepared(dishNFTId);
+		emit Cook(dishNFTId);
 	}
 
 	/**
 	 * @notice This method alloes chef contract to uncook the dish.
 	 * @param _dishId - indicates the dishId to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external OnlyOven onlyValidDishId(_dishId) {
+	function uncookDish(uint256 _dishId) external OnlyCooker onlyValidDishId(_dishId) {
 		Dish storage dishToUncook = dish[_dishId];
 		require(dishToUncook.cooked, 'DishesNFT: ALREADY_UNCOOKED_DISH');
 
 		// uncook dish
 		dishToUncook.cooked = false;
 
-		emit DishUncooked(_dishId);
+		emit Uncook(_dishId);
 	}
 
 	/**
@@ -195,7 +195,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime
-	) external OnlyOven {
+	) external OnlyCooker {
 		// update flame type
 		dish[_dishId].flameType = _flameId;
 		// update dish preparationTime

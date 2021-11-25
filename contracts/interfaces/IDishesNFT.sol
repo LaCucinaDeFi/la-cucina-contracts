@@ -23,7 +23,7 @@ interface IDishesNFT is IERC721Upgradeable {
 			uint256 multiplier
 		);
 
-	function prepareDish(
+	function cookDish(
 		address _user,
 		uint256 _dishId,
 		uint256 _flameId,
