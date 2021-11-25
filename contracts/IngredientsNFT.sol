@@ -308,7 +308,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		returns (uint256 nutrionHash)
 	{
 		for (uint256 i = 0; i < _nutritions.length; i++) {
-			nutrionHash += _nutritions[i] * 256**i;
+			nutrionHash += _nutritions[i] * 100000**i;
 		}
 	}
 
