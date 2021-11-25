@@ -356,7 +356,7 @@ contract DishesNFT is BaseERC721 {
 		// add defs
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			string('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">')
+			string('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">')
 		);
 
 		uint256 slotConst = 256;
