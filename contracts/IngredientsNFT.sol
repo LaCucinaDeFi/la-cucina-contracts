@@ -294,12 +294,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		tokenUri = string(
 			abi.encodePacked(
 				'https://ipfs.infura.io/ipfs/',
-				ipfsHash[_tokenId],
-				'/lacucina_secret_ingredients/',
-				LaCucinaUtils.toString(block.chainid),
-				'/',
-				LaCucinaUtils.toString(_tokenId),
-				'.json'
+				ipfsHash[_tokenId]
 			)
 		);
 	}
@@ -313,7 +308,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		returns (uint256 nutrionHash)
 	{
 		for (uint256 i = 0; i < _nutritions.length; i++) {
-			nutrionHash += _nutritions[i] * 256**i;
+			nutrionHash += _nutritions[i] * 100000**i;
 		}
 	}
 

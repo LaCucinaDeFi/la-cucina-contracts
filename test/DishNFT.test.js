@@ -124,7 +124,7 @@ contract('DishesNFT', (accounts) => {
 
 	before('add ingredients', async () => {
 		// add ingredients
-		nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+		nutritionHash = await this.Ingredient.getNutritionHash([14200, 24100, 22200, 42000, 63100, 39100, 75200]);
 		// add ingredient with variation
 		await this.Ingredient.addIngredientWithVariations(
 			owner,
@@ -141,6 +141,7 @@ contract('DishesNFT', (accounts) => {
 			}
 		);
 
+		nutritionHash = await this.Ingredient.getNutritionHash([24100, 34100, 32200, 32000, 33100, 59100, 65200]);
 		// add ingredient with variation
 		await this.Ingredient.addIngredientWithVariations(
 			owner,
@@ -269,8 +270,8 @@ contract('DishesNFT', (accounts) => {
 			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.creationTime).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.completionTime).to.bignumber.be.gt(dishDetails.creationTime);
-			expect(dishDetails.multiplier).to.bignumber.be.gt(new BN('0'));
-
+			expect(dishDetails.multiplier).to.bignumber.be.eq(new BN('2897315367569879096'));
+			
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(currentDishIdAfter).to.bignumber.be.eq(new BN('1'));
 		});
