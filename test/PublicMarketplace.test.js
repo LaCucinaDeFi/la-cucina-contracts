@@ -14,7 +14,6 @@ const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
 const PublicMarketplaceV2 = artifacts.require('PublicMarketplaceV2');
-const TalienContract = artifacts.require('Talien');
 
 const {Talien} = require('./helper/talien');
 
@@ -31,6 +30,7 @@ contract('PublicMarketplace', (accounts) => {
 	const user2 = accounts[3];
 	const user3 = accounts[4];
 	const fundReceiver = accounts[5];
+	const operator = accounts[6];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
@@ -46,28 +46,12 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		// deploy NFT token
-		this.Talien = await deployProxy(
-			TalienContract,
-			[
-				'La Cucina Taliens',
-				'TALIEN',
-				url,
-				fundReceiver,
-				this.sampleToken.address,
-				ether('10'),
-				royaltyReceiver,
-				'100',
-				'Mokoto Glitch Regular'
-			],
-			{
-				initializer: 'initialize'
-			}
+		this.TalienContract = new Talien(operator, owner);
+		this.Talien = await this.TalienContract.setup(
+			fundReceiver,
+			royaltyReceiver,
+			this.sampleToken.address
 		);
-
-		this.TalienObj = new Talien(this.Talien);
-
-		await this.TalienObj.setup(owner);
-
 		// deploy private marketplace
 		this.privateMarketplace = await deployProxy(
 			PrivateMarketplace,
@@ -85,23 +69,31 @@ contract('PublicMarketplace', (accounts) => {
 		// add privateMarket as minter in ERC1155 contract.
 		const minterRole = await this.Ingredient.MINTER_ROLE();
 		await this.Ingredient.grantRole(minterRole, this.privateMarketplace.address);
+		await this.Ingredient.grantRole(minterRole, minter);
+
+		// grant updator role to talion contract
+		const OPERATOR_ROLE = await this.Ingredient.OPERATOR_ROLE();
+		await this.Ingredient.grantRole(OPERATOR_ROLE, operator, {from: owner});
+		await this.privateMarketplace.grantRole(OPERATOR_ROLE, operator, {from: owner});
 
 		// add excepted address
-		await this.Ingredient.addExceptedAddress(this.privateMarketplace.address);
+		await this.Ingredient.addExceptedAddress(this.privateMarketplace.address, {from: operator});
 		// add excepted address
-		await this.Ingredient.addExceptedAddress(this.publicMarketplace.address);
+		await this.Ingredient.addExceptedAddress(this.publicMarketplace.address, {from: operator});
 		// add stash as excepted address
-		await this.Ingredient.addExceptedAddress(stash);
+		await this.Ingredient.addExceptedAddress(stash, {from: operator});
 
 		// add minter in privateMarketplace
 		await this.privateMarketplace.grantRole(minterRole, minter);
 
 		// add minter in publicMarketplace
 		await this.publicMarketplace.grantRole(minterRole, minter);
+		// add minter in publicMarketplace
+		await this.publicMarketplace.grantRole(OPERATOR_ROLE, operator, {from: owner});
 
 		// add supported token
-		await this.privateMarketplace.addSupportedToken(this.sampleToken.address);
-		await this.publicMarketplace.addSupportedToken(this.sampleToken.address);
+		await this.privateMarketplace.addSupportedToken(this.sampleToken.address, {from: operator});
+		await this.publicMarketplace.addSupportedToken(this.sampleToken.address, {from: operator});
 
 		// mint tokens to users
 		await this.sampleToken.mint(user1, ether('100'));
@@ -112,7 +104,7 @@ contract('PublicMarketplace', (accounts) => {
 	describe('initialize()', () => {
 		before('add ingredients', async () => {
 			// add owner as excepted address
-			await this.Ingredient.addExceptedAddress(owner);
+			await this.Ingredient.addExceptedAddress(owner, {from: operator});
 
 			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
@@ -127,7 +119,7 @@ contract('PublicMarketplace', (accounts) => {
 				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
-					from: owner
+					from: minter
 				}
 			);
 
@@ -142,7 +134,7 @@ contract('PublicMarketplace', (accounts) => {
 				[caviar[0].svg],
 				[caviar[0].name],
 				{
-					from: owner,
+					from: minter,
 					gas: GAS_LIMIT
 				}
 			);
@@ -158,7 +150,7 @@ contract('PublicMarketplace', (accounts) => {
 				[leaves[0].svg, leaves[1].svg, leaves[2].svg],
 				[leaves[0].name, leaves[1].name, leaves[2].name],
 				{
-					from: owner,
+					from: minter,
 					gas: GAS_LIMIT
 				}
 			);
@@ -174,7 +166,7 @@ contract('PublicMarketplace', (accounts) => {
 				[venom[0].svg, venom[1].svg, venom[2].svg],
 				[venom[0].name, venom[1].name, venom[2].name],
 				{
-					from: owner,
+					from: minter,
 					gas: GAS_LIMIT
 				}
 			);
@@ -190,7 +182,7 @@ contract('PublicMarketplace', (accounts) => {
 				[antEggs[0].svg],
 				[antEggs[0].name],
 				{
-					from: owner,
+					from: minter,
 					gas: GAS_LIMIT
 				}
 			);
@@ -919,7 +911,7 @@ contract('PublicMarketplace', (accounts) => {
 			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
-			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
+			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: operator});
 		});
 
 		it('should add supported token correctly', async () => {
@@ -931,7 +923,7 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should revert when admin tries to add token which is already supported', async () => {
 			await expectRevert(
-				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner}),
+				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: operator}),
 				'Market: TOKEN_ALREADY_ADDED'
 			);
 		});
@@ -939,7 +931,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when non-admin tries to add the supported token', async () => {
 			await expectRevert(
 				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: user2}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -951,15 +943,15 @@ contract('PublicMarketplace', (accounts) => {
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(this.privateMarketplace.address, {
-				from: owner
+				from: operator
 			});
 
 			// remove supported token
-			await this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner});
+			await this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: operator});
 
 			// remove supported token
 			await this.publicMarketplace.removeSupportedToken(this.privateMarketplace.address, {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -976,7 +968,7 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
 			await expectRevert(
-				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner}),
+				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: operator}),
 				'Market: TOKEN_DOES_NOT_EXISTS'
 			);
 		});
@@ -984,7 +976,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when non-admin tries to remove the supported token', async () => {
 			await expectRevert(
 				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: minter}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -997,13 +989,13 @@ contract('PublicMarketplace', (accounts) => {
 
 			// update minimum duration
 			await this.publicMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
-				from: owner
+				from: operator
 			});
 		});
 		after('reset minimum duration to 1 days', async () => {
 			// update minimum duration
 			await this.publicMarketplace.updateMinimumDuration(String(time.duration.days('1')), {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -1015,7 +1007,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when admin tries to update minimum duration with same duration', async () => {
 			await expectRevert(
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
-					from: owner
+					from: operator
 				}),
 				'MintingStatoin: INVALID_MINIMUM_DURATION'
 			);
@@ -1024,7 +1016,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when admin tries to update minimum duration to zero', async () => {
 			await expectRevert(
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('0')), {
-					from: owner
+					from: operator
 				}),
 				'MintingStatoin: INVALID_MINIMUM_DURATION'
 			);
@@ -1034,7 +1026,7 @@ contract('PublicMarketplace', (accounts) => {
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('3')), {
 					from: user2
 				}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -1497,7 +1489,7 @@ contract('PublicMarketplace', (accounts) => {
 			let isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
 			expect(isSupported).to.be.eq(true);
 
-			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
+			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: operator});
 
 			isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
 			expect(isSupported).to.be.eq(false);

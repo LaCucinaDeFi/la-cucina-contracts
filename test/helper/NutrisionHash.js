@@ -53,4 +53,6 @@ const getMultiplier = async (nutritionsHash) => {
 	return [plutamins, nutrition];
 };
 
+
+
 module.exports = {getNutritionsHash, getMultiplier};

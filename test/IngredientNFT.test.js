@@ -20,6 +20,7 @@ contract('IngredientsNFT', (accounts) => {
 	const user1 = accounts[2];
 	const user2 = accounts[3];
 	const user3 = accounts[4];
+	const operator = accounts[5];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	let nutritionHash;
@@ -28,11 +29,15 @@ contract('IngredientsNFT', (accounts) => {
 		this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 			initializer: 'initialize'
 		});
+
+		// grant updator role to talion contract
+		const OPERATOR_ROLE = await this.Ingredient.OPERATOR_ROLE();
+		await this.Ingredient.grantRole(OPERATOR_ROLE, operator, {from: owner});
 	});
 
 	it('should initialize the contract correctly', async () => {
 		const uri = await this.Ingredient.uri(1);
-		expect(uri).to.be.eq('https://ipfs.infura.io/ipfs//lacucina_secret_ingredients/999/1.json');
+		expect(uri).to.be.eq('https://ipfs.infura.io/ipfs/');
 	});
 
 	it('should give the deployer the minter role', async () => {
@@ -63,7 +68,7 @@ contract('IngredientsNFT', (accounts) => {
 			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
 
 			// add owner as excepted address
-			await this.Ingredient.addExceptedAddress(owner);
+			await this.Ingredient.addExceptedAddress(owner, {from: operator});
 
 			this.addIngredientTX = await this.Ingredient.addIngredient(
 				owner,
@@ -73,7 +78,7 @@ contract('IngredientsNFT', (accounts) => {
 				ipfsHash,
 				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 				{
-					from: owner
+					from: minter
 				}
 			);
 
@@ -118,7 +123,7 @@ contract('IngredientsNFT', (accounts) => {
 					ipfsHash,
 					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
-						from: owner
+						from: minter
 					}
 				),
 				'IngredientNFT: INVALID_INGREDIENT_NAME'
@@ -135,7 +140,7 @@ contract('IngredientsNFT', (accounts) => {
 					'',
 					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
-						from: owner
+						from: minter
 					}
 				),
 				'IngredientNFT: INVALID_IPFS_HASH'
@@ -151,14 +156,14 @@ contract('IngredientsNFT', (accounts) => {
 					nutritionHash,
 					ipfsHash,
 					[papayas[0].keyword],
-					{from: owner}
+					{from: minter}
 				),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
 
 			await expectRevert(
 				this.Ingredient.addIngredient(owner, 10, 'Papaya', nutritionHash, ipfsHash, [], {
-					from: owner
+					from: minter
 				}),
 				'IngredientNFT: INSUFFICIENT_KEYWORDS'
 			);
@@ -174,7 +179,7 @@ contract('IngredientsNFT', (accounts) => {
 					ipfsHash,
 					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
-						from: owner
+						from: minter
 					}
 				),
 				'IngredientNFT: INVALID_USER'
@@ -191,7 +196,7 @@ contract('IngredientsNFT', (accounts) => {
 					ipfsHash,
 					[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
 					{
-						from: owner
+						from: minter
 					}
 				),
 				'IngredientNFT: INVALID_AMOUNT'
@@ -216,7 +221,7 @@ contract('IngredientsNFT', (accounts) => {
 				currentIngredientId,
 				'One',
 				papayas[0].svg,
-				{from: owner}
+				{from: operator}
 			);
 			//	console.log('add ingredient variation: ', this.addVariationTx);
 		});
@@ -245,30 +250,30 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.addVariation(currentIngredientId, 'One', papayas[0].svg, {
 					from: minter
 				}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when owner tries to add ingredient without svg', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(currentIngredientId, 'one', '', {from: owner}),
+				this.Ingredient.addVariation(currentIngredientId, 'one', '', {from: operator}),
 				'IngredientNFT: INVALID_SVG'
 			);
 		});
 		it('should revert when owner tries to add ingredient without variation name', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(currentIngredientId, '', papayas[0].svg, {from: owner}),
+				this.Ingredient.addVariation(currentIngredientId, '', papayas[0].svg, {from: operator}),
 				'IngredientNFT: INVALID_NAME'
 			);
 		});
 
 		it('should revert when owner tries to add ingredient with invalid ingredient id', async () => {
 			await expectRevert(
-				this.Ingredient.addVariation(0, 'One', papayas[0].svg, {from: owner}),
+				this.Ingredient.addVariation(0, 'One', papayas[0].svg, {from: operator}),
 				'BaseERC1155: INVALID_NFT_ID'
 			);
 			await expectRevert(
-				this.Ingredient.addVariation(50, 'One', papayas[0].svg, {from: owner}),
+				this.Ingredient.addVariation(50, 'One', papayas[0].svg, {from: operator}),
 				'BaseERC1155: INVALID_NFT_ID'
 			);
 		});
@@ -314,7 +319,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	describe('addExceptedAddress()', () => {
 		before('add excepted contract address', async () => {
-			await this.Ingredient.addExceptedAddress(user1, {from: owner});
+			await this.Ingredient.addExceptedAddress(user1, {from: operator});
 		});
 
 		it('should add user1 as excepted address', async () => {
@@ -325,13 +330,13 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-owner tries to add address as excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedAddress(user1, {from: minter}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
-				this.Ingredient.addExceptedAddress(user1, {from: owner}),
+				this.Ingredient.addExceptedAddress(user1, {from: operator}),
 				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
@@ -339,7 +344,7 @@ contract('IngredientsNFT', (accounts) => {
 
 	describe('addExceptedFromAddress()', () => {
 		before('add exceptedFrom address', async () => {
-			await this.Ingredient.addExceptedFromAddress(user2, {from: owner});
+			await this.Ingredient.addExceptedFromAddress(user2, {from: operator});
 		});
 
 		it('should add user1 as excepted address', async () => {
@@ -350,13 +355,13 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-owner tries to add address as excepted address', async () => {
 			await expectRevert(
 				this.Ingredient.addExceptedFromAddress(user3, {from: minter}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when owner tries to except already excepted address', async () => {
 			await expectRevert(
-				this.Ingredient.addExceptedFromAddress(user2, {from: owner}),
+				this.Ingredient.addExceptedFromAddress(user2, {from: operator}),
 				'IngredientNFT: ALREADY_ADDED'
 			);
 		});
@@ -365,7 +370,7 @@ contract('IngredientsNFT', (accounts) => {
 	describe('removeExceptedAddress()', () => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
-				this.Ingredient.removeExceptedAddress(user3, {from: owner}),
+				this.Ingredient.removeExceptedAddress(user3, {from: operator}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
@@ -373,7 +378,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to remove zero address ', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress('0x0000000000000000000000000000000000000000', {
-					from: owner
+					from: operator
 				}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
@@ -382,13 +387,13 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-owner tries to remove excepted address ', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedAddress(user1, {from: minter}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should remove user from excepted addresses list correctly', async () => {
-			await this.Ingredient.removeExceptedAddress(user1, {from: owner});
-			await this.Ingredient.removeExceptedAddress(owner, {from: owner});
+			await this.Ingredient.removeExceptedAddress(user1, {from: operator});
+			await this.Ingredient.removeExceptedAddress(owner, {from: operator});
 
 			const isUser1Excepted = await this.Ingredient.exceptedAddresses(user1);
 
@@ -397,7 +402,7 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
-				this.Ingredient.removeExceptedAddress(user1, {from: owner}),
+				this.Ingredient.removeExceptedAddress(user1, {from: operator}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
@@ -406,7 +411,7 @@ contract('IngredientsNFT', (accounts) => {
 	describe('removeExceptedFromAddress()', () => {
 		it('should revert when owner tries to remove non-excepted address', async () => {
 			await expectRevert(
-				this.Ingredient.removeExceptedFromAddress(user3, {from: owner}),
+				this.Ingredient.removeExceptedFromAddress(user3, {from: operator}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
@@ -414,12 +419,12 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-owner tries to remove excepted address ', async () => {
 			await expectRevert(
 				this.Ingredient.removeExceptedFromAddress(user1, {from: minter}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should remove user from excepted addresses list correctly', async () => {
-			await this.Ingredient.removeExceptedFromAddress(user2, {from: owner});
+			await this.Ingredient.removeExceptedFromAddress(user2, {from: operator});
 
 			const isUser1Excepted = await this.Ingredient.exceptedFromAddresses(user1);
 
@@ -428,7 +433,7 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should revert when owner tries to remove excepted address from empty list', async () => {
 			await expectRevert(
-				this.Ingredient.removeExceptedFromAddress(user2, {from: owner}),
+				this.Ingredient.removeExceptedFromAddress(user2, {from: operator}),
 				'IngredientNFT: ALREADY_REMOVED'
 			);
 		});
@@ -440,7 +445,7 @@ contract('IngredientsNFT', (accounts) => {
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 
 			await this.Ingredient.updateIngredientName(currentIngredientId, 'pepperIngredient', {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -457,14 +462,14 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.updateIngredientName(currentIngredientId, 'pepperIngredient', {
 					from: minter
 				}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when owner tries to update ingredient without name', async () => {
 			await expectRevert(
 				this.Ingredient.updateIngredientName(currentIngredientId, '', {
-					from: owner
+					from: operator
 				}),
 				'IngredientNFT: INVALID_INGREDIENT_NAME'
 			);
@@ -479,7 +484,7 @@ contract('IngredientsNFT', (accounts) => {
 			defId = await this.Ingredient.getVariationIdByIndex(currentIngredientId, 0);
 
 			await this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -497,14 +502,14 @@ contract('IngredientsNFT', (accounts) => {
 				this.Ingredient.updateIngredientVariation(defId, 'Two', papayas[1].svg, {
 					from: minter
 				}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when owner tries to update ingredient variation without name', async () => {
 			await expectRevert(
 				this.Ingredient.updateIngredientVariation(defId, '', papayas[1].svg, {
-					from: owner
+					from: operator
 				}),
 				'IngredientNFT: INVALID_NAME'
 			);
@@ -513,7 +518,7 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when owner tries to update ingredient variation without svg', async () => {
 			await expectRevert(
 				this.Ingredient.updateIngredientVariation(defId, 'Two', '', {
-					from: owner
+					from: operator
 				}),
 				'IngredientNFT: INVALID_SVG'
 			);
@@ -525,7 +530,7 @@ contract('IngredientsNFT', (accounts) => {
 		let user2BalanceBefore;
 		before(async () => {
 			// add excepted address to receive multiple tokens
-			await this.Ingredient.addExceptedAddress(minter);
+			await this.Ingredient.addExceptedAddress(minter, {from: operator});
 
 			currentIngredientId = await this.Ingredient.getCurrentNftId();
 			await this.Ingredient.safeTransferFrom(owner, user1, currentIngredientId, 1, '0x837', {
@@ -561,7 +566,7 @@ contract('IngredientsNFT', (accounts) => {
 
 		it('should recieve multiple nfts correctly when nft is sent from exceptedFrom address', async () => {
 			//add minter as exceptedFrom address so that user2 can receive multiple tokens of same ingredient
-			await this.Ingredient.addExceptedFromAddress(minter, {from: owner});
+			await this.Ingredient.addExceptedFromAddress(minter, {from: operator});
 
 			// transfer same ingredient to user2
 			await this.Ingredient.safeTransferFrom(minter, user2, currentIngredientId, 1, '0x837', {
@@ -719,7 +724,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm'
 			);
 		});
 	});
@@ -730,33 +735,36 @@ contract('IngredientsNFT', (accounts) => {
 			currentNftId = await this.Ingredient.getCurrentNftId();
 
 			// update uri
-			await this.Ingredient.updateUri('ipfs://', {from: owner});
+			await this.Ingredient.updateUri('ipfs://', {from: operator});
 		});
 
 		it('should update base uri correctly', async () => {
 			const baseUri = await this.Ingredient.uri(1);
 
 			expect(baseUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm'
 			);
 		});
 
 		it('should revert when non-admin tries to update the uri', async () => {
 			await expectRevert(
 				this.Ingredient.updateUri('ipfs://', {from: user1}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when admin tries to update the uri with empty uri', async () => {
-			await expectRevert(this.Ingredient.updateUri('', {from: owner}), 'BaseERC1155: INVALID_URI');
+			await expectRevert(
+				this.Ingredient.updateUri('', {from: operator}),
+				'BaseERC1155: INVALID_URI'
+			);
 		});
 
 		it('should get token uri correctly', async () => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/999/1.json'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm'
 			);
 		});
 	});
@@ -770,7 +778,7 @@ contract('IngredientsNFT', (accounts) => {
 			await this.Ingredient.updateIpfsHash(
 				currentNftId,
 				'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd',
-				{from: owner}
+				{from: operator}
 			);
 		});
 
@@ -787,13 +795,13 @@ contract('IngredientsNFT', (accounts) => {
 					'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd',
 					{from: user1}
 				),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 
 		it('should revert when admin tries to update the ipfsHash with empty hash', async () => {
 			await expectRevert(
-				this.Ingredient.updateIpfsHash(currentNftId, '', {from: owner}),
+				this.Ingredient.updateIpfsHash(currentNftId, '', {from: operator}),
 				'IngredientNFT: INVALID_IPFS_HASH'
 			);
 		});
@@ -802,7 +810,7 @@ contract('IngredientsNFT', (accounts) => {
 			const tokenUri = await this.Ingredient.uri(currentNftId);
 
 			expect(tokenUri).to.be.eq(
-				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd/lacucina_secret_ingredients/999/1.json'
+				'https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxasd'
 			);
 		});
 	});
@@ -826,7 +834,7 @@ contract('IngredientsNFT', (accounts) => {
 	describe('updateRoyaltyReceiver()', () => {
 		it('should update the royalty receiver correctly', async () => {
 			// update royalty receiver
-			await this.Ingredient.updateRoyaltyReceiver(user1, {from: owner});
+			await this.Ingredient.updateRoyaltyReceiver(user1, {from: operator});
 
 			const currentRoyaltyReceiver = await this.Ingredient.royaltyReceiver();
 			expect(currentRoyaltyReceiver).to.be.eq(user1);
@@ -834,12 +842,12 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-admin tries to update the royalty receiver', async () => {
 			await expectRevert(
 				this.Ingredient.updateRoyaltyReceiver(user1, {from: user1}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 		it('should revert when admin tries to update the royalty receiver with zero address', async () => {
 			await expectRevert(
-				this.Ingredient.updateRoyaltyReceiver(ZERO_ADDRESS, {from: owner}),
+				this.Ingredient.updateRoyaltyReceiver(ZERO_ADDRESS, {from: operator}),
 				'BaseERC1155WithRoyaltiesNFTWithRoyalties: INVALID_ROYALTY_RECEIVER'
 			);
 		});
@@ -848,7 +856,7 @@ contract('IngredientsNFT', (accounts) => {
 	describe('updateRoyaltyFee()', () => {
 		it('should update the royalty Fee correctly', async () => {
 			// update royalty receiver
-			await this.Ingredient.updateRoyaltyFee('200', {from: owner});
+			await this.Ingredient.updateRoyaltyFee('200', {from: operator});
 
 			const currentRoyaltyFee = await this.Ingredient.royaltyFee();
 			expect(currentRoyaltyFee).to.bignumber.be.eq(new BN('200'));
@@ -856,12 +864,12 @@ contract('IngredientsNFT', (accounts) => {
 		it('should revert when non-admin tries to update the royalty fee', async () => {
 			await expectRevert(
 				this.Ingredient.updateRoyaltyFee('200', {from: minter}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
+				'BaseERC1155: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 		it('should revert when admin tries to update the royalty fee with more that maximum royalty fee', async () => {
 			await expectRevert(
-				this.Ingredient.updateRoyaltyFee('251', {from: owner}),
+				this.Ingredient.updateRoyaltyFee('251', {from: operator}),
 				'BaseERC1155WithRoyaltiesNFTWithRoyalties: INVALID_ROYALTY_FEE'
 			);
 		});
@@ -874,8 +882,12 @@ contract('IngredientsNFT', (accounts) => {
 			this.Ingredient = await deployProxy(IngredientNFT, [url, royaltyReceiver, royaltyFee], {
 				initializer: 'initialize'
 			});
+			// grant updator role to talion contract
+			const OPERATOR_ROLE = await this.Ingredient.OPERATOR_ROLE();
+			await this.Ingredient.grantRole(OPERATOR_ROLE, operator, {from: owner});
+
 			// add owner as excepted address
-			await this.Ingredient.addExceptedAddress(owner);
+			await this.Ingredient.addExceptedAddress(owner, {from: operator});
 
 			// grant minter role
 			const minterRole = await this.Ingredient.MINTER_ROLE();
@@ -892,7 +904,7 @@ contract('IngredientsNFT', (accounts) => {
 				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
-					from: owner,
+					from: minter,
 					gas: GAS_LIMIT
 				}
 			);
@@ -943,7 +955,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -963,7 +975,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -983,7 +995,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1001,7 +1013,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1021,7 +1033,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1041,7 +1053,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1061,7 +1073,7 @@ contract('IngredientsNFT', (accounts) => {
 					[],
 					[papayas[0].name, papayas[1].name, papayas[2].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1081,7 +1093,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[papayas[0].name, papayas[1].name],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
@@ -1099,7 +1111,7 @@ contract('IngredientsNFT', (accounts) => {
 					[papayas[0].svg, papayas[1].svg, papayas[2].svg],
 					[],
 					{
-						from: owner,
+						from: minter,
 						gas: GAS_LIMIT
 					}
 				),
