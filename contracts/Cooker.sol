@@ -38,6 +38,8 @@ contract Cooker is
    	======================== Private Variables ============================
    	=======================================================================
  	*/
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
+
 	CountersUpgradeable.Counter private flamesCounter;
 
 	/*
@@ -109,8 +111,8 @@ contract Cooker is
    	======================== Modifiers ====================================
  	=======================================================================
  	*/
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), 'Cooker: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'Cooker: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -120,7 +122,10 @@ contract Cooker is
 	}
 
 	modifier onlyValidDishNFTId(uint256 _dishNFTId) {
-		require(_dishNFTId > 0 && _dishNFTId <= dishesNft.getCurrentTokenId(), 'Cooker: INVALID_DISH_ID');
+		require(
+			_dishNFTId > 0 && _dishNFTId <= dishesNft.getCurrentTokenId(),
+			'Cooker: INVALID_DISH_ID'
+		);
 		_;
 	}
 
@@ -266,7 +271,7 @@ contract Cooker is
 		string memory _flameType,
 		uint256 _preparationTime,
 		uint256 _lacCharge
-	) external onlyAdmin returns (uint256 flameId) {
+	) external onlyOperator returns (uint256 flameId) {
 		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		// increase flame counter
@@ -288,7 +293,7 @@ contract Cooker is
 		string memory _flameType,
 		uint256 _preparationTime,
 		uint256 _lacCharge
-	) external onlyAdmin onlyValidFlameId(_flameId) {
+	) external onlyOperator onlyValidFlameId(_flameId) {
 		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		flames[_flameId] = FlameDetail(_flameType, _preparationTime, _lacCharge);
@@ -348,7 +353,7 @@ contract Cooker is
 	 * @notice This method allows admin to update the uncooking fee
 	 * @param _newFee - indicates the new uncooking fee to set
 	 */
-	function updateUncookingFee(uint256 _newFee) external onlyAdmin {
+	function updateUncookingFee(uint256 _newFee) external onlyOperator {
 		require(_newFee != uncookingFee, 'Cooker: INVALID_FEE');
 		uncookingFee = _newFee;
 	}
@@ -357,8 +362,11 @@ contract Cooker is
 	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
 	 * @param _maxIngredients - indicates the new uncooking fee to set
 	 */
-	function updateMaxIngredients(uint256 _maxIngredients) external onlyAdmin {
-		require(_maxIngredients > 1 && _maxIngredients != maxIngredients, 'Cooker: INVALID_INGREDIENTS');
+	function updateMaxIngredients(uint256 _maxIngredients) external onlyOperator {
+		require(
+			_maxIngredients > 1 && _maxIngredients != maxIngredients,
+			'Cooker: INVALID_INGREDIENTS'
+		);
 		maxIngredients = _maxIngredients;
 	}
 
@@ -366,7 +374,7 @@ contract Cooker is
 	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
 	 * @param _additionalIngredients - indicates the additional number of ingrediens that vip user can prepare a dish with
 	 */
-	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyAdmin {
+	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyOperator {
 		require(_additionalIngredients != additionalIngredients, 'Cooker: ALREADY_SET');
 		additionalIngredients = _additionalIngredients;
 	}
@@ -374,7 +382,7 @@ contract Cooker is
 	/**
 	 * @notice This method allows admin to claim all the tokens of specified address to given address
 	 */
-	function claimAllTokens(address _user, address _tokenAddress) external onlyAdmin {
+	function claimAllTokens(address _user, address _tokenAddress) external onlyOperator {
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -390,7 +398,7 @@ contract Cooker is
 		address _user,
 		address _tokenAddress,
 		uint256 _amount
-	) external onlyAdmin {
+	) external onlyOperator {
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -442,10 +450,11 @@ contract Cooker is
 			hasTalien = true;
 			for (uint256 index = 0; index < userTalienBal; index++) {
 				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
-				(, uint256 generation, , , ) = talien.taliens(talienId);
 
-				// check if talien generation is genesis generation
-				if (generation == 1) {
+				(uint256 galaxyItemId, uint256 seriesId, , , , ) = talien.galaxyItems(talienId);
+
+				// check if talien series is genesis series
+				if (galaxyItemId == 1 && seriesId == 1) {
 					isGenesis = true;
 					break;
 				}

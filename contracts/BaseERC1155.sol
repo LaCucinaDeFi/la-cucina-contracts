@@ -41,6 +41,7 @@ contract BaseERC1155 is
  	*/
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
 	bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 
 	/*
    	=======================================================================
@@ -92,13 +93,13 @@ contract BaseERC1155 is
    	=======================================================================
  	*/
 
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'BaseERC1155: ONLY_ADMIN_CAN_CALL');
+	modifier onlyMinter() {
+		require(hasRole(MINTER_ROLE, _msgSender()), 'BaseERC1155: ONLY_MINTER_CAN_CALL');
 		_;
 	}
 
-	modifier onlyMinter() {
-		require(hasRole(MINTER_ROLE, _msgSender()), 'BaseERC1155: ONLY_MINTER_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'BaseERC1155: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -131,8 +132,8 @@ contract BaseERC1155 is
 	 * @notice This method allows admin to update base token uri
 	 * @param _newUri - indicates the new uri
 	 */
-	//todo- do we need this? 
-	function updateUri(string memory _newUri) external virtual onlyAdmin {
+	//todo- do we need this?
+	function updateUri(string memory _newUri) external virtual onlyOperator {
 		require(bytes(_newUri).length > 0, 'BaseERC1155: INVALID_URI');
 		_setURI(_newUri);
 	}

@@ -41,7 +41,7 @@ contract PublicMarketplaceV2 is PublicMarketplace {
    =======================================================================
  */
 
-	function updateMaxDuration(uint256 _duration) external virtual onlyAdmin {
+	function updateMaxDuration(uint256 _duration) external virtual onlyOperator {
 		require(_duration > 0 && _duration != maxDuration, 'PublicMarket: INVALID_MAX_DURATION');
 		maxDuration = _duration;
 	}

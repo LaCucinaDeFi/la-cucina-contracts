@@ -62,6 +62,7 @@ contract BaseMarketplace is
    =======================================================================
  */
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 
 	/*
    =======================================================================
@@ -144,8 +145,8 @@ contract BaseMarketplace is
    ======================== Modifiers ====================================
    =======================================================================
  */
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'Market: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'Market: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -292,7 +293,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
-	function addSupportedToken(address _tokenAddress) external virtual onlyAdmin {
+	function addSupportedToken(address _tokenAddress) external virtual onlyOperator {
 		require(!supportedTokens[_tokenAddress], 'Market: TOKEN_ALREADY_ADDED');
 		supportedTokens[_tokenAddress] = true;
 	}
@@ -301,7 +302,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to remove the ERC20/BEP20 token from the accepted token list.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
-	function removeSupportedToken(address _tokenAddress) external virtual onlyAdmin {
+	function removeSupportedToken(address _tokenAddress) external virtual onlyOperator {
 		require(supportedTokens[_tokenAddress], 'Market: TOKEN_DOES_NOT_EXISTS');
 		supportedTokens[_tokenAddress] = false;
 	}
@@ -310,7 +311,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to update minimum duration for the auction period.
 	 * @param _newDuration indicates the new mint limit
 	 */
-	function updateMinimumDuration(uint256 _newDuration) external virtual onlyAdmin {
+	function updateMinimumDuration(uint256 _newDuration) external virtual onlyOperator {
 		require(
 			_newDuration > 0 && _newDuration != minDuration,
 			'MintingStatoin: INVALID_MINIMUM_DURATION'

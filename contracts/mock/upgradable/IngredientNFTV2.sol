@@ -28,7 +28,7 @@ contract IngredientsNFTV2 is IngredientsNFT {
    =======================================================================
  */
 
-	function addBurner(address _burner) public virtual onlyAdmin {
+	function addBurner(address _burner) public virtual onlyOperator {
 		require(_burner != address(0), 'ERC1155: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}

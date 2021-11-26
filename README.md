@@ -245,8 +245,8 @@ Their are four main contracts in recipe which are listed below-
 * This contract uses the Dishes NFT contract for preparing a dish and minting the dishNFT to the user.
 * Users must have at least two ingredient NFTs to prepare the dish. 
 * When user wants to prepare the dish, The Cooker contracts gets the ingredient NFT from the user and mints the unique dishNFT to the user. User needs to select the flame type to prepare a dish. 
-* The flame allows user to speed up or slow down the dish preparation time. If user wants to minimize the preparation time, user needs to pay the fees in LAC token depending on the flame type.If user wants to increase the preparation time, the oven contract returns the extra LAC tokens that he paid for higher flame and only charge the fees for selected flame type.
-* User can also uncook the dish and get the ingredient NFTS. User needs to return the dishNft to the oven contract in this case. user can uncook the dish only after the dish preparation time. 
+* The flame allows user to speed up or slow down the dish preparation time. If user wants to minimize the preparation time, user needs to pay the fees in LAC token depending on the flame type.If user wants to increase the preparation time, the cooker contract returns the extra LAC tokens that he paid for higher flame and only charge the fees for selected flame type.
+* User can also uncook the dish and get the ingredient NFTS. User needs to return the dishNft to the cooker contract in this case. user can uncook the dish only after the dish preparation time. 
 
 # Contract Deployment
 
@@ -275,13 +275,13 @@ Their are four main contracts in recipe which are listed below-
   * _kitchenAddress: Indicates the address of the kitchen contract.
 
 ## Deploy Cooker contract
-* After deploying the above contracts, admin need to deploy the oven contract with following parameters-
+* After deploying the above contracts, admin need to deploy the cooker contract with following parameters-
   * _ingredientAddress: Indicates the address of the ingredient contract.
   * _dishNFTAddress: Indicates the dishNFT contracts address.
   * _lacTokenAddress: Indicates the lacToken address.
-* Add the Cooker contract`s address as excepted contract address in IngredientsNFT contract using the **addExceptedAddress()** method which requires the oven contract address as a parameter.
-* Add the Cooker contract`s address as excepted contract address in DishesNFT contract using the **addExceptedAddress()** method which requires the oven contract address as a parameter.
-* Grant the OVEN_ROLE to the oven contract in DishesNFT contract using the **grantRole()** method.
+* Add the Cooker contract`s address as excepted contract address in IngredientsNFT contract using the **addExceptedAddress()** method which requires the cooker contract address as a parameter.
+* Add the Cooker contract`s address as excepted contract address in DishesNFT contract using the **addExceptedAddress()** method which requires the cooker contract address as a parameter.
+* Grant the COOKER_ROLE to the cooker contract in DishesNFT contract using the **grantRole()** method.
 * Add the different types of flames usingthe **addFlame()** method which requires flame type name, preparation duration in seconds and the lac charge for selecting the flame.
 
 # Development

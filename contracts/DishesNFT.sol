@@ -33,7 +33,7 @@ contract DishesNFT is BaseERC721 {
    ======================== Constants ====================================
    =======================================================================
  */
-	bytes32 public constant OVEN_ROLE = keccak256('OVEN_ROLE');
+	bytes32 public constant COOKER_ROLE = keccak256('COOKER_ROLE');
 
 	/*
    	=======================================================================
@@ -100,7 +100,7 @@ contract DishesNFT is BaseERC721 {
    	=======================================================================
  	*/
 	modifier OnlyCooker() {
-		require(hasRole(OVEN_ROLE, msg.sender), 'DishesNFT: ONLY_OVEN_CAN_CALL');
+		require(hasRole(COOKER_ROLE, msg.sender), 'DishesNFT: ONLY_COOKER_CAN_CALL');
 		_;
 	}
 
@@ -189,7 +189,7 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	/**
-	 * @notice This method update the preparation time for given dish. only oven can call this method
+	 * @notice This method update the preparation time for given dish. only cooker can call this method
 	 */
 	function updatePrepartionTime(
 		uint256 _dishId,
@@ -206,7 +206,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
 	 * @param _account indicates the address to add.
 	 */
-	function addExceptedAddress(address _account) external virtual onlyAdmin {
+	function addExceptedAddress(address _account) external virtual onlyOperator {
 		require(!exceptedAddresses[_account], 'DishesNFT: ALREADY_ADDED');
 		exceptedAddresses[_account] = true;
 	}
@@ -215,7 +215,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to remove the excepted addresses from having multiple tokens of same NFT.
 	 * @param _account indicates the address to remove.
 	 */
-	function removeExceptedAddress(address _account) external virtual onlyAdmin {
+	function removeExceptedAddress(address _account) external virtual onlyOperator {
 		require(exceptedAddresses[_account], 'DishesNFT: ALREADY_REMOVED');
 		exceptedAddresses[_account] = false;
 	}
@@ -224,7 +224,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to update the min value
 	 * @param _newMin - new min value. it MUST be multiplied with 10000
 	 */
-	function updateMin(int256 _newMin) external virtual onlyAdmin {
+	function updateMin(int256 _newMin) external virtual onlyOperator {
 		require(_newMin != min, 'DishesNFT: MIN_ALREADY_SET');
 		min = _newMin;
 	}
@@ -233,7 +233,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to update the max value
 	 * @param _newMax - new max value. it MUST be multiplied with 10000
 	 */
-	function updateMax(int256 _newMax) external virtual onlyAdmin {
+	function updateMax(int256 _newMax) external virtual onlyOperator {
 		require(_newMax != max, 'DishesNFT: MAX_ALREADY_SET');
 		max = _newMax;
 	}
@@ -449,7 +449,7 @@ contract DishesNFT is BaseERC721 {
 		int256 scaledMin = min * 1 ether * int256(10000)**(totalIngredients - 2);
 		if (multiplier > scaledMax) multiplier = scaledMax;
 		if (multiplier < scaledMin) multiplier = scaledMin;
-		
+
 		int256 multiplier_minus_min = multiplier - (scaledMin);
 		int256 dived_by_diff = multiplier_minus_min / (max - min);
 		int256 mutliply_by_nine = 9 * dived_by_diff;
