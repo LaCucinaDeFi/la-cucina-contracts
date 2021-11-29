@@ -1300,7 +1300,7 @@ contract('PrivateMarketplace', (accounts) => {
 			await this.privateMarketplace.createAndAuctionNFT(
 				ether('1'),
 				this.sampleToken.address,
-				time.duration.days('2'),
+				time.duration.days('3'),
 				true,
 				'Papaya',
 				nutritionHash,
@@ -1330,12 +1330,12 @@ contract('PrivateMarketplace', (accounts) => {
 			expect(isVipUser[1]).to.be.eq(true);
 
 			// user1 places bid on vip auction
-			this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {from: user1});
+			await this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {from: user1});
 		});
 
 		it('should resolve the vip auction correctly', async () => {
 			// increase duration
-			await time.increase(time.duration.days('3'));
+			await time.increase(time.duration.days('4'));
 
 			currentBidId = await this.privateMarketplace.getCurrentBidId();
 
