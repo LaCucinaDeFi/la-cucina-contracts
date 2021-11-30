@@ -529,7 +529,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'pizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -559,7 +559,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -589,7 +589,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -618,7 +618,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -647,7 +647,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -676,7 +676,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -706,7 +706,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -737,7 +737,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
@@ -772,7 +772,7 @@ contract('Cooker', (accounts) => {
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
 
 			const addresssPath = await path.join(
-				'generated/cookers',
+				'generated/cooker',
 				'newPizza' + currentDishId.toString() + '.svg'
 			);
 			dishId++;
