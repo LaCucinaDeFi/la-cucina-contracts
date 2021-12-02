@@ -1131,6 +1131,75 @@ contract('Cooker', (accounts) => {
 		});
 	});
 
+	describe('updateUncookingFee()', () => {
+		it('should update uncooking fee correctly', async () => {
+			await this.Cooker.updateUncookingFee(ether('10'), {from: operator});
+
+			const uncookingFee = await this.Cooker.uncookingFee();
+			expect(uncookingFee).to.bignumber.be.eq(ether('10'));
+		});
+
+		it('should revert when non-operator tries to update the uncooking fee', async () => {
+			await expectRevert(
+				this.Cooker.updateUncookingFee(ether('10'), {from: user1}),
+				'Cooker: ONLY_OPERATOR_CAN_CALL'
+			);
+		});
+
+		it('should revert when operator tries to update the uncooking fee with already set value', async () => {
+			await expectRevert(
+				this.Cooker.updateUncookingFee(ether('10'), {from: operator}),
+				'Cooker: INVALID_FEE'
+			);
+		});
+	});
+
+	describe('updateMaxIngredients()', async () => {
+		it('should update the max ingredients correctly', async () => {
+			await this.Cooker.updateMaxIngredients(9, {from: operator});
+
+			const maxIngredients = await this.Cooker.maxIngredients();
+			expect(maxIngredients).to.bignumber.be.eq(new BN('9'));
+		});
+
+		it('should revert when non-operator tries to update the max ingredients', async () => {
+			await expectRevert(
+				this.Cooker.updateMaxIngredients(9, {from: user1}),
+				'Cooker: ONLY_OPERATOR_CAN_CALL'
+			);
+		});
+
+		it('should revert when operator tries to update the max ingredients with already set value', async () => {
+			await expectRevert(
+				this.Cooker.updateMaxIngredients(9, {from: operator}),
+				'Cooker: INVALID_INGREDIENTS'
+			);
+		});
+	});
+
+	describe('updateAdditionalIngredients()', async () => {
+		it('should update the additional ingredients correctly', async () => {
+			await this.Cooker.updateAdditionalIngredients(5, {from: operator});
+
+			const additionalIngredients = await this.Cooker.additionalIngredients();
+			expect(additionalIngredients).to.bignumber.be.eq(new BN('5'));
+		});
+
+		it('should revert when non-operator tries to update the additional ingredients', async () => {
+			await expectRevert(
+				this.Cooker.updateAdditionalIngredients(5, {from: user1}),
+				'Cooker: ONLY_OPERATOR_CAN_CALL'
+			);
+		});
+
+		it('should revert when operator tries to update the additional ingredients with already set value', async () => {
+			await expectRevert(
+				this.Cooker.updateAdditionalIngredients(5, {from: operator}),
+				'Cooker: ALREADY_SET'
+			);
+		});
+	});
+
 	describe('upgradeProxy()', () => {
 		let versionBeforeUpgrade;
 		before('upgradeProxy', async () => {
