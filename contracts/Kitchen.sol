@@ -48,6 +48,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Private Variables ============================
    	=======================================================================
  	*/
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
+
 	CountersUpgradeable.Counter private dishTypeCounter;
 	CountersUpgradeable.Counter private baseIngredientCounter;
 	CountersUpgradeable.Counter private baseVariationCounter;
@@ -75,9 +77,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'Kitchen: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'Kitchen: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -113,7 +114,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string memory _name,
 		uint256[] memory _x,
 		uint256[] memory _y
-	) external onlyAdmin returns (uint256 dishTypeId) {
+	) external onlyOperator returns (uint256 dishTypeId) {
 		require(bytes(_name).length > 0, 'Kitchen: INVALID_DISH_NAME');
 		require(
 			_x.length == totalCoordinates && _x.length == _y.length,
@@ -136,7 +137,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 */
 	function addBaseIngredientForDishType(uint256 _dishTypeId, string memory _name)
 		external
-		onlyAdmin
+		onlyOperator
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256 baseIngredientId)
 	{
@@ -164,7 +165,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string memory _svg
 	)
 		external
-		onlyAdmin
+		onlyOperator
 		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256 baseVariationId)
 	{
@@ -184,7 +185,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	/**
 	 * @notice This method allows admin to update the total number of coordinates
 	 */
-	function updateTotalCoordinates(uint256 _newTotal) external onlyAdmin {
+	function updateTotalCoordinates(uint256 _newTotal) external onlyOperator {
 		require(_newTotal != totalCoordinates && _newTotal > 0, 'Kitchen: INVALID_COORDINATES');
 		totalCoordinates = _newTotal;
 	}

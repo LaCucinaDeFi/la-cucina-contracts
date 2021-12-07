@@ -163,7 +163,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 _ingredientId,
 		string memory _name,
 		string memory _svg
-	) external virtual onlyAdmin onlyValidNftId(_ingredientId) returns (uint256 defsId) {
+	) external virtual onlyOperator onlyValidNftId(_ingredientId) returns (uint256 defsId) {
 		defsId = _addVariation(_ingredientId, _name, _svg);
 		// increse total variations
 		ingredients[_ingredientId].totalVariations += 1;
@@ -177,7 +177,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function updateIngredientName(uint256 _tokenId, string memory _name)
 		external
 		virtual
-		onlyAdmin
+		onlyOperator
 		onlyValidNftId(_tokenId)
 	{
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
@@ -196,7 +196,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 _defId,
 		string memory _name,
 		string memory _svg
-	) external virtual onlyAdmin onlyValidDefId(_defId) {
+	) external virtual onlyOperator onlyValidDefId(_defId) {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
@@ -216,7 +216,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function updateIpfsHash(uint256 _tokenId, string memory _ipfsHash)
 		external
 		virtual
-		onlyAdmin
+		onlyOperator
 		onlyValidNftId(_tokenId)
 	{
 		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
@@ -228,7 +228,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
 	 * @param _account indicates the address to add.
 	 */
-	function addExceptedAddress(address _account) external virtual onlyAdmin {
+	function addExceptedAddress(address _account) external virtual onlyOperator {
 		require(!exceptedAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
 		exceptedAddresses[_account] = true;
 	}
@@ -237,7 +237,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method allows admin to remove the excepted addresses from having multiple tokens of same NFT.
 	 * @param _account indicates the address to remove.
 	 */
-	function removeExceptedAddress(address _account) external virtual onlyAdmin {
+	function removeExceptedAddress(address _account) external virtual onlyOperator {
 		require(exceptedAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
 		exceptedAddresses[_account] = false;
 	}
@@ -246,7 +246,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method allows admin to except the from addresses so that user can receive the multiple same nft tokens.
 	 * @param _account indicates the address to add.
 	 */
-	function addExceptedFromAddress(address _account) external virtual onlyAdmin {
+	function addExceptedFromAddress(address _account) external virtual onlyOperator {
 		require(!exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_ADDED');
 		exceptedFromAddresses[_account] = true;
 	}
@@ -255,7 +255,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @notice This method allows admin to remove the excepted addresses .
 	 * @param _account indicates the address to remove.
 	 */
-	function removeExceptedFromAddress(address _account) external virtual onlyAdmin {
+	function removeExceptedFromAddress(address _account) external virtual onlyOperator {
 		require(exceptedFromAddresses[_account], 'IngredientNFT: ALREADY_REMOVED');
 		exceptedFromAddresses[_account] = false;
 	}
@@ -291,17 +291,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	 * @param _tokenId - indicates the token id
 	 */
 	function uri(uint256 _tokenId) public view virtual override returns (string memory tokenUri) {
-		tokenUri = string(
-			abi.encodePacked(
-				'https://ipfs.infura.io/ipfs/',
-				ipfsHash[_tokenId],
-				'/lacucina_secret_ingredients/',
-				LaCucinaUtils.toString(block.chainid),
-				'/',
-				LaCucinaUtils.toString(_tokenId),
-				'.json'
-			)
-		);
+		tokenUri = string(abi.encodePacked('https://ipfs.infura.io/ipfs/', ipfsHash[_tokenId]));
 	}
 
 	/**
@@ -313,7 +303,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		returns (uint256 nutrionHash)
 	{
 		for (uint256 i = 0; i < _nutritions.length; i++) {
-			nutrionHash += _nutritions[i] * 256**i;
+			nutrionHash += _nutritions[i] * 100000**i;
 		}
 	}
 

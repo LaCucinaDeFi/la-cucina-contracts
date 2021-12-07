@@ -246,7 +246,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 * @notice This method allows admin to update the early access time, so that user with genesis talien can get early access to ingredients.
 	 * @param _newAccessTime - indicates the new access time
 	 */
-	function updateEarlyAccessTime(uint256 _newAccessTime) external onlyAdmin {
+	function updateEarlyAccessTime(uint256 _newAccessTime) external onlyOperator {
 		require(earlyAccessTime != _newAccessTime, 'PrivateMarketplace: ALREADY_SET');
 		earlyAccessTime = _newAccessTime;
 	}
@@ -268,10 +268,10 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 			hasTalien = true;
 			for (uint256 index = 0; index < userTalienBal; index++) {
 				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
-				(, uint256 generation, , , ) = talien.taliens(talienId);
+				(uint256 galaxyItemId, uint256 seriesId, , , , ) = talien.galaxyItems(talienId);
 
-				// check if talien generation is genesis generation
-				if (generation == 1) {
+				// check if talien series is genesis series
+				if (galaxyItemId == 1 && seriesId == 1) {
 					isGenesis = true;
 					break;
 				}

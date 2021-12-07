@@ -33,7 +33,7 @@ contract DishesNFT is BaseERC721 {
    ======================== Constants ====================================
    =======================================================================
  */
-	bytes32 public constant OVEN_ROLE = keccak256('OVEN_ROLE');
+	bytes32 public constant COOKER_ROLE = keccak256('COOKER_ROLE');
 
 	/*
    	=======================================================================
@@ -82,8 +82,8 @@ contract DishesNFT is BaseERC721 {
 		ingredientNft = IIngredientNFT(_ingredientAddress);
 		kitchen = IKitchen(_kitchenAddress);
 		nonce = 1;
-		min = -0.2638 ether;
-		max = 7.4531 ether;
+		min = -2638;
+		max = 74531;
 	}
 
 	/*
@@ -91,16 +91,16 @@ contract DishesNFT is BaseERC721 {
    	======================== Events =======================================
    	=======================================================================
  	*/
-	event DishPrepared(uint256 dishId);
-	event DishUncooked(uint256 dishId);
+	event Cook(uint256 dishId);
+	event Uncook(uint256 dishId);
 
 	/*
    	=======================================================================
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-	modifier OnlyOven() {
-		require(hasRole(OVEN_ROLE, msg.sender), 'DishesNFT: ONLY_OVEN_CAN_CALL');
+	modifier OnlyCooker() {
+		require(hasRole(COOKER_ROLE, msg.sender), 'DishesNFT: ONLY_COOKER_CAN_CALL');
 		_;
 	}
 
@@ -122,13 +122,13 @@ contract DishesNFT is BaseERC721 {
 	 * @param _ingredientIds - indicates the list of ingredients that you want to include in dish
 	 * @return dishNFTId - indicates the new dish id
 	 */
-	function prepareDish(
+	function cookDish(
 		address _user,
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime,
 		uint256[] memory _ingredientIds
-	) external OnlyOven returns (uint256 dishNFTId) {
+	) external OnlyCooker returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
 		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'DishesNFT: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
@@ -171,31 +171,31 @@ contract DishesNFT is BaseERC721 {
 
 		dishNames[dishNFTId] = dishName;
 
-		emit DishPrepared(dishNFTId);
+		emit Cook(dishNFTId);
 	}
 
 	/**
 	 * @notice This method alloes chef contract to uncook the dish.
 	 * @param _dishId - indicates the dishId to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external OnlyOven onlyValidDishId(_dishId) {
+	function uncookDish(uint256 _dishId) external OnlyCooker onlyValidDishId(_dishId) {
 		Dish storage dishToUncook = dish[_dishId];
 		require(dishToUncook.cooked, 'DishesNFT: ALREADY_UNCOOKED_DISH');
 
 		// uncook dish
 		dishToUncook.cooked = false;
 
-		emit DishUncooked(_dishId);
+		emit Uncook(_dishId);
 	}
 
 	/**
-	 * @notice This method update the preparation time for given dish. only oven can call this method
+	 * @notice This method update the preparation time for given dish. only cooker can call this method
 	 */
 	function updatePrepartionTime(
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime
-	) external OnlyOven {
+	) external OnlyCooker {
 		// update flame type
 		dish[_dishId].flameType = _flameId;
 		// update dish preparationTime
@@ -206,7 +206,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to except the addresses to have multiple tokens of same NFT.
 	 * @param _account indicates the address to add.
 	 */
-	function addExceptedAddress(address _account) external virtual onlyAdmin {
+	function addExceptedAddress(address _account) external virtual onlyOperator {
 		require(!exceptedAddresses[_account], 'DishesNFT: ALREADY_ADDED');
 		exceptedAddresses[_account] = true;
 	}
@@ -215,25 +215,27 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method allows admin to remove the excepted addresses from having multiple tokens of same NFT.
 	 * @param _account indicates the address to remove.
 	 */
-	function removeExceptedAddress(address _account) external virtual onlyAdmin {
+	function removeExceptedAddress(address _account) external virtual onlyOperator {
 		require(exceptedAddresses[_account], 'DishesNFT: ALREADY_REMOVED');
 		exceptedAddresses[_account] = false;
 	}
 
 	/**
 	 * @notice This method allows admin to update the min value
+	 * @param _newMin - new min value. it MUST be multiplied with 10000
 	 */
-	function updateMin(int256 _newMin) external virtual onlyAdmin {
+	function updateMin(int256 _newMin) external virtual onlyOperator {
 		require(_newMin != min, 'DishesNFT: MIN_ALREADY_SET');
-		min = _newMin * 1 ether;
+		min = _newMin;
 	}
 
 	/**
 	 * @notice This method allows admin to update the max value
+	 * @param _newMax - new max value. it MUST be multiplied with 10000
 	 */
-	function updateMax(int256 _newMax) external virtual onlyAdmin {
+	function updateMax(int256 _newMax) external virtual onlyOperator {
 		require(_newMax != max, 'DishesNFT: MAX_ALREADY_SET');
-		max = _newMax * 1 ether;
+		max = _newMax;
 	}
 
 	/*
@@ -254,33 +256,25 @@ contract DishesNFT is BaseERC721 {
 		virtual
 		returns (uint256 plutamins, uint256 strongies)
 	{
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
-		uint256 bitMask;
+		uint256 slotConst = 100000;
 		uint256 slotMultiplier;
-		uint256 nutritionsValue;
 		uint256 nutrition;
 
 		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 0; slot < uint8(7); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			nutritionsValue = nutritionsHash & bitMask;
-
-			if (nutritionsValue > 0) {
-				nutrition = (slot > 0) // Extract nutrition from slotted value
-					? nutritionsValue / slotMultiplier
-					: nutritionsValue;
-
-				// store 2nd and last nutrition i.e plutamins and strongies
-				if (slot == uint8(1)) {
-					plutamins = nutrition;
-				}
-
-				if (slot == uint8(6)) {
-					strongies = nutrition;
-				}
+		for (uint8 slot = 7; slot > uint8(0); slot--) {
+			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
+			nutrition = (slot > 0) // Extract nutrition from slotted value
+				? nutritionsHash / slotMultiplier
+				: nutritionsHash;
+			// store 2nd and last nutrition i.e plutamins and strongies
+			if (slot == uint8(2)) {
+				plutamins = nutrition;
 			}
+
+			if (slot == uint8(7)) {
+				strongies = nutrition;
+			}
+			nutritionsHash -= nutrition * slotMultiplier;
 		}
 	}
 
@@ -356,7 +350,7 @@ contract DishesNFT is BaseERC721 {
 		// add defs
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			string('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">')
+			string('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">')
 		);
 
 		uint256 slotConst = 256;
@@ -449,13 +443,20 @@ contract DishesNFT is BaseERC721 {
 		}
 
 		int256 multiplier;
-		if (strongies != 0) multiplier = int256(plutamins) / int256(strongies);
-		multiplier = multiplier * 1 ether;
-		if (multiplier > max) multiplier = max;
-		if (multiplier < min) multiplier = min;
-		// normalize multiplier
-		mScaled = 1 ether + (9 ether * (multiplier - min)) / (max - min);
-		mScaled = mScaled / 1 ether;
+		if (strongies != 0) multiplier = 1 ether * (int256(plutamins) / int256(strongies));
+		// 10000 ---> Decimal Fixer
+		int256 scaledMax = max * 1 ether * int256(10000)**(totalIngredients - 2);
+		int256 scaledMin = min * 1 ether * int256(10000)**(totalIngredients - 2);
+		if (multiplier > scaledMax) multiplier = scaledMax;
+		if (multiplier < scaledMin) multiplier = scaledMin;
+
+		int256 multiplier_minus_min = multiplier - (scaledMin);
+		int256 dived_by_diff = multiplier_minus_min / (max - min);
+		int256 mutliply_by_nine = 9 * dived_by_diff;
+		int256 add_to_one = (1 * int256(10000)**(totalIngredients - 2) * 1 ether) + mutliply_by_nine;
+		// will always return value which needs to be devided by 10e18 (decimals of 1 ether)
+		// 1 + 9 * (multiplier - min / max - min)
+		mScaled = add_to_one / int256(10000)**(totalIngredients - 2);
 	}
 
 	function _getPlaceHolder(

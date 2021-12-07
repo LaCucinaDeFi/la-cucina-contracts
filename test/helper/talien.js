@@ -1,109 +1,71 @@
 const {deployProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {bg01, bg02, bg03} = require('../../data/talien/background');
-const {greenBody} = require('../../data/talien/bodies');
-const {cowboy} = require('../../data/talien/clothes');
-const {angryEyes, regularEyes} = require('../../data/talien/eyes');
-const {cowboyHat} = require('../../data/talien/headAccessory');
-const {blueHead} = require('../../data/talien/heads');
-const {knife, sword} = require('../../data/talien/holdingAccessory');
-const {bigMouthBlue, biteLipMouthBlue, piercedMouthBlue} = require('../../data/talien/mouth');
-const {silver_badge, golden_badge, platinum_badge} = require('../../data/talien/badge');
 const url = 'https://token-cdn-domain/{id}.json';
 
+const TalienContract = artifacts.require('Galaxy');
+
+const {AccessoriesContract} = require('./AccessoriesHelper');
+const {TraitFactoryContract} = require('./TraitFactoryHelper');
 class Talien {
-	constructor(talienContract) {
-		this.Talien = talienContract;
+	constructor(operator, owner) {
+		this.operator = operator;
+		this.owner = owner;
 	}
 
-	setup = async (owner) => {
-		// add the Traits
-		await this.Talien.addTrait('Background', {from: owner});
-		await this.Talien.addTrait('Bodies', {from: owner});
-		await this.Talien.addTrait('Head', {from: owner});
-		await this.Talien.addTrait('Mouth', {from: owner});
-		await this.Talien.addTrait('Eyes', {from: owner});
-		await this.Talien.addTrait('HeadAccessory', {from: owner});
-		await this.Talien.addTrait('HoldingAccessory', {from: owner});
-		await this.Talien.addTrait('Clothes', {from: owner});
+	setup = async (fundReceiver, royaltyReceiver, feeToken) => {
+		this.AccessoriesContract = new AccessoriesContract(this.operator, this.owner);
+		this.Accessories = await this.AccessoriesContract.setup(royaltyReceiver);
 
-		await this.addTraitVariations(owner);
-		// activate profile generation
-		await this.Talien.activateProfileGeneration({from: owner});
-	};
+		this.TraitFactoryContract = new TraitFactoryContract(this.operator, this.owner);
+		this.TraitFactory = await this.TraitFactoryContract.setup();
 
-	addTraitVariations = async (owner) => {
-		// add trait variations
-		await this.Talien.updateGeneration(10, 'Genesis');
-		const currentGeneration = await this.Talien.getCurrentGeneration();
-
-		await this.Talien.addTraitVariation(1, currentGeneration, 'BG_04', bg01, '80', {
-			from: owner
-		});
-		await this.Talien.addTraitVariation(1, currentGeneration, 'BG_09', bg02, '20', {
-			from: owner
-		});
-
-		await this.Talien.addTraitVariation(2, currentGeneration, 'Green Body', greenBody, '100', {
-			from: owner
-		});
-
-		await this.Talien.addTraitVariation(3, currentGeneration, 'Blue Head', blueHead, '100', {
-			from: owner
-		});
-
-		await this.Talien.addTraitVariation(
-			4,
-			currentGeneration,
-			'Big Blue Mouth',
-			bigMouthBlue,
-			'40',
+		// deploy NFT token
+		this.Talien = await deployProxy(
+			TalienContract,
+			[
+				'La Cucina Taliens',
+				'TALIEN',
+				url,
+				fundReceiver,
+				feeToken,
+				this.Accessories.address,
+				this.TraitFactory.address,
+				royaltyReceiver,
+				'100'
+			],
 			{
-				from: owner
+				initializer: 'initialize'
 			}
 		);
-		await this.Talien.addTraitVariation(
-			4,
-			currentGeneration,
-			'Pierved Blue Mouth',
-			piercedMouthBlue,
-			'35',
-			{from: owner}
-		);
-		await this.Talien.addTraitVariation(
-			4,
-			currentGeneration,
-			'Bite Lip Blue Mouth',
-			biteLipMouthBlue,
-			'25',
-			{from: owner}
-		);
 
-		await this.Talien.addTraitVariation(5, currentGeneration, 'Angry Eyes', angryEyes, '60', {
-			from: owner
-		});
-		await this.Talien.addTraitVariation(5, currentGeneration, 'Regular Eyes', regularEyes, '40', {
-			from: owner
-		});
+		const currentGalaxyItemId = await this.TraitFactory.getCurrentGalaxyItemId();
+		const currentSeriesId = await this.TraitFactory.currentSeries(currentGalaxyItemId);
 
-		await this.Talien.addTraitVariation(6, currentGeneration, 'Cowboy Hat', cowboyHat, '100', {
-			from: owner
-		});
+		// grant updator role to talion contract
+		const UPDATOR_ROLE = await this.TraitFactory.UPDATOR_ROLE();
+		await this.TraitFactory.grantRole(UPDATOR_ROLE, this.Talien.address, {from: this.owner});
 
-		await this.Talien.addTraitVariation(7, currentGeneration, 'Knife', knife, '50', {
-			from: owner
-		});
-		await this.Talien.addTraitVariation(7, currentGeneration, 'Sword', sword, '50', {
-			from: owner
-		});
+		// grant minter role to talion contract
+		const MINTER_ROLE = await this.Accessories.MINTER_ROLE();
+		await this.Accessories.grantRole(MINTER_ROLE, this.Talien.address, {from: this.owner});
 
-		await this.Talien.addTraitVariation(8, currentGeneration, 'Cowboy Top', cowboy, '100', {
-			from: owner
-		});
+		// grant updator role to talion contract
+		const OPERATOR_ROLE = await this.Talien.OPERATOR_ROLE();
+		await this.Talien.grantRole(OPERATOR_ROLE, this.operator, {from: this.owner});
+
+		// add Talion as excepted address
+		await this.Accessories.addExceptedAddress(this.Talien.address, {from: this.operator});
+
+		// add Talion as excepted address
+		await this.Accessories.addExceptedFromAddress(this.Talien.address, {from: this.operator});
+
+	
+		return this.Talien;
 	};
-	generateTalien = async (user) => {
+
+	generateTalien = async (galaxyItemId, seriesId, withAccessories, user) => {
 		// traitrate profile picture
-		await this.Talien.generateTalien({from: user});
+		await this.Talien.generateGalaxyItem(galaxyItemId, seriesId, withAccessories, {from: user});
 	};
 }
 

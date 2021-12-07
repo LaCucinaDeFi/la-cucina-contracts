@@ -74,7 +74,7 @@ contract BaseERC721WithRoyalties is BaseERC721 {
 	 * @notice This method allows admin to update the royalty receiver address
 	 * @param _newReceiver - indicates the new royalty receiver address
 	 */
-	function updateRoyaltyReceiver(address _newReceiver) external virtual onlyAdmin {
+	function updateRoyaltyReceiver(address _newReceiver) external virtual onlyOperator {
 		require(_newReceiver != address(0), 'Royalty: INVALID_RECEIVER');
 		royaltyReceiver = _newReceiver;
 	}
@@ -83,7 +83,7 @@ contract BaseERC721WithRoyalties is BaseERC721 {
 	 * @notice This method allows admin to update the royalty fee
 	 * @param _newFee - indicates the new royalty fee
 	 */
-	function updateRoyaltyFee(uint8 _newFee) external virtual onlyAdmin {
+	function updateRoyaltyFee(uint8 _newFee) external virtual onlyOperator {
 		require(_newFee <= MAX_ROYALTY_FEE, 'Royalty: INVALID_FEE');
 		royaltyFee = _newFee;
 	}
