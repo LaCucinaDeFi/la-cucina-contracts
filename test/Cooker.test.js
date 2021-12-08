@@ -29,8 +29,12 @@ const SampleToken = artifacts.require('SampleToken');
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 const GAS_LIMIT = 85000000;
+const GAS_PRICE = 10; // 10 gwei
 
-contract('Cooker', (accounts) => {
+const gasToEth = (gascost) => {
+	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
+};
+contract.only('Cooker', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -516,6 +520,10 @@ contract('Cooker', (accounts) => {
 			//get dish owner
 			const dishOwner = await this.Dish.ownerOf(preparedDishId);
 
+			console.log(
+				'gas cost for cooking dish1: ',
+				gasToEth(this.prepareDish1Tx.receipt.cumulativeGasUsed)
+			);
 			expect(dishOwner).to.be.eq(user1);
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(preparedDishId).to.bignumber.be.eq(new BN('1'));
@@ -546,7 +554,10 @@ contract('Cooker', (accounts) => {
 
 			// prepare the dish
 			this.prepareDish2Tx = await this.Cooker.cookDish(1, 1, [1, 2], {from: user1});
-
+			console.log(
+				'gas cost for cooking dish2: ',
+				gasToEth(this.prepareDish2Tx.receipt.cumulativeGasUsed)
+			);
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
 
@@ -575,8 +586,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Cooker.cookDish(1, 1, [1, 3], {from: user1});
-
+			this.prepareDish3Tx = await this.Cooker.cookDish(1, 1, [1, 3], {from: user1});
+			console.log(
+				'gas cost for cooking dish3: ',
+				gasToEth(this.prepareDish3Tx.receipt.cumulativeGasUsed)
+			);
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
 
@@ -604,7 +618,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Cooker.cookDish(1, 1, [1, 4], {from: user1});
+			this.prepareDish4Tx = await this.Cooker.cookDish(1, 1, [1, 4], {from: user1});
+			console.log(
+				'gas cost for cooking dish4: ',
+				gasToEth(this.prepareDish4Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -633,7 +651,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Cooker.cookDish(1, 1, [1, 5], {from: user1});
+			this.prepareDish5Tx = await this.Cooker.cookDish(1, 1, [1, 5], {from: user1});
+			console.log(
+				'gas cost for cooking dish5: ',
+				gasToEth(this.prepareDish5Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -662,7 +684,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			await this.Cooker.cookDish(1, 1, [2, 5], {from: user1});
+			this.prepareDish6Tx = await this.Cooker.cookDish(1, 1, [2, 5], {from: user1});
+			console.log(
+				'gas cost for cooking dish6: ',
+				gasToEth(this.prepareDish6Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -692,7 +718,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			this.prepareDish3Tx = await this.Cooker.cookDish(1, 1, [1, 2, 5], {from: user1});
+			this.prepareDish7Tx = await this.Cooker.cookDish(1, 1, [1, 2, 5], {from: user1});
+			console.log(
+				'gas cost for cooking dish7: ',
+				gasToEth(this.prepareDish7Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -723,7 +753,11 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
 			// prepare the dish
-			this.prepareDish4Tx = await this.Cooker.cookDish(1, 1, [2, 3, 4, 5], {from: user1});
+			this.prepareDish8Tx = await this.Cooker.cookDish(1, 1, [2, 3, 4, 5], {from: user1});
+			console.log(
+				'gas cost for cooking dish8: ',
+				gasToEth(this.prepareDish8Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -758,7 +792,11 @@ contract('Cooker', (accounts) => {
 			);
 
 			// prepare the dish
-			await this.Cooker.cookDish(1, 1, [2, 4, 5], {from: user1});
+			this.prepareDish9Tx = await this.Cooker.cookDish(1, 1, [2, 4, 5], {from: user1});
+			console.log(
+				'gas cost for cooking dish9: ',
+				gasToEth(this.prepareDish9Tx.receipt.cumulativeGasUsed)
+			);
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
@@ -910,6 +948,10 @@ contract('Cooker', (accounts) => {
 
 			// uncook dish
 			this.uncookTx = await this.Cooker.uncookDish(1, {from: user1});
+			console.log(
+				'gas cost for uncooking dish: ',
+				gasToEth(this.uncookTx.receipt.cumulativeGasUsed)
+			);
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(1);
@@ -979,7 +1021,11 @@ contract('Cooker', (accounts) => {
 			await this.Dish.setApprovalForAll(this.Cooker.address, true, {from: user2});
 			await time.increase(time.duration.days('1'));
 
-			await this.Cooker.uncookDish(currentDishId, {from: user2});
+			this.uncookTx1 = await this.Cooker.uncookDish(currentDishId, {from: user2});
+			console.log(
+				'gas cost for uncooking dish: ',
+				gasToEth(this.uncookTx1.receipt.cumulativeGasUsed)
+			);
 
 			const lacBalAfter = await this.SampleToken.balanceOf(user2);
 
@@ -1003,7 +1049,11 @@ contract('Cooker', (accounts) => {
 
 			const lacBalBefore = await this.SampleToken.balanceOf(user2);
 
-			await this.Cooker.uncookDish(currentDishId, {from: user2});
+			this.uncookTx2 = await this.Cooker.uncookDish(currentDishId, {from: user2});
+			console.log(
+				'gas cost for uncooking dish: ',
+				gasToEth(this.uncookTx2.receipt.cumulativeGasUsed)
+			);
 
 			const lacBalAfter = await this.SampleToken.balanceOf(user2);
 
