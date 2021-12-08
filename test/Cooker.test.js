@@ -34,7 +34,7 @@ const GAS_PRICE = 10; // 10 gwei
 const gasToEth = (gascost) => {
 	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
 };
-contract.only('Cooker', (accounts) => {
+contract('Cooker', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
 	const user1 = accounts[2];
@@ -788,7 +788,7 @@ contract.only('Cooker', (accounts) => {
 
 			await expectRevert(
 				this.Cooker.cookDish(4, 1, [2, 4, 5], {from: user1}),
-				'DishesNFT: INVALID_DISH_ID'
+				'Kitchen: INVALID_DISH_ID'
 			);
 
 			// prepare the dish

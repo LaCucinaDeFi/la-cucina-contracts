@@ -310,13 +310,13 @@ contract('DishesNFT', (accounts) => {
 				this.Dish.cookDish(user1, 5, 1, time.duration.minutes('5'), [1, 2, 3, 4, 5], {
 					from: minter
 				}),
-				'DishesNFT: INVALID_DISH_ID'
+				'Kitchen: INVALID_DISH_ID'
 			);
 			await expectRevert(
 				this.Dish.cookDish(user1, 0, 1, time.duration.minutes('5'), [1, 2, 3, 4, 5], {
 					from: minter
 				}),
-				'DishesNFT: INVALID_DISH_ID'
+				'Kitchen: INVALID_DISH_ID'
 			);
 		});
 		it('should rever when chef wants to prepare a dish with insufficient ingredients', async () => {
@@ -524,16 +524,6 @@ contract('DishesNFT', (accounts) => {
 
 		it('should revert when owner tries to update the max with already set value', async () => {
 			await expectRevert(this.Dish.updateMax('60', {from: operator}), 'DishesNFT: MAX_ALREADY_SET');
-		});
-	});
-
-	describe('getMultiplier()', () => {
-		it('should return multiplier correctly', async () => {
-			const multiplier = await this.Dish.getMultiplier(nutritionHash.toString());
-
-			expect(multiplier[0]).to.bignumber.be.eq(new BN('34100'));
-
-			expect(multiplier[1]).to.bignumber.be.eq(new BN('65200'));
 		});
 	});
 
