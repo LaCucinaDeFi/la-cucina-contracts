@@ -130,27 +130,21 @@ contract DishesNFT is BaseERC721 {
 		uint256[] memory _ingredientIds
 	) external OnlyCooker returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
-		require(_dishId > 0 && _dishId <= kitchen.getCurrentDishTypeId(), 'DishesNFT: INVALID_DISH_ID');
 		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
 
-		(string memory _dishName, uint256 totalBaseIngredients) = kitchen.dishType(_dishId);
-		require(totalBaseIngredients > 0, 'DishesNFT: INSUFFICIENT_BASE_INGREDINETS');
+		(uint256 baseVariationHash, string memory _dishTypeName, uint256 totalBaseIngredients) = kitchen
+			.getBaseVariationHash(_dishId, nonce);
 
-		(uint256 ingrediendVariaionHash, uint256 baseVariationHash, int256 multiplier) = _getHash(
-			_dishId,
-			totalBaseIngredients,
-			_ingredientIds
-		);
+		nonce++;
 
-		string memory dishName = string(
-			abi.encodePacked(
-				ingredientNft.getIngredientKeyword(_ingredientIds[0], 0), // 1st keyword of 1st ingredient
-				' ',
-				ingredientNft.getIngredientKeyword(_ingredientIds[1], 1), // 2nd keyword of 2nd ingredient
-				' ',
-				_dishName
-			)
-		);
+		(
+			uint256 ingrediendVariaionHash,
+			string memory dishName,
+			uint256 plutamins,
+			uint256 strongies
+		) = ingredientNft.getIngredientHash(_ingredientIds, _dishTypeName, nonce);
+
+		int256 multiplier = _getHash(plutamins, strongies, _ingredientIds.length);
 
 		// mint dish nft to user
 		dishNFTId = mint(_user);
@@ -170,6 +164,7 @@ contract DishesNFT is BaseERC721 {
 		);
 
 		dishNames[dishNFTId] = dishName;
+		nonce++;
 
 		emit Cook(dishNFTId);
 	}
@@ -243,40 +238,6 @@ contract DishesNFT is BaseERC721 {
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
-
-	/**
-	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
-	 * @param nutritionsHash - indicates the nutritionHash of ingredient
-	 * @return plutamins - indicates the values of plutamin nutrition
-	 * @return strongies - indicates the values of strongies nutrition
-	 */
-	function getMultiplier(uint256 nutritionsHash)
-		public
-		view
-		virtual
-		returns (uint256 plutamins, uint256 strongies)
-	{
-		uint256 slotConst = 100000;
-		uint256 slotMultiplier;
-		uint256 nutrition;
-
-		// Iterate Ingredient hash and assemble SVGs
-		for (uint8 slot = 7; slot > uint8(0); slot--) {
-			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
-			nutrition = (slot > 0) // Extract nutrition from slotted value
-				? nutritionsHash / slotMultiplier
-				: nutritionsHash;
-			// store 2nd and last nutrition i.e plutamins and strongies
-			if (slot == uint8(2)) {
-				plutamins = nutrition;
-			}
-
-			if (slot == uint8(7)) {
-				strongies = nutrition;
-			}
-			nutritionsHash -= nutrition * slotMultiplier;
-		}
-	}
 
 	/**
 		@notice This method allows users to get the svg of their dish
@@ -386,62 +347,10 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	function _getHash(
-		uint256 _dishId,
-		uint256 _totalBaseIngredients,
-		uint256[] memory _ingredientIds
-	)
-		internal
-		returns (
-			uint256 variationIdHash,
-			uint256 baseVariationHash,
-			int256 mScaled
-		)
-	{
-		uint256 totalIngredients = _ingredientIds.length;
-		uint256 plutamins;
-		uint256 strongies;
-
-		// get base Variation Hash
-		for (uint256 baseIndex = 0; baseIndex < _totalBaseIngredients; baseIndex++) {
-			uint256 baseIngredientId = kitchen.getBaseIngredientId(_dishId, baseIndex);
-			(, uint256 baseVariationCount) = kitchen.baseIngredient(baseIngredientId);
-
-			require(baseVariationCount > 0, 'DishesNFT: NO_BASE_VARIATIONS');
-
-			uint256 randomVarionIndex = LaCucinaUtils.getRandomVariation(nonce, baseVariationCount);
-
-			uint256 baseVariationId = kitchen.getBaseVariationId(baseIngredientId, randomVarionIndex);
-
-			baseVariationHash += baseVariationId * 256**baseIndex;
-			nonce++;
-		}
-		// get variationIdHash
-		for (uint256 i = 0; i < totalIngredients; i++) {
-			(, , uint256 totalVariations, uint256 nutritionsHash) = ingredientNft.ingredients(
-				_ingredientIds[i]
-			);
-
-			require(totalVariations > 0, 'DishesNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
-
-			// add plus one to avoid the 0 as random variation id
-			uint256 variationIndex = LaCucinaUtils.getRandomVariation(nonce, totalVariations);
-
-			uint256 variationId = ingredientNft.getVariationIdByIndex(_ingredientIds[i], variationIndex);
-
-			(uint256 plutamin, uint256 strongie) = getMultiplier(nutritionsHash);
-
-			if (i == 0) {
-				plutamins = plutamin;
-				strongies = strongie;
-			} else {
-				plutamins *= plutamin;
-				strongies += strongie;
-			}
-
-			variationIdHash += variationId * 256**i;
-			nonce++;
-		}
-
+		uint256 plutamins,
+		uint256 strongies,
+		uint256 totalIngredients
+	) internal view returns (int256 mScaled) {
 		int256 multiplier;
 		if (strongies != 0) multiplier = 1 ether * (int256(plutamins) / int256(strongies));
 		// 10000 ---> Decimal Fixer
@@ -463,7 +372,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 dishTypeId,
 		uint256[] memory variationIdList,
 		string[] memory defs
-	) public view returns (string memory ingredientPlaceholders) {
+	) internal view returns (string memory ingredientPlaceholders) {
 		uint256 ingredientId;
 		uint256 defId;
 

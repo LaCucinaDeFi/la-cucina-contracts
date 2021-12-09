@@ -265,6 +265,62 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
+	function getIngredientHash(
+		uint256[] memory _ingredientIds,
+		string memory _dishTypeName,
+		uint256 _nonce
+	)
+		external
+		view
+		returns (
+			uint256 variationIdHash,
+			string memory dishName,
+			uint256 plutamins,
+			uint256 strongies
+		)
+	{
+		// get variationIdHash
+		for (uint256 i = 0; i < _ingredientIds.length; i++) {
+			uint256 totalVariations = ingredients[_ingredientIds[i]].totalVariations;
+
+			require(totalVariations > 0, 'IngredientNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
+
+			// add plus one to avoid the 0 as random variation id
+			uint256 variationIndex = LaCucinaUtils.getRandomVariation(_nonce, totalVariations);
+
+			uint256 variationId = ingredients[_ingredientIds[i]].defIds[variationIndex];
+
+			(uint256 plutamin, uint256 strongie) = getMultiplier(
+				ingredients[_ingredientIds[i]].nutritionsHash
+			);
+
+			if (i == 0) {
+				plutamins = plutamin;
+				strongies = strongie;
+			} else {
+				plutamins *= plutamin;
+				strongies += strongie;
+			}
+
+			variationIdHash += variationId * 256**i;
+		}
+
+		Ingredient memory ingredient1 = ingredients[_ingredientIds[0]];
+		Ingredient memory ingredient2 = ingredients[_ingredientIds[1]];
+
+		require(ingredient1.keywords.length >= 1, 'IngredientsNFT: INVALID_INDEX');
+		require(ingredient2.keywords.length >= 2, 'IngredientsNFT: INVALID_INDEX');
+
+		dishName = string(
+			abi.encodePacked(
+				ingredient1.keywords[0], // 1st keyword of 1st ingredient
+				' ',
+				ingredient2.keywords[1], // 2nd keyword of 2nd ingredient
+				' ',
+				_dishTypeName
+			)
+		);
+	}
 
 	/**
 	 * @notice This method allows us to get the ingredient variation id from the list of variations.
@@ -337,6 +393,38 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
    	======================== Internal Methods =============================
    	=======================================================================
  	*/
+	/**
+	 * @notice This method returns the multiplier for the ingeredient. It calculates the multiplier based on the nutritions hash
+	 * @param nutritionsHash - indicates the nutritionHash of ingredient
+	 * @return plutamins - indicates the values of plutamin nutrition
+	 * @return strongies - indicates the values of strongies nutrition
+	 */
+	function getMultiplier(uint256 nutritionsHash)
+		internal
+		pure
+		returns (uint256 plutamins, uint256 strongies)
+	{
+		uint256 slotConst = 100000;
+		uint256 slotMultiplier;
+		uint256 nutrition;
+
+		// Iterate Ingredient hash and assemble SVGs
+		for (uint8 slot = 7; slot > uint8(0); slot--) {
+			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
+			nutrition = (slot > 0) // Extract nutrition from slotted value
+				? nutritionsHash / slotMultiplier
+				: nutritionsHash;
+			// store 2nd and last nutrition i.e plutamins and strongies
+			if (slot == uint8(2)) {
+				plutamins = nutrition;
+			}
+
+			if (slot == uint8(7)) {
+				strongies = nutrition;
+			}
+			nutritionsHash -= nutrition * slotMultiplier;
+		}
+	}
 
 	function _addIngredient(
 		string memory _name,

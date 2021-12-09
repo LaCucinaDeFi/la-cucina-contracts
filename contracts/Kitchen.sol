@@ -5,6 +5,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
+import './library/RandomNumber.sol';
 
 contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersionedContract {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
@@ -195,6 +196,33 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
+	function getBaseVariationHash(uint256 _dishTypeId, uint256 nonce)
+		external
+		view
+		onlyValidDishTypeId(_dishTypeId)
+		returns (
+			uint256 baseVariationHash,
+			string memory dishName,
+			uint256 totalBaseIngredients
+		)
+	{
+		totalBaseIngredients = dishType[_dishTypeId].totalBaseIngredients;
+		require(totalBaseIngredients > 0, 'Kitchen: INSUFFICIENT_BASE_INGREDINETS');
+
+		// get base Variation Hash
+		for (uint256 baseIndex = 0; baseIndex < totalBaseIngredients; baseIndex++) {
+			uint256 baseIngredientId = dishType[_dishTypeId].baseIngredientIds[baseIndex];
+			uint256 baseVariationCount = baseIngredient[baseIngredientId].totalVariations;
+
+			require(baseVariationCount > 0, 'Kitchen: NO_BASE_VARIATIONS');
+
+			uint256 randomVarionIndex = RandomNumber.getRandomVariation(nonce, baseVariationCount);
+			uint256 baseVariationId = baseIngredient[baseIngredientId].variationIds[randomVarionIndex];
+
+			baseVariationHash += baseVariationId * 256**baseIndex;
+		}
+		dishName = dishType[_dishTypeId].name;
+	}
 
 	/**
 	 * @notice This method returns the baseIngredient id from the base ingredients list of given dishType at given index.
