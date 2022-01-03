@@ -200,10 +200,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
-		Defs storage ingrediendVariaion = defs[_defId];
+		Defs storage ingredientVariaion = defs[_defId];
 
-		ingrediendVariaion.name = _name;
-		ingrediendVariaion.svg = _svg;
+		ingredientVariaion.name = _name;
+		ingredientVariaion.svg = _svg;
 
 		emit IngredientVariationUpdated(_defId);
 	}

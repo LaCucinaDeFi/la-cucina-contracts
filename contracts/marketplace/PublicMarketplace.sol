@@ -76,6 +76,7 @@ contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVers
 		external
 		virtual
 		onlyValidAuctionId(_auctionId)
+		nonReentrant
 		returns (uint256 bidId)
 	{
 		bidId = _placeBid(_auctionId, _bidAmount);

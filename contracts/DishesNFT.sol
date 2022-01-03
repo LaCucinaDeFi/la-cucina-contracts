@@ -15,7 +15,6 @@ contract DishesNFT is BaseERC721 {
  	*/
 
 	struct Dish {
-		address dishOwner;
 		bool cooked;
 		uint256 dishId;
 		uint256 totalIngredients;
@@ -138,7 +137,7 @@ contract DishesNFT is BaseERC721 {
 		nonce++;
 
 		(
-			uint256 ingrediendVariaionHash,
+			uint256 ingredientVariaionHash,
 			string memory dishName,
 			uint256 plutamins,
 			uint256 strongies
@@ -150,11 +149,10 @@ contract DishesNFT is BaseERC721 {
 		dishNFTId = mint(_user);
 
 		dish[dishNFTId] = Dish(
-			_user,
 			true,
 			_dishId,
 			_ingredientIds.length,
-			ingrediendVariaionHash,
+			ingredientVariaionHash,
 			totalBaseIngredients,
 			baseVariationHash,
 			_flameId,
@@ -186,7 +184,7 @@ contract DishesNFT is BaseERC721 {
 	/**
 	 * @notice This method update the preparation time for given dish. only cooker can call this method
 	 */
-	function updatePrepartionTime(
+	function updatePreparationTime(
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime

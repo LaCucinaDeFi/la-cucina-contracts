@@ -228,6 +228,7 @@ contract BaseMarketplace is
 		external
 		virtual
 		onlyValidAuctionId(_auctionId)
+		nonReentrant
 		returns (uint256 saleId)
 	{
 		require(isActiveAuction(_auctionId), 'Market: CANNOT_MOVE_NFT_FROM_INACTIVE_AUCTION');
@@ -471,6 +472,7 @@ contract BaseMarketplace is
 		returns (uint256 bidId)
 	{
 		require(isActiveAuction(_auctionId), 'Market: CANNOT_BID_ON_INACTIVE_AUCTION');
+		require(tx.origin == msg.sender, 'Market: ONLY_VALID_USERS');
 
 		AuctionInfo storage _auction = auction[_auctionId];
 		require(_auction.sellerAddress != msg.sender, 'Market: OWNER_CANNOT_PLACE_BID');

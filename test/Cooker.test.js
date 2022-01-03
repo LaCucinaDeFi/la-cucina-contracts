@@ -468,8 +468,9 @@ contract('Cooker', (accounts) => {
 			//get dish details
 			const dishDetail = await this.Dish.dish(currentDishId);
 			const dishName = await this.Dish.dishNames(currentDishId);
+			const dishOwner = await this.Dish.ownerOf(currentDishId);
 
-			expect(dishDetail.dishOwner).to.be.eq(user1);
+			expect(dishOwner).to.be.eq(user1);
 			expect(dishDetail.cooked).to.be.eq(true);
 			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
 			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('3'));
@@ -1222,6 +1223,13 @@ contract('Cooker', (accounts) => {
 		it('should revert when operator tries to update the max ingredients with already set value', async () => {
 			await expectRevert(
 				this.Cooker.updateMaxIngredients(9, {from: operator}),
+				'Cooker: INVALID_INGREDIENTS'
+			);
+		});
+
+		it('should revert when operator tries to update the max ingredients with more than 32 ingredients', async () => {
+			await expectRevert(
+				this.Cooker.updateMaxIngredients(33, {from: operator}),
 				'Cooker: INVALID_INGREDIENTS'
 			);
 		});

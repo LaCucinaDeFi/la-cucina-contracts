@@ -188,6 +188,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 		external
 		virtual
 		onlyValidAuctionId(_auctionId)
+		nonReentrant
 		returns (uint256 bidId)
 	{
 		if (auction[_auctionId].isVipAuction) {

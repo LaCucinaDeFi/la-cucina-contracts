@@ -88,7 +88,7 @@ contract Cooker is
 		require(_dishesNft != address(0), 'Cooker: INVALID_DISHES_ADDRESS');
 		require(_lacToken != address(0), 'Cooker: INVALID_LAC_ADDRESS');
 		require(_talien != address(0), 'Cooker: INVALID_TALIEN_ADDRESS');
-		require(_maxIngredients > 1, 'Cooker: INSUFFICIENT_INGREDIENTS');
+		require(_maxIngredients > 1 && _maxIngredients <= 32, 'Cooker: INSUFFICIENT_INGREDIENTS');
 
 		__AccessControl_init();
 		__ReentrancyGuard_init();
@@ -145,7 +145,7 @@ contract Cooker is
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256[] memory _ingredientIds
-	) external onlyValidFlameId(_flameId) returns (uint256 dishId) {
+	) external onlyValidFlameId(_flameId) nonReentrant returns (uint256 dishId) {
 		FlameDetail memory flame = flames[_flameId];
 		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
 		uint256 maxAllowedIngredients = maxIngredients + additionalIngredients;
@@ -192,25 +192,15 @@ contract Cooker is
 	 * @notice This method alloes users to uncook the dish by returning the dishNFT and claim back the ingredient nfts
 	 * @param _dishId - indicates the id of dish to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external {
+	function uncookDish(uint256 _dishId) external nonReentrant {
 		require(isDishReadyToUncook(_dishId), 'Cooker: CANNOT_UNCOOK_WHILE_PREPARING');
 
 		// get details of dish
-		(
-			address dishOwner,
-			,
-			,
-			uint256 totalIngredients,
-			uint256 ingredientVariationHash,
-			,
-			,
-			,
-			,
-			,
+		(, , uint256 totalIngredients, uint256 ingredientVariationHash, , , , , , ) = dishesNft.dish(
+			_dishId
+		);
 
-		) = dishesNft.dish(_dishId);
-
-		require(dishOwner == msg.sender, 'Cooker: ONLY_DISH_OWNER_CAN_UNCOOK');
+		require(dishesNft.ownerOf(_dishId) == msg.sender, 'Cooker: ONLY_DISH_OWNER_CAN_UNCOOK');
 
 		(, bool hasGenesisTalien) = doesUserHasTalien(msg.sender);
 
@@ -315,21 +305,12 @@ contract Cooker is
 		require(!isDishReadyToUncook(_dishNFTId), 'Cooker: CANNOT_UPDATE_FLAME');
 
 		// get details of dish
-		(
-			address dishOwner, // indicates hash of the indexes of ingredient variations
-			,
-			,
-			,
-			,
-			,
-			,
-			uint256 oldFlameId,
-			,
-			,
+		(, , , , , , uint256 oldFlameId, , , ) = dishesNft.dish(_dishNFTId);
 
-		) = dishesNft.dish(_dishNFTId);
-
-		require(msg.sender == dishOwner, 'Cooker: ONLY_DISH_OWNER_CAN_UPDATE_FLAME');
+		require(
+			dishesNft.ownerOf(_dishNFTId) == msg.sender,
+			'Cooker: ONLY_DISH_OWNER_CAN_UPDATE_FLAME'
+		);
 		require(_flameId != oldFlameId, 'Cooker: FLAME_ALREADY_SET');
 
 		FlameDetail storage oldFlame = flames[oldFlameId];
@@ -346,7 +327,7 @@ contract Cooker is
 			}
 		}
 
-		dishesNft.updatePrepartionTime(_dishNFTId, _flameId, newFlame.preparationDuration);
+		dishesNft.updatePreparationTime(_dishNFTId, _flameId, newFlame.preparationDuration);
 	}
 
 	/**
@@ -364,7 +345,7 @@ contract Cooker is
 	 */
 	function updateMaxIngredients(uint256 _maxIngredients) external onlyOperator {
 		require(
-			_maxIngredients > 1 && _maxIngredients != maxIngredients,
+			_maxIngredients > 1 && _maxIngredients != maxIngredients && _maxIngredients <= 32,
 			'Cooker: INVALID_INGREDIENTS'
 		);
 		maxIngredients = _maxIngredients;
@@ -382,7 +363,7 @@ contract Cooker is
 	/**
 	 * @notice This method allows admin to claim all the tokens of specified address to given address
 	 */
-	function claimAllTokens(address _user, address _tokenAddress) external onlyOperator {
+	function claimAllTokens(address _user, address _tokenAddress) external onlyOperator nonReentrant {
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -398,7 +379,7 @@ contract Cooker is
 		address _user,
 		address _tokenAddress,
 		uint256 _amount
-	) external onlyOperator {
+	) external onlyOperator nonReentrant {
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -425,7 +406,7 @@ contract Cooker is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
-		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (block.timestamp > completionTime) {
 			return true;
@@ -473,7 +454,7 @@ contract Cooker is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{
-		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (completionTime > block.timestamp) {
 			return completionTime - block.timestamp;

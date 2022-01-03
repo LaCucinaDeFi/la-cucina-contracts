@@ -8,6 +8,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
 
 /**
@@ -28,6 +29,7 @@ contract BaseERC1155 is
 	Initializable,
 	ContextUpgradeable,
 	AccessControlEnumerableUpgradeable,
+	ReentrancyGuardUpgradeable,
 	ERC1155PausableUpgradeable,
 	ERC1155SupplyUpgradeable,
 	IVersionedContract
@@ -124,7 +126,7 @@ contract BaseERC1155 is
 		address _from,
 		uint256 _id,
 		uint256 _amount
-	) public virtual onlyMinter onlyValidNftId(_id) {
+	) public virtual onlyMinter onlyValidNftId(_id) nonReentrant {
 		_burn(_from, _id, _amount);
 	}
 
@@ -132,7 +134,6 @@ contract BaseERC1155 is
 	 * @notice This method allows admin to update base token uri
 	 * @param _newUri - indicates the new uri
 	 */
-	//todo- do we need this?
 	function updateUri(string memory _newUri) external virtual onlyOperator {
 		require(bytes(_newUri).length > 0, 'BaseERC1155: INVALID_URI');
 		_setURI(_newUri);
