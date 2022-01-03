@@ -115,7 +115,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string memory _name,
 		uint256[] memory _x,
 		uint256[] memory _y
-	) external onlyOperator returns (uint256 dishTypeId) {
+	) external virtual onlyOperator returns (uint256 dishTypeId) {
 		require(bytes(_name).length > 0, 'Kitchen: INVALID_DISH_NAME');
 		require(
 			_x.length == totalCoordinates && _x.length == _y.length,
@@ -138,6 +138,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 */
 	function addBaseIngredientForDishType(uint256 _dishTypeId, string memory _name)
 		external
+		virtual
 		onlyOperator
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256 baseIngredientId)
@@ -166,6 +167,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string memory _svg
 	)
 		external
+		virtual
 		onlyOperator
 		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256 baseVariationId)
@@ -186,7 +188,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	/**
 	 * @notice This method allows admin to update the total number of coordinates
 	 */
-	function updateTotalCoordinates(uint256 _newTotal) external onlyOperator {
+	function updateTotalCoordinates(uint256 _newTotal) external virtual onlyOperator {
 		require(_newTotal != totalCoordinates && _newTotal > 0, 'Kitchen: INVALID_COORDINATES');
 		totalCoordinates = _newTotal;
 	}
@@ -199,6 +201,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getBaseVariationHash(uint256 _dishTypeId, uint256 nonce)
 		external
 		view
+		virtual
 		onlyValidDishTypeId(_dishTypeId)
 		returns (
 			uint256 baseVariationHash,
@@ -233,6 +236,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getBaseIngredientId(uint256 _dishTypeId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256)
 	{
@@ -250,6 +254,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getBaseVariationId(uint256 _baseIngredientId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256)
 	{
@@ -286,6 +291,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getXCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256)
 	{
@@ -299,6 +305,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getYCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256)
 	{

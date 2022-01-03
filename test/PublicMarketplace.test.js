@@ -1374,13 +1374,6 @@ contract('PublicMarketplace', (accounts) => {
 
 			expect(auction.winningBidId).to.bignumber.be.eq(currentBidId);
 		});
-
-		it('should revert when anyone tries to get winning bid with invalid auction id', async () => {
-			await expectRevert(
-				this.publicMarketplace.getAuctionWinningBid(18),
-				'Market: INVALID_AUCTION_ID'
-			);
-		});
 	});
 
 	describe('getters', () => {
@@ -1479,10 +1472,6 @@ contract('PublicMarketplace', (accounts) => {
 
 			isActive = await this.publicMarketplace.isActiveSale(currentSaleId);
 			expect(isActive).to.be.eq(false);
-		});
-
-		it('should revert when anyone gets the sale status with invalid sale id', async () => {
-			await expectRevert(this.publicMarketplace.isActiveSale('15'), 'Market: INVALID_SALE_ID');
 		});
 
 		it('should return isSupported token correctly', async () => {

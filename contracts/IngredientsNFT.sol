@@ -356,6 +356,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function getNutritionHash(uint256[] memory _nutritions)
 		external
 		pure
+		virtual
 		returns (uint256 nutrionHash)
 	{
 		for (uint256 i = 0; i < _nutritions.length; i++) {

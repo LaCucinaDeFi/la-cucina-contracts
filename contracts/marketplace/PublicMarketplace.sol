@@ -42,7 +42,7 @@ contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVers
 
 		//get NFT tokens from seller
 		nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
-		saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, 1);
+		saleId = _sellNFT(_nftId, _nftPrice, _tokenAddress, 1, msg.sender);
 	}
 
 	/**
@@ -64,7 +64,7 @@ contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVers
 		//get nft copy from sender and put it in auction
 		nftContract.safeTransferFrom(msg.sender, address(this), _nftId, 1, '');
 
-		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration, false);
+		auctionId = _createAuction(_nftId, _initialPrice, _tokenAddress, _duration, false, msg.sender);
 	}
 
 	/**
@@ -79,7 +79,7 @@ contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVers
 		nonReentrant
 		returns (uint256 bidId)
 	{
-		bidId = _placeBid(_auctionId, _bidAmount);
+		bidId = _placeBid(_auctionId, _bidAmount, msg.sender);
 	}
 
 	/**

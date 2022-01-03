@@ -60,9 +60,6 @@ contract Cooker is
 	// @notice user with talien can prepare dish with maxIngredients + additionalIngredients number of ingredients
 	uint256 public additionalIngredients;
 
-	/// @notice Stores the uncooked dishNFT ids
-	uint256[] public uncookedDishIds;
-
 	// flameId => FlameDetails
 	mapping(uint256 => FlameDetail) public flames;
 
@@ -145,7 +142,7 @@ contract Cooker is
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256[] memory _ingredientIds
-	) external onlyValidFlameId(_flameId) nonReentrant returns (uint256 dishId) {
+	) external virtual onlyValidFlameId(_flameId) nonReentrant returns (uint256 dishId) {
 		FlameDetail memory flame = flames[_flameId];
 		uint256 currentIngredientId = ingredientNft.getCurrentNftId();
 		uint256 maxAllowedIngredients = maxIngredients + additionalIngredients;
@@ -192,7 +189,7 @@ contract Cooker is
 	 * @notice This method alloes users to uncook the dish by returning the dishNFT and claim back the ingredient nfts
 	 * @param _dishId - indicates the id of dish to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external nonReentrant {
+	function uncookDish(uint256 _dishId) external virtual nonReentrant {
 		require(isDishReadyToUncook(_dishId), 'Cooker: CANNOT_UNCOOK_WHILE_PREPARING');
 
 		// get details of dish
@@ -211,8 +208,6 @@ contract Cooker is
 
 		// get the dish nft from user
 		dishesNft.transferFrom(msg.sender, address(this), _dishId);
-
-		uncookedDishIds.push(_dishId);
 
 		// uncook the dish
 		dishesNft.uncookDish(_dishId);
@@ -234,16 +229,12 @@ contract Cooker is
 					? slottedValue / slotMultiplier
 					: slottedValue;
 
-				require(
-					variation > 0 && variation <= ingredientNft.getCurrentDefs(),
-					'Cooker: INVALID_INGREDIENT_VARIATION'
-				);
+				assert(variation > 0 && variation <= ingredientNft.getCurrentDefs());
 
 				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
-				require(
-					ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId(),
-					'Cooker: INVALID_INGREDIENT_ID'
-				);
+
+				assert(ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId());
+
 				// transfer the ingredient nft to user
 				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
 			}
@@ -261,7 +252,7 @@ contract Cooker is
 		string memory _flameType,
 		uint256 _preparationTime,
 		uint256 _lacCharge
-	) external onlyOperator returns (uint256 flameId) {
+	) external virtual onlyOperator returns (uint256 flameId) {
 		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		// increase flame counter
@@ -283,7 +274,7 @@ contract Cooker is
 		string memory _flameType,
 		uint256 _preparationTime,
 		uint256 _lacCharge
-	) external onlyOperator onlyValidFlameId(_flameId) {
+	) external virtual onlyOperator onlyValidFlameId(_flameId) {
 		require(bytes(_flameType).length > 0, 'Cooker: INVALID_FLAME_TYPE');
 
 		flames[_flameId] = FlameDetail(_flameType, _preparationTime, _lacCharge);
@@ -299,6 +290,7 @@ contract Cooker is
 	 */
 	function updateFlame(uint256 _dishNFTId, uint256 _flameId)
 		external
+		virtual
 		onlyValidDishNFTId(_dishNFTId)
 		onlyValidFlameId(_flameId)
 	{
@@ -319,12 +311,10 @@ contract Cooker is
 		// faster flame
 		if (newFlame.lacCharge > oldFlame.lacCharge) {
 			// get the LAC tokens from user
-			if (newFlame.lacCharge > 0) {
-				require(
-					lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge),
-					'Cooker: TRANSFER_FAILED'
-				);
-			}
+			require(
+				lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge),
+				'Cooker: TRANSFER_FAILED'
+			);
 		}
 
 		dishesNft.updatePreparationTime(_dishNFTId, _flameId, newFlame.preparationDuration);
@@ -334,7 +324,7 @@ contract Cooker is
 	 * @notice This method allows admin to update the uncooking fee
 	 * @param _newFee - indicates the new uncooking fee to set
 	 */
-	function updateUncookingFee(uint256 _newFee) external onlyOperator {
+	function updateUncookingFee(uint256 _newFee) external virtual onlyOperator {
 		require(_newFee != uncookingFee, 'Cooker: INVALID_FEE');
 		uncookingFee = _newFee;
 	}
@@ -343,7 +333,7 @@ contract Cooker is
 	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
 	 * @param _maxIngredients - indicates the new uncooking fee to set
 	 */
-	function updateMaxIngredients(uint256 _maxIngredients) external onlyOperator {
+	function updateMaxIngredients(uint256 _maxIngredients) external virtual onlyOperator {
 		require(
 			_maxIngredients > 1 && _maxIngredients != maxIngredients && _maxIngredients <= 32,
 			'Cooker: INVALID_INGREDIENTS'
@@ -355,7 +345,11 @@ contract Cooker is
 	 * @notice This method allows admin to update the max number of ingredients for preparing a dish
 	 * @param _additionalIngredients - indicates the additional number of ingrediens that vip user can prepare a dish with
 	 */
-	function updateAdditionalIngredients(uint256 _additionalIngredients) external onlyOperator {
+	function updateAdditionalIngredients(uint256 _additionalIngredients)
+		external
+		virtual
+		onlyOperator
+	{
 		require(_additionalIngredients != additionalIngredients, 'Cooker: ALREADY_SET');
 		additionalIngredients = _additionalIngredients;
 	}
@@ -363,7 +357,12 @@ contract Cooker is
 	/**
 	 * @notice This method allows admin to claim all the tokens of specified address to given address
 	 */
-	function claimAllTokens(address _user, address _tokenAddress) external onlyOperator nonReentrant {
+	function claimAllTokens(address _user, address _tokenAddress)
+		external
+		virtual
+		onlyOperator
+		nonReentrant
+	{
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -379,7 +378,7 @@ contract Cooker is
 		address _user,
 		address _tokenAddress,
 		uint256 _amount
-	) external onlyOperator nonReentrant {
+	) external virtual onlyOperator nonReentrant {
 		require(_user != address(0), 'Cooker: INVALID_USER_ADDRESS');
 		require(_tokenAddress != address(0), 'Cooker: INVALID_TOKEN_ADDRESS');
 
@@ -403,6 +402,7 @@ contract Cooker is
 	function isDishReadyToUncook(uint256 _dishNFTId)
 		public
 		view
+		virtual
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
@@ -451,6 +451,7 @@ contract Cooker is
 	function getRemainingTime(uint256 _dishNFTId)
 		external
 		view
+		virtual
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{

@@ -127,7 +127,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 _flameId,
 		uint256 _preparationTime,
 		uint256[] memory _ingredientIds
-	) external OnlyCooker returns (uint256 dishNFTId) {
+	) external virtual OnlyCooker returns (uint256 dishNFTId) {
 		require(_user != address(0), 'DishesNFT: INVALID_USER_ADDRESS');
 		require(_ingredientIds.length > 1, 'DishesNFT: INSUFFICIENT_INGREDIENTS');
 
@@ -171,7 +171,7 @@ contract DishesNFT is BaseERC721 {
 	 * @notice This method alloes chef contract to uncook the dish.
 	 * @param _dishId - indicates the dishId to be uncooked.
 	 */
-	function uncookDish(uint256 _dishId) external OnlyCooker onlyValidDishId(_dishId) {
+	function uncookDish(uint256 _dishId) external virtual OnlyCooker onlyValidDishId(_dishId) {
 		Dish storage dishToUncook = dish[_dishId];
 		require(dishToUncook.cooked, 'DishesNFT: ALREADY_UNCOOKED_DISH');
 
@@ -188,7 +188,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 _dishId,
 		uint256 _flameId,
 		uint256 _preparationTime
-	) external OnlyCooker {
+	) external virtual OnlyCooker {
 		// update flame type
 		dish[_dishId].flameType = _flameId;
 		// update dish preparationTime
@@ -245,6 +245,7 @@ contract DishesNFT is BaseERC721 {
 	function serveDish(uint256 _dishId)
 		external
 		view
+		virtual
 		onlyValidDishId(_dishId)
 		returns (string memory accumulator)
 	{
@@ -344,6 +345,9 @@ contract DishesNFT is BaseERC721 {
 		return accumulator;
 	}
 
+	/**
+	 * @notice This method returns the normalized multiplier for the dish
+	 */
 	function _getHash(
 		uint256 plutamins,
 		uint256 strongies,
@@ -366,6 +370,9 @@ contract DishesNFT is BaseERC721 {
 		mScaled = add_to_one / int256(10000)**(totalIngredients - 2);
 	}
 
+	/**
+	 * @notice This method returns the placeholders for the ingredients
+	 */
 	function _getPlaceHolder(
 		uint256 dishTypeId,
 		uint256[] memory variationIdList,

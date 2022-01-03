@@ -519,13 +519,13 @@ contract('Cooker', (accounts) => {
 			const preparedDishId = await this.Dish.getCurrentTokenId();
 
 			//get dish owner
-			const dishOwner = await this.Dish.ownerOf(preparedDishId);
+			const dishOwner1 = await this.Dish.ownerOf(preparedDishId);
 
 			console.log(
 				'gas cost for cooking dish1: ',
 				gasToEth(this.prepareDish1Tx.receipt.cumulativeGasUsed)
 			);
-			expect(dishOwner).to.be.eq(user1);
+			expect(dishOwner1).to.be.eq(user1);
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(preparedDishId).to.bignumber.be.eq(new BN('1'));
 		});
@@ -1060,12 +1060,6 @@ contract('Cooker', (accounts) => {
 
 			expect(lacBalBefore).to.bignumber.be.gt(lacBalAfter);
 			expect(lacBalBefore).to.bignumber.be.eq(lacBalAfter.add(new BN(ether('5'))));
-		});
-
-		it('should add the dish id in uncooked dish ids list in Cooker contract', async () => {
-			const uncookedDishIds = await this.Cooker.uncookedDishIds(0);
-
-			expect(uncookedDishIds).to.bignumber.be.eq(new BN('1'));
 		});
 
 		it('should revert when non-dishOwner tries to uncook the dish', async () => {

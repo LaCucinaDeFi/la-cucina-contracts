@@ -12,7 +12,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
    =======================================================================
  */
 	ITalien public talien;
-	uint256 earlyAccessTime;
+	uint256 public earlyAccessTime;
 
 	/*
    =======================================================================
@@ -94,7 +94,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 		);
 
 		//create sale
-		saleId = _sellNFT(nftId, _nftPrice, _tokenAddress, _amountOfCopies);
+		saleId = _sellNFT(nftId, _nftPrice, _tokenAddress, _amountOfCopies, msg.sender);
 	}
 
 	/**
@@ -137,7 +137,14 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 		);
 
 		//creating auction for one copy of nft.
-		auctionId = _createAuction(nftId, _initialPrice, _tokenAddress, _duration, _isVipAuction);
+		auctionId = _createAuction(
+			nftId,
+			_initialPrice,
+			_tokenAddress,
+			_duration,
+			_isVipAuction,
+			msg.sender
+		);
 	}
 
 	/**
@@ -196,7 +203,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 			require(hasGenesisTalien, 'PrivateMarketplace: ONLY_VIP_MEMBERS_CAN_BID');
 		}
 
-		bidId = _placeBid(_auctionId, _bidAmount);
+		bidId = _placeBid(_auctionId, _bidAmount, msg.sender);
 	}
 
 	/**
@@ -247,7 +254,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 * @notice This method allows admin to update the early access time, so that user with genesis talien can get early access to ingredients.
 	 * @param _newAccessTime - indicates the new access time
 	 */
-	function updateEarlyAccessTime(uint256 _newAccessTime) external onlyOperator {
+	function updateEarlyAccessTime(uint256 _newAccessTime) external virtual onlyOperator {
 		require(earlyAccessTime != _newAccessTime, 'PrivateMarketplace: ALREADY_SET');
 		earlyAccessTime = _newAccessTime;
 	}
