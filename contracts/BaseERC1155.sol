@@ -131,15 +131,6 @@ contract BaseERC1155 is
 	}
 
 	/**
-	 * @notice This method allows admin to update base token uri
-	 * @param _newUri - indicates the new uri
-	 */
-	function updateUri(string memory _newUri) external virtual onlyOperator {
-		require(bytes(_newUri).length > 0, 'BaseERC1155: INVALID_URI');
-		_setURI(_newUri);
-	}
-
-	/**
 	 * @dev Pauses all token transfers.
 	 *
 	 * See {ERC1155Pausable} and {Pausable-_pause}.
