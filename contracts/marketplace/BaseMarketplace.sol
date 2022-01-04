@@ -62,6 +62,7 @@ contract BaseMarketplace is
    =======================================================================
  */
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 
 	/*
    =======================================================================
@@ -111,7 +112,7 @@ contract BaseMarketplace is
  */
 	event NewNFTListing(address indexed seller, uint256 indexed saleId);
 	event NFTAuction(address indexed seller, uint256 indexed auctionId);
-	event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint256 saleId);
+	event BuySaleNFT(address indexed buyer, uint256 indexed nftId, uint256 saleId, uint256 date);
 	event BuyAuctionNFT(address indexed buyer, uint256 indexed nftId, uint256 auctionId);
 	event PlaceBid(
 		uint256 indexed auctionId,
@@ -128,6 +129,7 @@ contract BaseMarketplace is
 	function __Marketplace_init(address _nftContractAddress) internal virtual initializer {
 		__AccessControl_init();
 		__ReentrancyGuard_init();
+		__ERC1155Receiver_init();
 
 		require(_nftContractAddress != address(0), 'Market: INVALID_NFT_CONTRACT');
 
@@ -143,8 +145,8 @@ contract BaseMarketplace is
    ======================== Modifiers ====================================
    =======================================================================
  */
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'Market: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'Market: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -226,6 +228,7 @@ contract BaseMarketplace is
 		external
 		virtual
 		onlyValidAuctionId(_auctionId)
+		nonReentrant
 		returns (uint256 saleId)
 	{
 		require(isActiveAuction(_auctionId), 'Market: CANNOT_MOVE_NFT_FROM_INACTIVE_AUCTION');
@@ -239,7 +242,7 @@ contract BaseMarketplace is
 		_auction.status = 2;
 
 		//create sale
-		saleId = _sellNFT(_auction.nftId, _sellingPrice, _auction.currency, 1);
+		saleId = _sellNFT(_auction.nftId, _sellingPrice, _auction.currency, 1, msg.sender);
 	}
 
 	/**
@@ -291,7 +294,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
-	function addSupportedToken(address _tokenAddress) external virtual onlyAdmin {
+	function addSupportedToken(address _tokenAddress) external virtual onlyOperator {
 		require(!supportedTokens[_tokenAddress], 'Market: TOKEN_ALREADY_ADDED');
 		supportedTokens[_tokenAddress] = true;
 	}
@@ -300,7 +303,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to remove the ERC20/BEP20 token from the accepted token list.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
-	function removeSupportedToken(address _tokenAddress) external virtual onlyAdmin {
+	function removeSupportedToken(address _tokenAddress) external virtual onlyOperator {
 		require(supportedTokens[_tokenAddress], 'Market: TOKEN_DOES_NOT_EXISTS');
 		supportedTokens[_tokenAddress] = false;
 	}
@@ -309,7 +312,7 @@ contract BaseMarketplace is
 	 * @notice This method allows admin to update minimum duration for the auction period.
 	 * @param _newDuration indicates the new mint limit
 	 */
-	function updateMinimumDuration(uint256 _newDuration) external virtual onlyAdmin {
+	function updateMinimumDuration(uint256 _newDuration) external virtual onlyOperator {
 		require(
 			_newDuration > 0 && _newDuration != minDuration,
 			'MintingStatoin: INVALID_MINIMUM_DURATION'
@@ -328,13 +331,7 @@ contract BaseMarketplace is
 	 * @param _auctionId indicates the id of auction.
 	 * @return returns the details of winning bid.
 	 */
-	function getAuctionWinningBid(uint256 _auctionId)
-		external
-		view
-		virtual
-		onlyValidAuctionId(_auctionId)
-		returns (Bid memory)
-	{
+	function getAuctionWinningBid(uint256 _auctionId) external view virtual returns (Bid memory) {
 		return bid[auction[_auctionId].winningBidId];
 	}
 
@@ -364,14 +361,8 @@ contract BaseMarketplace is
 	 * @param _auctionId indicates the auction id.
 	 * @return isActive - returns true if auction is active false otherwise.
 	 */
-	function isActiveAuction(uint256 _auctionId)
-		public
-		view
-		virtual
-		onlyValidAuctionId(_auctionId)
-		returns (bool isActive)
-	{
-		if (auction[_auctionId].status == 1) return true;
+	function isActiveAuction(uint256 _auctionId) public view virtual returns (bool isActive) {
+		return auction[_auctionId].status == 1;
 	}
 
 	/**
@@ -379,18 +370,11 @@ contract BaseMarketplace is
 	 * @param _saleId indicates the sale id.
 	 * @return isActive - returns true if sale is active false otherwise.
 	 */
-	function isActiveSale(uint256 _saleId)
-		public
-		view
-		virtual
-		onlyValidSaleId(_saleId)
-		returns (bool isActive)
-	{
-		if (
+	function isActiveSale(uint256 _saleId) public view virtual returns (bool isActive) {
+		return
 			sale[_saleId].sellTimeStamp == 0 &&
 			sale[_saleId].remainingCopies > 0 &&
-			sale[_saleId].cancelTimeStamp == 0
-		) return true;
+			sale[_saleId].cancelTimeStamp == 0;
 	}
 
 	/*
@@ -403,7 +387,8 @@ contract BaseMarketplace is
 		uint256 _nftId,
 		uint256 _nftPrice,
 		address _tokenAddress,
-		uint256 _amountOfCopies
+		uint256 _amountOfCopies,
+		address _user
 	) internal virtual onlySupportedTokens(_tokenAddress) returns (uint256 saleId) {
 		//create sale
 		saleIdCounter.increment();
@@ -411,7 +396,7 @@ contract BaseMarketplace is
 		saleId = saleIdCounter.current();
 
 		sale[saleId] = SaleInfo(
-			msg.sender,
+			_user,
 			address(0),
 			_nftId,
 			_amountOfCopies,
@@ -423,9 +408,9 @@ contract BaseMarketplace is
 			0
 		);
 
-		userSaleIds[msg.sender].push(saleId);
+		userSaleIds[_user].push(saleId);
 
-		emit NewNFTListing(msg.sender, saleId);
+		emit NewNFTListing(_user, saleId);
 	}
 
 	function _createAuction(
@@ -433,7 +418,8 @@ contract BaseMarketplace is
 		uint256 _initialPrice,
 		address _tokenAddress,
 		uint256 _duration,
-		bool _isVipAuction
+		bool _isVipAuction,
+		address _user
 	) internal virtual onlySupportedTokens(_tokenAddress) returns (uint256 auctionId) {
 		require(_duration >= minDuration, 'Market: INVALID_DURATION');
 
@@ -446,7 +432,7 @@ contract BaseMarketplace is
 		auction[auctionId] = AuctionInfo(
 			_nftId,
 			_isVipAuction,
-			msg.sender,
+			_user,
 			_initialPrice,
 			_tokenAddress,
 			block.timestamp,
@@ -458,20 +444,21 @@ contract BaseMarketplace is
 			0
 		);
 
-		userAuctionIds[msg.sender].push(auctionId);
+		userAuctionIds[_user].push(auctionId);
 
-		emit NFTAuction(msg.sender, auctionId);
+		emit NFTAuction(_user, auctionId);
 	}
 
-	function _placeBid(uint256 _auctionId, uint256 _bidAmount)
-		internal
-		virtual
-		returns (uint256 bidId)
-	{
+	function _placeBid(
+		uint256 _auctionId,
+		uint256 _bidAmount,
+		address _user
+	) internal virtual returns (uint256 bidId) {
 		require(isActiveAuction(_auctionId), 'Market: CANNOT_BID_ON_INACTIVE_AUCTION');
+		require(tx.origin == _user, 'Market: ONLY_VALID_USERS');
 
 		AuctionInfo storage _auction = auction[_auctionId];
-		require(_auction.sellerAddress != msg.sender, 'Market: OWNER_CANNOT_PLACE_BID');
+		require(_auction.sellerAddress != _user, 'Market: OWNER_CANNOT_PLACE_BID');
 		require(block.timestamp >= _auction.startBlock, 'Market: CANNOT_BID_BEFORE_AUCTION_STARTS');
 		require(
 			block.timestamp <= (_auction.startBlock + _auction.duration),
@@ -486,7 +473,7 @@ contract BaseMarketplace is
 
 		//transferFrom the tokens
 		require(
-			IBEP20(_auction.currency).transferFrom(msg.sender, address(this), _bidAmount),
+			IBEP20(_auction.currency).transferFrom(_user, address(this), _bidAmount),
 			'Market: TRANSFER_FROM_FAILED'
 		);
 
@@ -504,14 +491,14 @@ contract BaseMarketplace is
 		bidIdCounter.increment();
 		bidId = bidIdCounter.current();
 
-		bid[bidId] = Bid(_auctionId, msg.sender, _bidAmount);
+		bid[bidId] = Bid(_auctionId, _user, _bidAmount);
 
 		_auction.winningBidId = bidId;
 		_auction.bidIds.push(bidId);
 
-		userBidIds[msg.sender].push(bidId);
+		userBidIds[_user].push(bidId);
 
-		emit PlaceBid(_auctionId, bidId, msg.sender, _bidAmount, block.timestamp);
+		emit PlaceBid(_auctionId, bidId, _user, _bidAmount, block.timestamp);
 	}
 
 	function onERC1155Received(

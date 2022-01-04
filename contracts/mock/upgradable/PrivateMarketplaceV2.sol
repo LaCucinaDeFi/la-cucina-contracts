@@ -41,7 +41,7 @@ contract PrivateMarketplaceV2 is PrivateMarketplace {
    =======================================================================
  */
 
-	function updateMaxDuration(uint256 _duration) external virtual onlyAdmin {
+	function updateMaxDuration(uint256 _duration) external virtual onlyOperator {
 		require(_duration > 0 && _duration != maxDuration, 'PrivateMarketplace: INVALID_MAX_DURATION');
 		maxDuration = _duration;
 	}

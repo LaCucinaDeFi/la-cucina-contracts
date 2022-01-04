@@ -40,7 +40,7 @@ contract DishesNFTV2 is DishesNFT {
    =======================================================================
  */
 
-	function addBurner(address _burner) public virtual onlyAdmin {
+	function addBurner(address _burner) public virtual onlyOperator {
 		require(_burner != address(0), 'DishesNFTV2: ZERO_ADDRESS_FOUND');
 		burners.push(_burner);
 	}

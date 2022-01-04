@@ -8,6 +8,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
 
 /**
@@ -28,6 +29,7 @@ contract BaseERC1155 is
 	Initializable,
 	ContextUpgradeable,
 	AccessControlEnumerableUpgradeable,
+	ReentrancyGuardUpgradeable,
 	ERC1155PausableUpgradeable,
 	ERC1155SupplyUpgradeable,
 	IVersionedContract
@@ -35,34 +37,35 @@ contract BaseERC1155 is
 	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*
-   =======================================================================
-   ======================== Constants ====================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Constants ====================================
+   	=======================================================================
+ 	*/
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
 	bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 
 	/*
-   =======================================================================
-   ======================== Private Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
 	CountersUpgradeable.Counter internal tokenCounter;
 
 	/*
-   =======================================================================
-   ======================== Public Variables ============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Variables ============================
+   	=======================================================================
+ 	*/
 
 	/// @dev tokenId -> totalSupply
 	mapping(uint256 => uint256) public tokenTotalSupply;
 
 	/*
-   =======================================================================
-   ======================== Initializer ==================================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Initializer ==================================
+   	=======================================================================
+	*/
 
 	/**
 	 * @dev Grants `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, and `PAUSER_ROLE` to the account that
@@ -87,18 +90,18 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Modifiers ====================================
-   =======================================================================
- */
-
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'BaseERC1155: ONLY_ADMIN_CAN_CALL');
-		_;
-	}
+   	=======================================================================
+   	======================== Modifiers ====================================
+   	=======================================================================
+ 	*/
 
 	modifier onlyMinter() {
 		require(hasRole(MINTER_ROLE, _msgSender()), 'BaseERC1155: ONLY_MINTER_CAN_CALL');
+		_;
+	}
+
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'BaseERC1155: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
@@ -108,10 +111,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Public Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Public Methods ===============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @notice This function allows minter to burn the tokens
@@ -123,7 +126,7 @@ contract BaseERC1155 is
 		address _from,
 		uint256 _id,
 		uint256 _amount
-	) public virtual onlyMinter onlyValidNftId(_id) {
+	) public virtual onlyMinter onlyValidNftId(_id) nonReentrant {
 		_burn(_from, _id, _amount);
 	}
 
@@ -162,10 +165,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Getter Methods ===============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Getter Methods ===============================
+   	=======================================================================
+ 	*/
 	/**
 	 * @notice This method retursn the current nft ID
 	 */
@@ -205,10 +208,10 @@ contract BaseERC1155 is
 	}
 
 	/*
-   =======================================================================
-   ======================== Internal Methods =============================
-   =======================================================================
- */
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+ 	*/
 
 	/**
 	 * @dev See {ERC1155-_mint}.

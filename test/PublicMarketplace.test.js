@@ -4,17 +4,16 @@ const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {caviar_1, caviar_2, caviar_3} = require('./svgs/Caviar');
-const {tuna_1, tuna_2, tuna_3} = require('./svgs/Tuna');
-const {gold_1, gold_2, gold_3} = require('./svgs/Gold');
-const {beef_1, beef_2, beef_3} = require('./svgs/Beef');
-const {truffle_1, truffle_2, truffle_3} = require('./svgs/Truffle');
+const papayas = require('../data/ingredients/papaya');
+const caviar = require('../data/ingredients/caviar');
+const leaves = require('../data/ingredients/leaves');
+const venom = require('../data/ingredients/venom');
+const antEggs = require('../data/ingredients/antEggs');
 
 const IngredientsNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PublicMarketplace = artifacts.require('PublicMarketplace');
 const PublicMarketplaceV2 = artifacts.require('PublicMarketplaceV2');
-const TalienContract = artifacts.require('Talien');
 
 const {Talien} = require('./helper/talien');
 
@@ -22,6 +21,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
+const GAS_LIMIT = 85000000;
 
 contract('PublicMarketplace', (accounts) => {
 	const owner = accounts[0];
@@ -30,11 +30,12 @@ contract('PublicMarketplace', (accounts) => {
 	const user2 = accounts[3];
 	const user3 = accounts[4];
 	const fundReceiver = accounts[5];
+	const operator = accounts[6];
 	const royaltyReceiver = accounts[8];
 	const royaltyFee = '100';
 	const stash = accounts[9];
 	let currentNftId;
-	let nutrisionHash;
+	let nutritionHash;
 	before('Deploy ERC-1155 and Marketplace contracts', async () => {
 		// deploy Lac token
 		this.sampleToken = await SampleToken.new();
@@ -45,28 +46,12 @@ contract('PublicMarketplace', (accounts) => {
 		});
 
 		// deploy NFT token
-		this.Talien = await deployProxy(
-			TalienContract,
-			[
-				'La Cucina Taliens',
-				'TALIEN',
-				url,
-				fundReceiver,
-				this.sampleToken.address,
-				ether('10'),
-				royaltyReceiver,
-				'100',
-				'Mokoto Glitch Regular'
-			],
-			{
-				initializer: 'initialize'
-			}
+		this.TalienContract = new Talien(operator, owner);
+		this.Talien = await this.TalienContract.setup(
+			fundReceiver,
+			royaltyReceiver,
+			this.sampleToken.address
 		);
-
-		this.TalienObj = new Talien(this.Talien);
-
-		await this.TalienObj.setup(owner);
-
 		// deploy private marketplace
 		this.privateMarketplace = await deployProxy(
 			PrivateMarketplace,
@@ -84,23 +69,31 @@ contract('PublicMarketplace', (accounts) => {
 		// add privateMarket as minter in ERC1155 contract.
 		const minterRole = await this.Ingredient.MINTER_ROLE();
 		await this.Ingredient.grantRole(minterRole, this.privateMarketplace.address);
+		await this.Ingredient.grantRole(minterRole, minter);
+
+		// grant updator role to talion contract
+		const OPERATOR_ROLE = await this.Ingredient.OPERATOR_ROLE();
+		await this.Ingredient.grantRole(OPERATOR_ROLE, operator, {from: owner});
+		await this.privateMarketplace.grantRole(OPERATOR_ROLE, operator, {from: owner});
 
 		// add excepted address
-		await this.Ingredient.addExceptedAddress(this.privateMarketplace.address);
+		await this.Ingredient.addExceptedAddress(this.privateMarketplace.address, {from: operator});
 		// add excepted address
-		await this.Ingredient.addExceptedAddress(this.publicMarketplace.address);
+		await this.Ingredient.addExceptedAddress(this.publicMarketplace.address, {from: operator});
 		// add stash as excepted address
-		await this.Ingredient.addExceptedAddress(stash);
+		await this.Ingredient.addExceptedAddress(stash, {from: operator});
 
 		// add minter in privateMarketplace
 		await this.privateMarketplace.grantRole(minterRole, minter);
 
 		// add minter in publicMarketplace
 		await this.publicMarketplace.grantRole(minterRole, minter);
+		// add minter in publicMarketplace
+		await this.publicMarketplace.grantRole(OPERATOR_ROLE, operator, {from: owner});
 
 		// add supported token
-		await this.privateMarketplace.addSupportedToken(this.sampleToken.address);
-		await this.publicMarketplace.addSupportedToken(this.sampleToken.address);
+		await this.privateMarketplace.addSupportedToken(this.sampleToken.address, {from: operator});
+		await this.publicMarketplace.addSupportedToken(this.sampleToken.address, {from: operator});
 
 		// mint tokens to users
 		await this.sampleToken.mint(user1, ether('100'));
@@ -111,22 +104,38 @@ contract('PublicMarketplace', (accounts) => {
 	describe('initialize()', () => {
 		before('add ingredients', async () => {
 			// add owner as excepted address
-			await this.Ingredient.addExceptedAddress(owner);
+			await this.Ingredient.addExceptedAddress(owner, {from: operator});
 
-			nutrisionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+			nutritionHash = await this.Ingredient.getNutritionHash([14, 50, 20, 4, 6, 39, 25]);
+
+			// add ingredient with variation
+			await this.Ingredient.addIngredientWithVariations(
+				owner,
+				10,
+				'Papaya',
+				nutritionHash,
+				ipfsHash,
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
+				{
+					from: minter
+				}
+			);
 
 			// add ingredient with variation
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
 				'Caviar',
-				nutrisionHash,
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[caviar[0].keyword, caviar[0].keyword],
+				[caviar[0].svg],
+				[caviar[0].name],
 				{
-					from: owner
+					from: minter,
+					gas: GAS_LIMIT
 				}
 			);
 
@@ -134,15 +143,15 @@ contract('PublicMarketplace', (accounts) => {
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
-				'Tuna',
-				nutrisionHash,
+				'Leaves',
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[tuna_1, tuna_2, tuna_3],
-				['One', 'Two', 'Three'],
+				[leaves[0].keyword, leaves[1].keyword, leaves[2].keyword],
+				[leaves[0].svg, leaves[1].svg, leaves[2].svg],
+				[leaves[0].name, leaves[1].name, leaves[2].name],
 				{
-					from: owner,
-					gas: 10000000000
+					from: minter,
+					gas: GAS_LIMIT
 				}
 			);
 
@@ -150,15 +159,15 @@ contract('PublicMarketplace', (accounts) => {
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
-				'Gold',
-				nutrisionHash,
+				'Venom',
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[gold_1, gold_2, gold_3],
-				['One', 'Two', 'Three'],
+				[venom[0].keyword, venom[1].keyword, venom[2].keyword],
+				[venom[0].svg, venom[1].svg, venom[2].svg],
+				[venom[0].name, venom[1].name, venom[2].name],
 				{
-					from: owner,
-					gas: 10000000000
+					from: minter,
+					gas: GAS_LIMIT
 				}
 			);
 
@@ -166,31 +175,15 @@ contract('PublicMarketplace', (accounts) => {
 			await this.Ingredient.addIngredientWithVariations(
 				owner,
 				10,
-				'Beef',
-				nutrisionHash,
+				'Ant_Eggs',
+				nutritionHash,
 				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[beef_1, beef_2, beef_3],
-				['One', 'Two', 'Three'],
+				[antEggs[0].keyword, antEggs[0].keyword],
+				[antEggs[0].svg],
+				[antEggs[0].name],
 				{
-					from: owner,
-					gas: 10000000000
-				}
-			);
-
-			// add ingredient with variation
-			await this.Ingredient.addIngredientWithVariations(
-				owner,
-				10,
-				'Truffle',
-				nutrisionHash,
-				ipfsHash,
-				['Red', 'Yellow', 'Green'],
-				[truffle_1, truffle_2, truffle_3],
-				['One', 'Two', 'Three'],
-				{
-					from: owner,
-					gas: 10000000000
+					from: minter,
+					gas: GAS_LIMIT
 				}
 			);
 
@@ -217,12 +210,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -918,7 +911,7 @@ contract('PublicMarketplace', (accounts) => {
 			isSupportedBefore = await this.publicMarketplace.supportedTokens(ZERO_ADDRESS);
 
 			// add supported token
-			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner});
+			await this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: operator});
 		});
 
 		it('should add supported token correctly', async () => {
@@ -930,7 +923,7 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should revert when admin tries to add token which is already supported', async () => {
 			await expectRevert(
-				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: owner}),
+				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: operator}),
 				'Market: TOKEN_ALREADY_ADDED'
 			);
 		});
@@ -938,7 +931,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when non-admin tries to add the supported token', async () => {
 			await expectRevert(
 				this.publicMarketplace.addSupportedToken(ZERO_ADDRESS, {from: user2}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -950,15 +943,15 @@ contract('PublicMarketplace', (accounts) => {
 
 			// add supported token
 			await this.publicMarketplace.addSupportedToken(this.privateMarketplace.address, {
-				from: owner
+				from: operator
 			});
 
 			// remove supported token
-			await this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner});
+			await this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: operator});
 
 			// remove supported token
 			await this.publicMarketplace.removeSupportedToken(this.privateMarketplace.address, {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -975,7 +968,7 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should revert when admin tries to remove token which does not supports already', async () => {
 			await expectRevert(
-				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: owner}),
+				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: operator}),
 				'Market: TOKEN_DOES_NOT_EXISTS'
 			);
 		});
@@ -983,7 +976,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when non-admin tries to remove the supported token', async () => {
 			await expectRevert(
 				this.publicMarketplace.removeSupportedToken(ZERO_ADDRESS, {from: minter}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -996,13 +989,13 @@ contract('PublicMarketplace', (accounts) => {
 
 			// update minimum duration
 			await this.publicMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
-				from: owner
+				from: operator
 			});
 		});
 		after('reset minimum duration to 1 days', async () => {
 			// update minimum duration
 			await this.publicMarketplace.updateMinimumDuration(String(time.duration.days('1')), {
-				from: owner
+				from: operator
 			});
 		});
 
@@ -1014,7 +1007,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when admin tries to update minimum duration with same duration', async () => {
 			await expectRevert(
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
-					from: owner
+					from: operator
 				}),
 				'MintingStatoin: INVALID_MINIMUM_DURATION'
 			);
@@ -1023,7 +1016,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should revert when admin tries to update minimum duration to zero', async () => {
 			await expectRevert(
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('0')), {
-					from: owner
+					from: operator
 				}),
 				'MintingStatoin: INVALID_MINIMUM_DURATION'
 			);
@@ -1033,7 +1026,7 @@ contract('PublicMarketplace', (accounts) => {
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('3')), {
 					from: user2
 				}),
-				'Market: ONLY_ADMIN_CAN_CALL'
+				'Market: ONLY_OPERATOR_CAN_CALL'
 			);
 		});
 	});
@@ -1052,12 +1045,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1196,12 +1189,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1333,12 +1326,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1381,13 +1374,6 @@ contract('PublicMarketplace', (accounts) => {
 
 			expect(auction.winningBidId).to.bignumber.be.eq(currentBidId);
 		});
-
-		it('should revert when anyone tries to get winning bid with invalid auction id', async () => {
-			await expectRevert(
-				this.publicMarketplace.getAuctionWinningBid(18),
-				'Market: INVALID_AUCTION_ID'
-			);
-		});
 	});
 
 	describe('getters', () => {
@@ -1403,12 +1389,12 @@ contract('PublicMarketplace', (accounts) => {
 				ether('1'),
 				this.sampleToken.address,
 				10,
-				'Caviar',
-				nutrisionHash,
+				'Papaya',
+				nutritionHash,
 				ipfsHash,
-				['Key1', 'Key2', 'Key3'],
-				[caviar_1, caviar_2, caviar_3],
-				['One', 'Two', 'Three'],
+				[papayas[0].keyword, papayas[1].keyword, papayas[2].keyword],
+				[papayas[0].svg, papayas[1].svg, papayas[2].svg],
+				[papayas[0].name, papayas[1].name, papayas[2].name],
 				{
 					from: minter
 				}
@@ -1488,15 +1474,11 @@ contract('PublicMarketplace', (accounts) => {
 			expect(isActive).to.be.eq(false);
 		});
 
-		it('should revert when anyone gets the sale status with invalid sale id', async () => {
-			await expectRevert(this.publicMarketplace.isActiveSale('15'), 'Market: INVALID_SALE_ID');
-		});
-
 		it('should return isSupported token correctly', async () => {
 			let isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
 			expect(isSupported).to.be.eq(true);
 
-			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: owner});
+			await this.publicMarketplace.removeSupportedToken(this.sampleToken.address, {from: operator});
 
 			isSupported = await this.publicMarketplace.supportedTokens(this.sampleToken.address);
 			expect(isSupported).to.be.eq(false);

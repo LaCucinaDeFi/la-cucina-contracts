@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import './interfaces/IBEP20.sol';
+import './interfaces/IVersionedContract.sol';
 
 /**
  * @dev {ERC721} token, including:
@@ -30,16 +30,24 @@ contract BaseERC721 is
 	Initializable,
 	ContextUpgradeable,
 	AccessControlEnumerableUpgradeable,
+	ReentrancyGuardUpgradeable,
 	ERC721EnumerableUpgradeable,
-	ERC721BurnableUpgradeable,
-	ERC721PausableUpgradeable
+	ERC721PausableUpgradeable,
+	IVersionedContract
 {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
 
+	/*
+   	=======================================================================
+   	======================== Private Variables ============================
+   	=======================================================================
+ 	*/
 	bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
 	bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 
 	CountersUpgradeable.Counter private _tokenIdTracker;
+
 	string private _baseTokenURI;
 
 	/*
@@ -47,9 +55,22 @@ contract BaseERC721 is
    	======================== Modifiers ====================================
  	=======================================================================
  	*/
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), 'BaseERC721: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'BaseERC721: ONLY_OPERATOR_CAN_CALL');
 		_;
+	}
+
+	/*
+   	=======================================================================
+   	======================== Initializer ==================================
+   	=======================================================================
+	*/
+	function initialize_BaseERC721(
+		string memory _name,
+		string memory _symbol,
+		string memory baseTokenURI
+	) internal virtual initializer {
+		__BaseERC721_init(_name, _symbol, baseTokenURI);
 	}
 
 	/**
@@ -63,22 +84,19 @@ contract BaseERC721 is
 		string memory _name,
 		string memory _symbol,
 		string memory baseTokenURI
-	) internal virtual initializer {
+	) internal initializer {
 		__Context_init_unchained();
 		__ERC165_init_unchained();
 		__AccessControl_init_unchained();
 		__AccessControlEnumerable_init_unchained();
 		__ERC721_init_unchained(_name, _symbol);
 		__ERC721Enumerable_init_unchained();
-		__ERC721Burnable_init_unchained();
 		__Pausable_init_unchained();
 		__ERC721Pausable_init_unchained();
 		__BaseERC721_init_unchained(baseTokenURI);
 	}
 
-	function __BaseERC721_init_unchained(
-		string memory baseTokenURI
-	) internal virtual initializer {
+	function __BaseERC721_init_unchained(string memory baseTokenURI) internal initializer {
 		_baseTokenURI = baseTokenURI;
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -137,11 +155,8 @@ contract BaseERC721 is
 	 *
 	 * - the caller must have the `PAUSER_ROLE`.
 	 */
-	function pause() public virtual {
-		require(
-			hasRole(PAUSER_ROLE, _msgSender()),
-			'ERC721BaseERC721PauserAutoId: must have pauser role to pause'
-		);
+	function pause() external virtual {
+		require(hasRole(PAUSER_ROLE, _msgSender()), 'BaseERC721: NEED_PAUSER_ROLE');
 		_pause();
 	}
 
@@ -154,23 +169,34 @@ contract BaseERC721 is
 	 *
 	 * - the caller must have the `PAUSER_ROLE`.
 	 */
-	function unpause() public virtual {
-		require(
-			hasRole(PAUSER_ROLE, _msgSender()),
-			'ERC721BaseERC721PauserAutoId: must have pauser role to unpause'
-		);
+	function unpause() external virtual {
+		require(hasRole(PAUSER_ROLE, _msgSender()), 'BaseERC721: NEED_PAUSER_ROLE');
 		_unpause();
+	}
+
+	/**
+	 * @notice Returns the storage, major, minor, and patch version of the contract.
+	 * @return The storage, major, minor, and patch version of the contract.
+	 */
+	function getVersionNumber()
+		external
+		pure
+		virtual
+		override
+		returns (
+			uint256,
+			uint256,
+			uint256
+		)
+	{
+		return (1, 0, 0);
 	}
 
 	function _beforeTokenTransfer(
 		address from,
 		address to,
 		uint256 tokenId
-	)
-		internal
-		virtual
-		override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable)
-	{
+	) internal virtual override(ERC721EnumerableUpgradeable, ERC721PausableUpgradeable) {
 		super._beforeTokenTransfer(from, to, tokenId);
 	}
 
@@ -186,27 +212,4 @@ contract BaseERC721 is
 	{
 		return super.supportsInterface(interfaceId);
 	}
-
-	/**
-	 * @notice Returns the storage, major, minor, and patch version of the contract.
-	 * @return The storage, major, minor, and patch version of the contract.
-	 */
-	function getVersionNumber()
-		external
-		pure
-		virtual
-		returns (
-			uint256,
-			uint256,
-			uint256
-		)
-	{
-		return (1, 0, 0);
-	}
-
-	/**
-	 * @dev This is empty reserved space in storage that is put in place in Upgrade Safe contracts.
-	 * It allows us to freely add new state variables in the future without compromising the storage compatibility with existing deployments.
-	 */
-	uint256[48] private __gap;
 }

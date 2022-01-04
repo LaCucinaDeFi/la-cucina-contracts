@@ -5,6 +5,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import './interfaces/IVersionedContract.sol';
+import './library/RandomNumber.sol';
 
 contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersionedContract {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
@@ -25,6 +26,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string name;
 		uint256 totalBaseIngredients;
 		uint256[] baseIngredientIds;
+		uint256[] x;
+		uint256[] y;
 	}
 
 	/*
@@ -32,6 +35,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Public Variables ============================
    	=======================================================================
  	*/
+	uint256 public totalCoordinates;
 
 	// dishTypeId => DishType
 	mapping(uint256 => DishType) public dishType;
@@ -45,6 +49,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Private Variables ============================
    	=======================================================================
  	*/
+	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
+
 	CountersUpgradeable.Counter private dishTypeCounter;
 	CountersUpgradeable.Counter private baseIngredientCounter;
 	CountersUpgradeable.Counter private baseVariationCounter;
@@ -63,6 +69,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		__ReentrancyGuard_init();
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+		totalCoordinates = 7;
 	}
 
 	/*
@@ -70,14 +78,16 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-
-	modifier onlyAdmin() {
-		require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), 'Kitchen: ONLY_ADMIN_CAN_CALL');
+	modifier onlyOperator() {
+		require(hasRole(OPERATOR_ROLE, _msgSender()), 'Kitchen: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
 
 	modifier onlyValidDishTypeId(uint256 _dishTypeId) {
-		require(_dishTypeId > 0 && _dishTypeId <= dishTypeCounter.current(), 'Kitchen: INVALID_DISH_ID');
+		require(
+			_dishTypeId > 0 && _dishTypeId <= dishTypeCounter.current(),
+			'Kitchen: INVALID_DISH_ID'
+		);
 		_;
 	}
 
@@ -96,16 +106,28 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
  	*/
 	/**
 	 * @notice This method allows admin to add the dishType name in which baseIngredients will be added
-	 * @param _name - indicates the namce of the dishType
+	 * @param _name - indicates the name of the dishType
+	 * @param _x - indicates the list of x coordinates for positioning the ingredient
+	 * @param _y - indicates the list of y coordinates for positioning the ingredient
 	 * @return dishTypeId - indicates the generated id of the dishType
 	 */
-	function addDishType(string memory _name) external onlyAdmin returns (uint256 dishTypeId) {
+	function addDishType(
+		string memory _name,
+		uint256[] memory _x,
+		uint256[] memory _y
+	) external virtual onlyOperator returns (uint256 dishTypeId) {
 		require(bytes(_name).length > 0, 'Kitchen: INVALID_DISH_NAME');
+		require(
+			_x.length == totalCoordinates && _x.length == _y.length,
+			'Kitchen: INVALID_COORDINATES'
+		);
 
 		dishTypeCounter.increment();
 		dishTypeId = dishTypeCounter.current();
 
 		dishType[dishTypeId].name = _name;
+		dishType[dishTypeId].x = _x;
+		dishType[dishTypeId].y = _y;
 	}
 
 	/**
@@ -116,7 +138,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 */
 	function addBaseIngredientForDishType(uint256 _dishTypeId, string memory _name)
 		external
-		onlyAdmin
+		virtual
+		onlyOperator
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256 baseIngredientId)
 	{
@@ -144,7 +167,8 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		string memory _svg
 	)
 		external
-		onlyAdmin
+		virtual
+		onlyOperator
 		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256 baseVariationId)
 	{
@@ -161,11 +185,47 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 		baseIngredient[_baseIngredientId].variationIds.push(baseVariationId);
 	}
 
+	/**
+	 * @notice This method allows admin to update the total number of coordinates
+	 */
+	function updateTotalCoordinates(uint256 _newTotal) external virtual onlyOperator {
+		require(_newTotal != totalCoordinates && _newTotal > 0, 'Kitchen: INVALID_COORDINATES');
+		totalCoordinates = _newTotal;
+	}
+
 	/*
    	=======================================================================
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
+	function getBaseVariationHash(uint256 _dishTypeId, uint256 nonce)
+		external
+		view
+		virtual
+		onlyValidDishTypeId(_dishTypeId)
+		returns (
+			uint256 baseVariationHash,
+			string memory dishName,
+			uint256 totalBaseIngredients
+		)
+	{
+		totalBaseIngredients = dishType[_dishTypeId].totalBaseIngredients;
+		require(totalBaseIngredients > 0, 'Kitchen: INSUFFICIENT_BASE_INGREDINETS');
+
+		// get base Variation Hash
+		for (uint256 baseIndex = 0; baseIndex < totalBaseIngredients; baseIndex++) {
+			uint256 baseIngredientId = dishType[_dishTypeId].baseIngredientIds[baseIndex];
+			uint256 baseVariationCount = baseIngredient[baseIngredientId].totalVariations;
+
+			require(baseVariationCount > 0, 'Kitchen: NO_BASE_VARIATIONS');
+
+			uint256 randomVarionIndex = RandomNumber.getRandomVariation(nonce, baseVariationCount);
+			uint256 baseVariationId = baseIngredient[baseIngredientId].variationIds[randomVarionIndex];
+
+			baseVariationHash += baseVariationId * 256**baseIndex;
+		}
+		dishName = dishType[_dishTypeId].name;
+	}
 
 	/**
 	 * @notice This method returns the baseIngredient id from the base ingredients list of given dishType at given index.
@@ -176,6 +236,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getBaseIngredientId(uint256 _dishTypeId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidDishTypeId(_dishTypeId)
 		returns (uint256)
 	{
@@ -193,6 +254,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	function getBaseVariationId(uint256 _baseIngredientId, uint256 _index)
 		external
 		view
+		virtual
 		onlyValidBaseIngredientId(_baseIngredientId)
 		returns (uint256)
 	{
@@ -221,6 +283,34 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 	 */
 	function getCurrentBaseVariationId() external view returns (uint256) {
 		return baseVariationCounter.current();
+	}
+
+	/**
+	 * @notice This method returns the x coordinate located at index for ingredient
+	 */
+	function getXCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		virtual
+		onlyValidDishTypeId(_dishTypeId)
+		returns (uint256)
+	{
+		require(_index < dishType[_dishTypeId].x.length, 'Kitchen: INVALID_INDEX');
+		return dishType[_dishTypeId].x[_index];
+	}
+
+	/**
+	 * @notice This method returns the y coordinate located at index for ingredient
+	 */
+	function getYCoordinateAtIndex(uint256 _dishTypeId, uint256 _index)
+		external
+		view
+		virtual
+		onlyValidDishTypeId(_dishTypeId)
+		returns (uint256)
+	{
+		require(_index < dishType[_dishTypeId].y.length, 'Kitchen: INVALID_INDEX');
+		return dishType[_dishTypeId].y[_index];
 	}
 
 	/**

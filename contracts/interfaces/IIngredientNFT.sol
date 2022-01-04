@@ -69,4 +69,18 @@ interface IIngredientNFT is INFT {
 		string memory _ipfsHash,
 		string[] memory _keywords
 	) external returns (uint256 ingredientId);
+
+	function getIngredientHash(
+		uint256[] memory _ingredientIds,
+		string memory _dishTypeName,
+		uint256 _nonce
+	)
+		external
+		view
+		returns (
+			uint256 variationIdHash,
+			string memory dishName,
+			uint256 plutamins,
+			uint256 strongies
+		);
 }
