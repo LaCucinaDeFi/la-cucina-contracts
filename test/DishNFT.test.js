@@ -20,7 +20,7 @@ const DishesNFTV2 = artifacts.require('DishesNFTV2');
 const IngredientNFT = artifacts.require('IngredientsNFT');
 const Kitchen = artifacts.require('Kitchen');
 
-const url = 'https://token-cdn-domain/{id}.json';
+const url = 'https://token-cdn-domain/';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 
 contract('DishesNFT', (accounts) => {
@@ -365,8 +365,10 @@ contract('DishesNFT', (accounts) => {
 
 		it('should revert when non oven tries to update the preparation time', async () => {
 			await expectRevert(
-				this.Dish.updatePrepartionTime(currentDishId, 2, time.duration.minutes('1'), {from: user1}),
-				'DishesNFT: ONLY_OVEN_CAN_CALL'
+				this.Dish.updatePreparationTime(currentDishId, 2, time.duration.minutes('1'), {
+					from: user1
+				}),
+				'DishesNFT: ONLY_COOKER_CAN_CALL'
 			);
 		});
 	});
@@ -502,6 +504,22 @@ contract('DishesNFT', (accounts) => {
 			expect(versionAfterUpgrade['0']).to.bignumber.be.eq(new BN('2'));
 			expect(versionAfterUpgrade['1']).to.bignumber.be.eq(new BN('0'));
 			expect(versionAfterUpgrade['2']).to.bignumber.be.eq(new BN('0'));
+		});
+	});
+
+	describe('tokenURI()', () => {
+		it('should get the tokenURI correctly', async () => {
+			const tokenUri = await this.Dish.tokenURI(1);
+			expect(tokenUri).to.be.eq('https://token-cdn-domain/1');
+		});
+	});
+
+	describe('updateBaseUri()', () => {
+		it('should get the updateBaseUri correctly', async () => {
+			await this.Dish.updateBaseUri('https://token-cdn/', {from: operator});
+
+			const tokenUri = await this.Dish.tokenURI(1);
+			expect(tokenUri).to.be.eq('https://token-cdn/1');
 		});
 	});
 });

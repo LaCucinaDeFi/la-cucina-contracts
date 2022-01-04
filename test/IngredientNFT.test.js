@@ -712,43 +712,6 @@ contract('IngredientsNFT', (accounts) => {
 		});
 	});
 
-	describe('updateUri()', () => {
-		let currentNftId;
-		before('update uri', async () => {
-			currentNftId = await this.Ingredient.getCurrentNftId();
-
-			// update uri
-			await this.Ingredient.updateUri('ipfs://', {from: owner});
-		});
-
-		it('should update base uri correctly', async () => {
-			const baseUri = await this.Ingredient.uri(1);
-
-			expect(baseUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
-			);
-		});
-
-		it('should revert when non-admin tries to update the uri', async () => {
-			await expectRevert(
-				this.Ingredient.updateUri('ipfs://', {from: user1}),
-				'BaseERC1155: ONLY_ADMIN_CAN_CALL'
-			);
-		});
-
-		it('should revert when admin tries to update the uri with empty uri', async () => {
-			await expectRevert(this.Ingredient.updateUri('', {from: owner}), 'BaseERC1155: INVALID_URI');
-		});
-
-		it('should get token uri correctly', async () => {
-			const tokenUri = await this.Ingredient.uri(currentNftId);
-
-			expect(tokenUri).to.be.eq(
-				`https://ipfs.infura.io/ipfs/bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm/lacucina_secret_ingredients/${this.chainId}/1.json`
-			);
-		});
-	});
-
 	describe('updateIpfsHash()', () => {
 		let currentNftId;
 		before('update ipfs hash', async () => {
