@@ -458,7 +458,7 @@ contract('Cooker', (accounts) => {
 			// approve tokens to Cooker
 			await this.SampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
 			// generate talien for user1
-			await this.Talien.generateGalaxyItem(1, 1, true, {from: user1});
+			await this.Talien.generateItem(1, 1, true, {from: user1});
 
 			// prepare the dish
 			this.prepareDish1Tx = await this.Cooker.cookDish(1, 1, [1, 2, 3, 4, 5], {from: user1});

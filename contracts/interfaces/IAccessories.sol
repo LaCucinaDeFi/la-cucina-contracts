@@ -2,12 +2,12 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 
 interface IAccessories is IERC1155 {
-	function addAccessoryType(uint256 _galaxyItemId, string memory _typeName)
+	function addAccessoryType(uint256 _itemId, string memory _typeName)
 		external
 		returns (uint256 accessoryTypeId);
 
 	function addAccessory(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _accessoryTypeId,
 		uint256 _seriesId,
 		string memory _name,
@@ -18,7 +18,7 @@ interface IAccessories is IERC1155 {
 	) external returns (uint256 accessoryId);
 
 	function addAccessoriesWithType(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		string memory _typeName,
 		uint256 _series,
 		string[] memory _name,
@@ -41,13 +41,13 @@ interface IAccessories is IERC1155 {
 	) external;
 
 	function getTotalAccessories(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _series,
 		uint256 _typeId
 	) external view returns (uint256);
 
 	function getAccessoryId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _series,
 		uint256 _typeId,
 		uint256 _index
@@ -55,21 +55,18 @@ interface IAccessories is IERC1155 {
 
 	function getCurrentNftId() external view returns (uint256);
 
-	function galaxyItems(uint256 _galaxyItemId)
-		external
-		view
-		returns (string memory accessoryTypeName);
+	function items(uint256 _itemId) external view returns (string memory accessoryTypeName);
 
-	function accessoryTypes(uint256 _galaxyItemId, uint256 _accessoryTypeId)
+	function accessoryTypes(uint256 _itemId, uint256 _accessoryTypeId)
 		external
 		view
-		returns (uint256 galaxyItemId, string memory accessoryTypeName);
+		returns (uint256 itemId, string memory accessoryTypeName);
 
 	function accessories(uint256 _accessoryId)
 		external
 		view
 		returns (
-			uint256 galaxyItemId,
+			uint256 itemId,
 			uint256 accessoryId,
 			uint256 typeId,
 			string memory name,
@@ -78,12 +75,15 @@ interface IAccessories is IERC1155 {
 			uint256 probability
 		);
 
-	function totalAccessoryTypes(uint256 galaxyItemId)
-		external
-		view
-		returns (uint256 totalAccessoryTypes);
+	function totalAccessoryTypes(uint256 itemId) external view returns (uint256 totalAccessoryTypes);
 
-	function getCurrentGalaxyItemId() external view returns (uint256);
+	function getCurrentItemId() external view returns (uint256);
 
 	function royaltyInfo(uint256, uint256 _salePrice) external view returns (address, uint256);
+
+	function getAccessories(
+		uint256 _itemId,
+		uint256 _seriesId,
+		uint256 _accessoryTypeId
+	) external returns (uint256 accessoryId, string memory svg);
 }

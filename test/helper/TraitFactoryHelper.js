@@ -1,13 +1,9 @@
 const {deployProxy} = require('@openzeppelin/truffle-upgrades');
 const {ether} = require('@openzeppelin/test-helpers');
-
 const {bg01, bg02, bg03} = require('../../data/talien/background');
 const {greenBody} = require('../../data/talien/bodies');
-const {cowboy} = require('../../data/talien/clothes');
 const {angryEyes, regularEyes} = require('../../data/talien/eyes');
-const {cowboyHat} = require('../../data/talien/headAccessory');
 const {blueHead} = require('../../data/talien/heads');
-const {knife, sword} = require('../../data/talien/holdingAccessory');
 const {bigMouthBlue, biteLipMouthBlue, piercedMouthBlue} = require('../../data/talien/mouth');
 const {silver_badge, golden_badge, platinum_badge} = require('../../data/talien/badge');
 
@@ -21,19 +17,29 @@ class TraitFactoryContract {
 
 	setup = async () => {
 		// deploy TraitFactory contract
-		this.TraitFactory = await deployProxy(TraitFactory, ['Mokoto Glitch Regular', ether('10')], {
-			initializer: 'initialize'
-		});
+		this.TraitFactory = await deployProxy(
+			TraitFactory,
+			['Mokoto Glitch Regular', ether('10'), ether('5')],
+			{
+				initializer: 'initialize'
+			}
+		);
 
 		// grant operator role
 		const OPERATOR_ROLE = await this.TraitFactory.OPERATOR_ROLE();
 		await this.TraitFactory.grantRole(OPERATOR_ROLE, this.operator, {from: this.owner});
 
-		// add galaxy item
-		await this.TraitFactory.addGalaxyItem('Talion', {from: this.operator});
+		// add  item
+		await this.TraitFactory.addItem('Talion', {from: this.operator});
 
 		// add series
 		await this.updateSeries();
+
+		// add traits
+		await this.addTrait();
+
+		// add traits variations
+		await this.addTraitVariations();
 
 		// add thresholds
 		await this.addThresholds();
@@ -42,58 +48,65 @@ class TraitFactoryContract {
 	};
 
 	updateSeries = async () => {
-		this.currentGalaxyItemId = await this.TraitFactory.getCurrentGalaxyItemId();
+		this.currentLaCucinaNftsItemId = await this.TraitFactory.getCurrentItemId();
 
-		await this.TraitFactory.updateSeries(this.currentGalaxyItemId, 10, 'Genesis', true, {
+		await this.TraitFactory.updateSeries(this.currentLaCucinaNftsItemId, 10, 'Genesis', true, {
 			from: this.operator
 		});
 
-		this.currentSeriesOfItem = await this.TraitFactory.currentSeries(this.currentGalaxyItemId);
-		console.log('currentSeries: ', this.currentSeriesOfItem.toString());
-
-		// activate nft generation
-		await this.TraitFactory.activateNFTGeneration(
-			this.currentGalaxyItemId,
-			this.currentSeriesOfItem,
-			{
-				from: this.operator
-			}
+		this.currentSeriesOfItem = await this.TraitFactory.currentSeries(
+			this.currentLaCucinaNftsItemId
 		);
-
-		// add traits
-		await this.addTrait();
-
-		// add traits variations
-		await this.addTraitVariations();
+		console.log('currentSeries: ', this.currentSeriesOfItem.toString());
 	};
 
 	addTrait = async () => {
 		await this.TraitFactory.addTrait(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			'Background',
 			{
 				from: this.operator
 			}
 		);
-		await this.TraitFactory.addTrait(this.currentGalaxyItemId, this.currentSeriesOfItem, 'Bodies', {
-			from: this.operator
-		});
-		await this.TraitFactory.addTrait(this.currentGalaxyItemId, this.currentSeriesOfItem, 'Head', {
-			from: this.operator
-		});
-		await this.TraitFactory.addTrait(this.currentGalaxyItemId, this.currentSeriesOfItem, 'Mouth', {
-			from: this.operator
-		});
-		await this.TraitFactory.addTrait(this.currentGalaxyItemId, this.currentSeriesOfItem, 'Eyes', {
-			from: this.operator
-		});
+		await this.TraitFactory.addTrait(
+			this.currentLaCucinaNftsItemId,
+			this.currentSeriesOfItem,
+			'Bodies',
+			{
+				from: this.operator
+			}
+		);
+		await this.TraitFactory.addTrait(
+			this.currentLaCucinaNftsItemId,
+			this.currentSeriesOfItem,
+			'Head',
+			{
+				from: this.operator
+			}
+		);
+		await this.TraitFactory.addTrait(
+			this.currentLaCucinaNftsItemId,
+			this.currentSeriesOfItem,
+			'Mouth',
+			{
+				from: this.operator
+			}
+		);
+		await this.TraitFactory.addTrait(
+			this.currentLaCucinaNftsItemId,
+			this.currentSeriesOfItem,
+			'Eyes',
+			{
+				from: this.operator
+			}
+		);
 	};
 
 	addTraitVariations = async () => {
 		// bagraound variations
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			1,
 			'BG_04',
@@ -104,7 +117,7 @@ class TraitFactoryContract {
 			}
 		);
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			1,
 			'BG_09',
@@ -117,7 +130,7 @@ class TraitFactoryContract {
 
 		// body variations
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			2,
 			'Green Body',
@@ -130,7 +143,7 @@ class TraitFactoryContract {
 
 		// head variations
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			3,
 			'Blue Head',
@@ -143,7 +156,7 @@ class TraitFactoryContract {
 
 		// mouth variations
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			4,
 			'Big Blue Mouth',
@@ -154,7 +167,7 @@ class TraitFactoryContract {
 			}
 		);
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			4,
 			'Pierved Blue Mouth',
@@ -163,7 +176,7 @@ class TraitFactoryContract {
 			{from: this.operator}
 		);
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			4,
 			'Bite Lip Blue Mouth',
@@ -174,7 +187,7 @@ class TraitFactoryContract {
 
 		// eyes variations
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			5,
 			'Angry Eyes',
@@ -185,7 +198,7 @@ class TraitFactoryContract {
 			}
 		);
 		await this.TraitFactory.addTraitVariation(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			this.currentSeriesOfItem,
 			5,
 			'Regular Eyes',

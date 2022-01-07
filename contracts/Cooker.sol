@@ -432,10 +432,10 @@ contract Cooker is
 			for (uint256 index = 0; index < userTalienBal; index++) {
 				uint256 talienId = talien.tokenOfOwnerByIndex(_user, index);
 
-				(uint256 galaxyItemId, uint256 seriesId, , , , ) = talien.galaxyItems(talienId);
+				(uint256 itemId, uint256 seriesId, , , , ) = talien.items(talienId);
 
 				// check if talien series is genesis series
-				if (galaxyItemId == 1 && seriesId == 1) {
+				if (itemId == 1 && seriesId == 1) {
 					isGenesis = true;
 					break;
 				}

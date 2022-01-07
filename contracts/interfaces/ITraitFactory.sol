@@ -1,16 +1,13 @@
 pragma solidity ^0.8.0;
 
 interface ITraitFactory {
-	function galaxyItems(uint256 _galaxyItemId)
-		external
-		view
-		returns (string memory name, uint256 totalSeries);
+	function items(uint256 _itemId) external view returns (string memory name);
 
-	function seriesDetails(uint256 _galaxyItemId, uint256 _seriesId)
+	function seriesDetails(uint256 _itemId, uint256 _seriesId)
 		external
 		view
 		returns (
-			uint256 galaxyItemId,
+			uint256 itemId,
 			uint256 seriesId,
 			string memory name,
 			uint256 maxNfts,
@@ -23,7 +20,7 @@ interface ITraitFactory {
 		external
 		view
 		returns (
-			uint256 galaxyItemId,
+			uint256 itemId,
 			uint256 seriesId,
 			string memory name
 		);
@@ -32,7 +29,7 @@ interface ITraitFactory {
 		external
 		view
 		returns (
-			uint256 galaxyItemId,
+			uint256 itemId,
 			uint256 seriesId,
 			uint256 traitId,
 			string memory name,
@@ -40,26 +37,26 @@ interface ITraitFactory {
 			uint256 probability
 		);
 
-	function currentSeries(uint256 _galaxyItemId) external view returns (uint256 _currentSeriesId);
+	function currentSeries(uint256 _itemId) external view returns (uint256 _currentSeriesId);
 
-	function getCurrentGalaxyItemId() external view returns (uint256);
+	function getCurrentItemId() external view returns (uint256);
 
 	function getCurrentTraitId() external view returns (uint256);
 
 	function getTotalVariationsForTrait(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _traitId
 	) external view returns (uint256 totalVariations);
 
 	function getSeriesTraitId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _index
 	) external view returns (uint256 traitId);
 
 	function getVariationsId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _traitId,
 		uint256 _index
@@ -70,15 +67,12 @@ interface ITraitFactory {
 	function getCurrentThresholdId() external view returns (uint256);
 
 	function updateTotalNftsMinted(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _amount
 	) external;
 
-	function isNftGenerationEnabled(uint256 _galaxyItemId, uint256 _seriesId)
-		external
-		view
-		returns (bool);
+	function isNftGenerationEnabled(uint256 _itemId, uint256 _seriesId) external view returns (bool);
 
 	function fontName() external view returns (string memory);
 
@@ -97,5 +91,11 @@ interface ITraitFactory {
 
 	function getSvgLikes(uint256 _totalLikes) external view returns (string memory svgLikes);
 
-	function generationFee() external view returns (uint256 generationFee);
+	function generationFeeWithAccessory() external view returns (uint256 generationFee);
+
+	function generationFeeWithoutAccessory() external view returns (uint256 generationFee);
+
+	function getTraitVariationHash(uint256 _itemId, uint256 _seriesId)
+		external
+		returns (uint256 traitVariationHash, uint256 totalTraits);
 }
