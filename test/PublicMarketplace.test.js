@@ -260,6 +260,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should store sale details correctly', async () => {
 			// get sale details
 			const sale = await this.publicMarketplace.sale(currentSaleId);
+			const userTotalSales = await this.publicMarketplace.userTotalSales(user1);
 
 			expect(sale.seller).to.be.eq(user1);
 			expect(sale.buyer).to.be.eq(ZERO_ADDRESS);
@@ -270,6 +271,7 @@ contract('PublicMarketplace', (accounts) => {
 			expect(sale.sellingPrice).to.bignumber.be.eq(new BN(ether('2')));
 			expect(sale.sellTimeStamp).to.bignumber.be.eq(new BN('0'));
 			expect(sale.cancelTimeStamp).to.bignumber.be.eq(new BN('0'));
+			expect(userTotalSales).to.bignumber.be.eq(new BN('1'));
 		});
 
 		it('should revert when seller tries to create NFT sale with unsupported tokens', async () => {
@@ -332,6 +334,7 @@ contract('PublicMarketplace', (accounts) => {
 		it('should store auction details correctly', async () => {
 			// get auction details
 			const auction = await this.publicMarketplace.auction(currentAuctionId);
+			const userTotalAuctions = await this.publicMarketplace.userTotalAuctions(user1);
 
 			expect(auction.nftId).to.bignumber.be.eq(currentNftId);
 			expect(auction.sellerAddress).to.be.eq(user1);
@@ -342,6 +345,8 @@ contract('PublicMarketplace', (accounts) => {
 			expect(auction.winningBidId).to.bignumber.be.eq(new BN('0'));
 			expect(auction.cancelTimeStamp).to.bignumber.be.eq(new BN('0'));
 			expect(auction.buyTimestamp).to.bignumber.be.eq(new BN('0'));
+
+			expect(userTotalAuctions).to.bignumber.be.eq(new BN('1'));
 		});
 		it('should revert when seller tries to create auction with invalid duration', async () => {
 			// buy nft from sale

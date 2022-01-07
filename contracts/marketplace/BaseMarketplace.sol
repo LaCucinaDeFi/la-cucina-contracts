@@ -96,6 +96,12 @@ contract BaseMarketplace is
 	/// @notice sellerAddress -> user`s auction ids
 	mapping(address => uint256[]) public userAuctionIds;
 
+	/// @notice sellerAddress -> user`s total auctions
+	mapping(address => uint256) public userTotalAuctions;
+
+	/// @notice sellerAddress -> user`s total sales
+	mapping(address => uint256) public userTotalSales;
+
 	/// @notice bidId -> Bid
 	mapping(uint256 => Bid) public bid;
 
@@ -409,6 +415,7 @@ contract BaseMarketplace is
 		);
 
 		userSaleIds[_user].push(saleId);
+		userTotalSales[_user] += 1;
 
 		emit NewNFTListing(_user, saleId);
 	}
@@ -445,6 +452,7 @@ contract BaseMarketplace is
 		);
 
 		userAuctionIds[_user].push(auctionId);
+		userTotalAuctions[_user] += 1;
 
 		emit NFTAuction(_user, auctionId);
 	}
