@@ -109,6 +109,10 @@ contract BaseERC721 is
 		return _baseTokenURI;
 	}
 
+	function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+		return string(abi.encodePacked(_baseTokenURI, StringsUpgradeable.toString(_tokenId)));
+	}
+
 	/**
 	 * @dev Creates a new token for `to`. Its token ID will be automatically
 	 * assigned (and available on the emitted {IERC721-Transfer} event), and the token
@@ -126,6 +130,13 @@ contract BaseERC721 is
 		// We cannot just use balanceOf to create the new tokenId because tokens
 		// can be burned (destroyed), so we need a separate counter.
 		_mint(to, tokenId);
+	}
+
+	/**
+	 * @notice This method allows operator to update base uri
+	 */
+	function updateBaseUri(string memory _baseUri) external virtual onlyOperator {
+		_baseTokenURI = _baseUri;
 	}
 
 	/**
