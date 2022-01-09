@@ -60,7 +60,8 @@ We have 2 main contracts:
 
   - **createAndAuctionNFT()**:
 
-    - This method allows a user with minter role to mint the new **unique nft** and sell it through the marketplace .
+    - This method allows a user with minter role to mint the new one **unique nft** and sell it through the marketplace.
+    - This method creates only one unique nft and put it in auction.
     - Internally it calls the `mint()` method of the ERC1155 contract and the `_createAuction()` from the NFTMarket contract.
 
     - Parameters required:

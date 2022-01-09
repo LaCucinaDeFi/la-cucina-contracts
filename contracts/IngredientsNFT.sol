@@ -200,10 +200,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
 		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
 
-		Defs storage ingrediendVariaion = defs[_defId];
+		Defs storage ingredientVariaion = defs[_defId];
 
-		ingrediendVariaion.name = _name;
-		ingrediendVariaion.svg = _svg;
+		ingredientVariaion.name = _name;
+		ingredientVariaion.svg = _svg;
 
 		emit IngredientVariationUpdated(_defId);
 	}
@@ -356,6 +356,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 	function getNutritionHash(uint256[] memory _nutritions)
 		external
 		pure
+		virtual
 		returns (uint256 nutrionHash)
 	{
 		for (uint256 i = 0; i < _nutritions.length; i++) {

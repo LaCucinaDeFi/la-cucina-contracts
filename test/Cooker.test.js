@@ -468,8 +468,9 @@ contract('Cooker', (accounts) => {
 			//get dish details
 			const dishDetail = await this.Dish.dish(currentDishId);
 			const dishName = await this.Dish.dishNames(currentDishId);
+			const dishOwner = await this.Dish.ownerOf(currentDishId);
 
-			expect(dishDetail.dishOwner).to.be.eq(user1);
+			expect(dishOwner).to.be.eq(user1);
 			expect(dishDetail.cooked).to.be.eq(true);
 			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
 			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('3'));
@@ -518,13 +519,13 @@ contract('Cooker', (accounts) => {
 			const preparedDishId = await this.Dish.getCurrentTokenId();
 
 			//get dish owner
-			const dishOwner = await this.Dish.ownerOf(preparedDishId);
+			const dishOwner1 = await this.Dish.ownerOf(preparedDishId);
 
 			console.log(
 				'gas cost for cooking dish1: ',
 				gasToEth(this.prepareDish1Tx.receipt.cumulativeGasUsed)
 			);
-			expect(dishOwner).to.be.eq(user1);
+			expect(dishOwner1).to.be.eq(user1);
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(preparedDishId).to.bignumber.be.eq(new BN('1'));
 		});
@@ -1061,12 +1062,6 @@ contract('Cooker', (accounts) => {
 			expect(lacBalBefore).to.bignumber.be.eq(lacBalAfter.add(new BN(ether('5'))));
 		});
 
-		it('should add the dish id in uncooked dish ids list in Cooker contract', async () => {
-			const uncookedDishIds = await this.Cooker.uncookedDishIds(0);
-
-			expect(uncookedDishIds).to.bignumber.be.eq(new BN('1'));
-		});
-
 		it('should revert when non-dishOwner tries to uncook the dish', async () => {
 			await expectRevert(
 				this.Cooker.uncookDish('1', {from: user2}),
@@ -1222,6 +1217,13 @@ contract('Cooker', (accounts) => {
 		it('should revert when operator tries to update the max ingredients with already set value', async () => {
 			await expectRevert(
 				this.Cooker.updateMaxIngredients(9, {from: operator}),
+				'Cooker: INVALID_INGREDIENTS'
+			);
+		});
+
+		it('should revert when operator tries to update the max ingredients with more than 32 ingredients', async () => {
+			await expectRevert(
+				this.Cooker.updateMaxIngredients(33, {from: operator}),
 				'Cooker: INVALID_INGREDIENTS'
 			);
 		});

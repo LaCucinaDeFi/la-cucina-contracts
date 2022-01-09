@@ -9,7 +9,7 @@ library RandomNumber {
 		returns (uint256 randomVariation)
 	{
 		randomVariation = random(_seed, _max);
-		require(randomVariation < _max, 'LaCucinaUtils: INVALID_VARIATION');
+		assert(randomVariation < _max);
 	}
 
 	function random(uint256 _seed, uint256 _max) internal view returns (uint256) {

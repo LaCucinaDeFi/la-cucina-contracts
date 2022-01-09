@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155ReceiverUpgradeable.sol';
 
 import './BaseERC721WithRoyalties.sol';
@@ -9,7 +8,7 @@ import '../../library/LaCucinaUtils.sol';
 import '../../interfaces/IAccessories.sol';
 import '../../interfaces/ITraitFactory.sol';
 
-contract Galaxy is BaseERC721WithRoyalties, ReentrancyGuardUpgradeable, ERC1155ReceiverUpgradeable {
+contract Galaxy is BaseERC721WithRoyalties, ERC1155ReceiverUpgradeable {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
 
 	/*

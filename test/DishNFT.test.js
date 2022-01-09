@@ -269,10 +269,10 @@ contract('DishesNFT', (accounts) => {
 			const dishDetails = await this.Dish.dish(currentDishIdAfter);
 			//get user1`s dish balance
 			const dishBalance = await this.Dish.balanceOf(user1);
+			const dishOwner = await this.Dish.ownerOf(currentDishIdAfter);
 
 			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
-
-			expect(dishDetails.dishOwner).to.bignumber.be.eq(user1);
+			expect(dishOwner).to.bignumber.be.eq(user1);
 			expect(dishDetails.cooked).to.be.eq(true);
 			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
@@ -402,12 +402,12 @@ contract('DishesNFT', (accounts) => {
 		});
 	});
 
-	describe('updatePrepartionTime()', () => {
+	describe('updatePreparationTime()', () => {
 		let currentDishId;
 		it('should update the dish preparation time correctly', async () => {
 			currentDishId = await this.Dish.getCurrentTokenId();
 
-			await this.Dish.updatePrepartionTime(currentDishId, 2, time.duration.minutes('1'), {
+			await this.Dish.updatePreparationTime(currentDishId, 2, time.duration.minutes('1'), {
 				from: minter
 			});
 
@@ -419,7 +419,7 @@ contract('DishesNFT', (accounts) => {
 
 		it('should revert when non cooker tries to update the preparation time', async () => {
 			await expectRevert(
-				this.Dish.updatePrepartionTime(currentDishId, 2, time.duration.minutes('1'), {from: user1}),
+				this.Dish.updatePreparationTime(currentDishId, 2, time.duration.minutes('1'), {from: user1}),
 				'DishesNFT: ONLY_COOKER_CAN_CALL'
 			);
 		});
