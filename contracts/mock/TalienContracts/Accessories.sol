@@ -3,26 +3,24 @@
 pragma solidity ^0.8.0;
 
 import '../../BaseERC1155WithRoyalties.sol';
+import '../../library/LaCucinaUtils.sol';
 
 contract Accessories is BaseERC1155WithRoyalties {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
-
 	/*
    	=======================================================================
    	======================== Structures ===================================
    	=======================================================================
  	*/
-	struct GalaxyItem {
+	struct Item {
 		string name;
 	}
-
 	struct AccessoryTypeDetail {
-		uint256 galaxyItemId;
+		uint256 itemId;
 		string accessoryTypeName;
 	}
-
 	struct AccessoryDetail {
-		uint256 galaxyItemId;
+		uint256 itemId;
 		uint256 accessoryId;
 		uint256 typeId; // ex. head / body / holding accessories
 		string name;
@@ -30,15 +28,13 @@ contract Accessories is BaseERC1155WithRoyalties {
 		uint256 series; //  1 to n -> series number
 		uint256 probability;
 	}
-
 	/*
    	=======================================================================
    	======================== Private Variables ============================
    	=======================================================================
  	*/
-
-	CountersUpgradeable.Counter private galaxyItemCounter;
-
+	uint256 nonce;
+	CountersUpgradeable.Counter private itemCounter;
 	/*
    	=======================================================================
    	======================== Public Variables ============================
@@ -48,23 +44,17 @@ contract Accessories is BaseERC1155WithRoyalties {
 	mapping(address => bool) public exceptedAddresses;
 	// userAddress => isExceptedFrom?
 	mapping(address => bool) public exceptedFromAddresses;
-
-	// galaxyItemId => GalaxyItem
-	mapping(uint256 => GalaxyItem) public galaxyItems;
-
-	// galaxyItemId => accessoryTypeId => AccessoryTypeDetail
+	// itemId => Item
+	mapping(uint256 => Item) public items;
+	// itemId => accessoryTypeId => AccessoryTypeDetail
 	mapping(uint256 => mapping(uint256 => AccessoryTypeDetail)) public accessoryTypes;
-
 	// accessoryId => AccessoryDetails
 	mapping(uint256 => AccessoryDetail) public accessories;
-
-	// galaxyItemId => accessoryType
+	// itemId => accessoryType
 	mapping(uint256 => uint256) public totalAccessoryTypes;
-
-	// galaxyItemId => seriesId => => AccessoryType => totalAccessories
+	// itemId => seriesId => => AccessoryType => totalAccessories
 	mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public totalAccessories;
-
-	// galaxyItemId => seriesId => => AccessoryType => AccessoryIds
+	// itemId => seriesId => => AccessoryType => AccessoryIds
 	mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256[]))) public accessoryIds;
 
 	/*
@@ -72,7 +62,6 @@ contract Accessories is BaseERC1155WithRoyalties {
    	======================== Constructor/Initializer ======================
    	=======================================================================
  	*/
-
 	function initialize(
 		string memory _baseTokenURI,
 		address _royaltyReceiver,
@@ -86,7 +75,7 @@ contract Accessories is BaseERC1155WithRoyalties {
    	======================== Events =======================================
    	=======================================================================
  	*/
-	event GalaxyItemAdded(uint256 itemId);
+	event ItemAdded(uint256 itemId);
 	event AccessoryTypeAdded(uint256 typeId);
 	event AccessoryAdded(uint256 accessoryId);
 	event AccessoryTypeUpdated(uint256 accessoryTypeId);
@@ -97,23 +86,17 @@ contract Accessories is BaseERC1155WithRoyalties {
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-
-	modifier onlyValidGalaxyItemId(uint256 _galaxyItemId) {
-		require(
-			_galaxyItemId > 0 && _galaxyItemId <= galaxyItemCounter.current(),
-			'Accessories: INVALID_ITEM_ID'
-		);
+	modifier onlyValidItemId(uint256 _itemId) {
+		require(_itemId > 0 && _itemId <= itemCounter.current(), 'Accessories: INVALID_ITEM_ID');
 		_;
 	}
-
-	modifier onlyValidAccessoryType(uint256 _galaxyItemId, uint256 _accessoryTypeId) {
+	modifier onlyValidAccessoryType(uint256 _itemId, uint256 _accessoryTypeId) {
 		require(
-			_accessoryTypeId > 0 && _accessoryTypeId <= totalAccessoryTypes[_galaxyItemId],
+			_accessoryTypeId > 0 && _accessoryTypeId <= totalAccessoryTypes[_itemId],
 			'Accessories: INVALID_TYPE_ID'
 		);
 		_;
 	}
-
 	modifier onlyValidName(string memory _name) {
 		require(bytes(_name).length > 0, 'Accessories: INVALID_NAME');
 		_;
@@ -124,54 +107,51 @@ contract Accessories is BaseERC1155WithRoyalties {
    	======================== Public Methods ===============================
    	=======================================================================
  	*/
-
 	/**
-	 * @notice This method allows operator to add the galaxy item
+	 * @notice This method allows operator to add the item
 	 * @param _itemName  - indicates the item name
-	 * @return galaxyItemId - indicates the galaxy item id
+	 * @return itemId - indicates the item id
 	 */
-	function addGalaxyItem(string memory _itemName)
+	function addItem(string memory _itemName)
 		external
 		virtual
 		onlyOperator
 		onlyValidName(_itemName)
-		returns (uint256 galaxyItemId)
+		returns (uint256 itemId)
 	{
-		galaxyItemCounter.increment();
-		galaxyItemId = galaxyItemCounter.current();
+		itemCounter.increment();
+		itemId = itemCounter.current();
 
-		galaxyItems[galaxyItemId].name = _itemName;
-		emit GalaxyItemAdded(galaxyItemId);
+		items[itemId].name = _itemName;
+		emit ItemAdded(itemId);
 	}
 
 	/**
-	 * @notice This method allows operator to add the type for the galaxy item
-	 * @param _galaxyItemId - indicates the item id
+	 * @notice This method allows operator to add the type for the item
+	 * @param _itemId - indicates the item id
 	 * @param _typeName - indicates the accessory type name
-	 * @return accessoryTypeId - indicates accessory type id for particular galaxy item
+	 * @return accessoryTypeId - indicates accessory type id for particular item
 	 */
-	function addAccessoryType(uint256 _galaxyItemId, string memory _typeName)
+	function addAccessoryType(uint256 _itemId, string memory _typeName)
 		public
 		virtual
 		onlyOperator
-		onlyValidGalaxyItemId(_galaxyItemId)
+		onlyValidItemId(_itemId)
 		onlyValidName(_typeName)
 		returns (uint256 accessoryTypeId)
 	{
-		totalAccessoryTypes[_galaxyItemId] += 1;
-		accessoryTypeId = totalAccessoryTypes[_galaxyItemId];
-
-		accessoryTypes[_galaxyItemId][accessoryTypeId].galaxyItemId = _galaxyItemId;
-		accessoryTypes[_galaxyItemId][accessoryTypeId].accessoryTypeName = _typeName;
-
+		totalAccessoryTypes[_itemId] += 1;
+		accessoryTypeId = totalAccessoryTypes[_itemId];
+		accessoryTypes[_itemId][accessoryTypeId].itemId = _itemId;
+		accessoryTypes[_itemId][accessoryTypeId].accessoryTypeName = _typeName;
 		emit AccessoryTypeAdded(accessoryTypeId);
 	}
 
 	/**
 	 * @notice This method allows operator to add the accessory for the accessory type
-	 * @param _galaxyItemId - indicates the galaxy item to which accessory belongs
+	 * @param _itemId - indicates the item to which accessory belongs
 	 * @param _accessoryTypeId - indicates the accessory type id to which accessory belongs
-	 * @param _seriesId - indicates the series of galaxy item to which the accessory will be applicable
+	 * @param _seriesId - indicates the series of item item to which the accessory will be applicable
 	 * @param _name - indicates the name of the accessory
 	 * @param _svg - indicates the svg for the accessory
 	 * @param _user - indicates the account address to which these nfts will be minted
@@ -179,7 +159,7 @@ contract Accessories is BaseERC1155WithRoyalties {
 	 * @param _probability - indicates the probability of the accessory to appear
 	 */
 	function addAccessory(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _accessoryTypeId,
 		uint256 _seriesId,
 		string memory _name,
@@ -189,7 +169,7 @@ contract Accessories is BaseERC1155WithRoyalties {
 		uint256 _probability
 	) external virtual onlyMinter returns (uint256 accessoryId) {
 		accessoryId = _addAccessory(
-			_galaxyItemId,
+			_itemId,
 			_accessoryTypeId,
 			_name,
 			_svg,
@@ -202,8 +182,8 @@ contract Accessories is BaseERC1155WithRoyalties {
 
 	/**
 	 * @notice This method allows operator to add the multiple accessories with the accessory type
-	 * @param _galaxyItemId - indicates the galaxy item to which accessory will belong
-	 * @param _seriesId - indicates the series of galaxy item to which the accessory will be applicable
+	 * @param _itemId - indicates the item to which accessory will belong
+	 * @param _seriesId - indicates the series of item item to which the accessory will be applicable
 	 * @param _typeName - indicates the accessory type name
 	 * @param _name - indicates the name of the accessories
 	 * @param _svg - indicates the svg for the accessories
@@ -212,7 +192,7 @@ contract Accessories is BaseERC1155WithRoyalties {
 	 * @param _probabilities - indicates the _probabilities of the accessories to appear
 	 */
 	function addAccessoriesWithType(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		string memory _typeName,
 		string[] memory _name,
@@ -228,12 +208,10 @@ contract Accessories is BaseERC1155WithRoyalties {
 				_name.length == _probabilities.length,
 			'Accessories: INVALID_ACCESSORY_DETAILS'
 		);
-
-		accessoryTypeId = addAccessoryType(_galaxyItemId, _typeName);
-
+		accessoryTypeId = addAccessoryType(_itemId, _typeName);
 		for (uint256 i = 0; i < _name.length; i++) {
 			_addAccessory(
-				_galaxyItemId,
+				_itemId,
 				accessoryTypeId,
 				_name[i],
 				_svg[i],
@@ -258,12 +236,9 @@ contract Accessories is BaseERC1155WithRoyalties {
 		string memory _svg,
 		uint256 _probability
 	) external virtual onlyOperator onlyValidNftId(_accessoryId) onlyValidName(_name) {
-		require(bytes(_svg).length > 0, 'Accessories: INVALID_SVG');
-
 		accessories[_accessoryId].name = _name;
 		accessories[_accessoryId].svg = _svg;
 		accessories[_accessoryId].probability = _probability;
-
 		emit AccessoryUpdated(_accessoryId);
 	}
 
@@ -316,7 +291,6 @@ contract Accessories is BaseERC1155WithRoyalties {
 	) external virtual onlyMinter onlyValidNftId(_accessoryId) {
 		require(_account != address(0), 'Accessories: INVALID_ACCOUNT');
 		require(_amount > 0, 'Accessories: INVALID_AMOUNT');
-
 		_mint(_account, _accessoryId, _amount, '');
 	}
 
@@ -325,30 +299,95 @@ contract Accessories is BaseERC1155WithRoyalties {
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
+	/**
+	 * @notice This method returns the
+	 */
+	function getAccessories(
+		uint256 _itemId,
+		uint256 _seriesId,
+		uint256 _accessoryTypeId
+	)
+		external
+		virtual
+		onlyMinter
+		onlyValidItemId(_itemId)
+		onlyValidAccessoryType(_itemId, _accessoryTypeId)
+		returns (uint256 accessoryId, string memory svg)
+	{
+		uint256 _totalAccessories = totalAccessories[_itemId][_seriesId][_accessoryTypeId];
+		require(_totalAccessories > 0, 'Accessories: INSUFFICIENT_ACCESSORIES');
+
+		accessoryId = _getRandomAccessory(_itemId, _seriesId, _accessoryTypeId, _totalAccessories);
+
+		require(
+			accessoryId > 0 && accessoryId <= tokenCounter.current(),
+			'Accessories: INVALID_ACCESSORY_ID'
+		);
+
+		svg = accessories[accessoryId].svg;
+	}
+
+	function _getRandomAccessory(
+		uint256 _itemId,
+		uint256 _seriesId,
+		uint256 _accessoryTypeId,
+		uint256 _totalAccessories
+	) internal view returns (uint256 accessoryId) {
+		uint256 initialAccessoryId = accessoryIds[_itemId][_seriesId][_accessoryTypeId][0];
+
+		if (_totalAccessories == 1) {
+			return initialAccessoryId;
+		}
+
+		// Create and fill prefix array
+		uint256[] memory prefix = new uint256[](_totalAccessories);
+
+		prefix[0] = accessories[initialAccessoryId].probability;
+
+		for (uint256 i = 1; i < _totalAccessories; ++i) {
+			prefix[i] =
+				prefix[i - 1] +
+				accessories[accessoryIds[_itemId][_seriesId][_accessoryTypeId][i]].probability;
+		}
+
+		return accessoryIds[_itemId][_seriesId][_accessoryTypeId][_getIndex(prefix, _totalAccessories)];
+	}
+
+	function _getIndex(uint256[] memory prefix, uint256 n) internal view returns (uint256 index) {
+		// prefix[n-1] is sum of all frequencies.
+		// Generate a random number with
+		// value from 1 to this sum
+		uint256 r = LaCucinaUtils.getRandomVariation(nonce, prefix[n - 1]) + 1;
+
+		// Find index of ceiling of r in prefix array
+		index = LaCucinaUtils.findCeil(prefix, r, 0, n - 1);
+
+		require(index < n, 'Accessories: INVALID_INDEX');
+	}
 
 	/**
-	 * @notice This method returns the total accessories of particular accessory type, series and galaxy item
+	 * @notice This method returns the total accessories of particular accessory type, series and item
 	 */
 	function getTotalAccessories(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _series,
 		uint256 _typeId
 	)
 		external
 		view
 		virtual
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidAccessoryType(_galaxyItemId, _typeId)
+		onlyValidItemId(_itemId)
+		onlyValidAccessoryType(_itemId, _typeId)
 		returns (uint256)
 	{
-		return totalAccessories[_galaxyItemId][_series][_typeId];
+		return totalAccessories[_itemId][_series][_typeId];
 	}
 
 	/**
 	 * @notice This method returns the accessory id at given index from the list of accessory ids belonging to particular accessory type.
 	 */
 	function getAccessoryId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _series,
 		uint256 _typeId,
 		uint256 _index
@@ -356,22 +395,19 @@ contract Accessories is BaseERC1155WithRoyalties {
 		external
 		view
 		virtual
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidAccessoryType(_galaxyItemId, _typeId)
+		onlyValidItemId(_itemId)
+		onlyValidAccessoryType(_itemId, _typeId)
 		returns (uint256)
 	{
-		require(
-			_index < totalAccessories[_galaxyItemId][_series][_typeId],
-			'Accessories: INVALID_INDEX'
-		);
-		return accessoryIds[_galaxyItemId][_series][_typeId][_index];
+		require(_index < totalAccessories[_itemId][_series][_typeId], 'Accessories: INVALID_INDEX');
+		return accessoryIds[_itemId][_series][_typeId][_index];
 	}
 
 	/**
-	 * @notice This method returns the current galaxy item id
+	 * @notice This method returns the current item id
 	 */
-	function getCurrentGalaxyItemId() external view virtual returns (uint256) {
-		return galaxyItemCounter.current();
+	function getCurrentItemId() external view virtual returns (uint256) {
+		return itemCounter.current();
 	}
 
 	/*
@@ -380,7 +416,7 @@ contract Accessories is BaseERC1155WithRoyalties {
    	=======================================================================
  	*/
 	function _addAccessory(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _accessoryTypeId,
 		string memory _name,
 		string memory _svg,
@@ -390,23 +426,20 @@ contract Accessories is BaseERC1155WithRoyalties {
 		uint256 _probability
 	)
 		internal
-		onlyValidGalaxyItemId(_galaxyItemId)
+		onlyValidItemId(_itemId)
 		onlyValidName(_name)
-		onlyValidAccessoryType(_galaxyItemId, _accessoryTypeId)
+		onlyValidAccessoryType(_itemId, _accessoryTypeId)
 		returns (uint256 accessoryId)
 	{
-		require(bytes(_svg).length > 0, 'Accessories: INVALID_SVG');
 		require(_user != address(0), 'Accessories: INVALID_ADDRESS');
 		require(_amount > 0, 'Accessories: INVALID_AMOUNT');
 		require(_series > 0, 'Accessories: INVALID_SERIES');
-
 		// generate accessoryId
 		tokenCounter.increment();
 		accessoryId = tokenCounter.current();
-
 		// add accessory supported for any series
 		accessories[accessoryId] = AccessoryDetail(
-			_galaxyItemId,
+			_itemId,
 			accessoryId,
 			_accessoryTypeId,
 			_name,
@@ -414,12 +447,9 @@ contract Accessories is BaseERC1155WithRoyalties {
 			_series,
 			_probability
 		);
-
-		totalAccessories[_galaxyItemId][_series][_accessoryTypeId] += 1;
-		accessoryIds[_galaxyItemId][_series][_accessoryTypeId].push(accessoryId);
-
+		totalAccessories[_itemId][_series][_accessoryTypeId] += 1;
+		accessoryIds[_itemId][_series][_accessoryTypeId].push(accessoryId);
 		_mint(_user, accessoryId, _amount, '');
-
 		emit AccessoryAdded(accessoryId);
 	}
 
@@ -440,7 +470,6 @@ contract Accessories is BaseERC1155WithRoyalties {
 					require(balanceOf(to, ids[i]) == 0, 'ERC1155NFT: TOKEN_ALREADY_EXIST');
 				}
 			}
-
 			for (uint256 i = 0; i < amounts.length; i++) {
 				require(amounts[i] == 1, 'ERC1155NFT: USER_CAN_TRANSFER_ONLY_ONE_TOKEN');
 			}

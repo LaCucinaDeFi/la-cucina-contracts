@@ -141,6 +141,7 @@ contract('PrivateMarketplace', (accounts) => {
 		it('should store sale details correctly', async () => {
 			// get sale details
 			const sale = await this.privateMarketplace.sale(currentSaleId);
+			const userTotalSales = await this.privateMarketplace.userTotalSales(minter);
 
 			expect(sale.seller).to.be.eq(minter);
 			expect(sale.buyer).to.be.eq(ZERO_ADDRESS);
@@ -151,6 +152,7 @@ contract('PrivateMarketplace', (accounts) => {
 			expect(sale.sellingPrice).to.bignumber.be.eq(new BN(ether('1')));
 			expect(sale.sellTimeStamp).to.bignumber.be.eq(new BN('0'));
 			expect(sale.cancelTimeStamp).to.bignumber.be.eq(new BN('0'));
+			expect(userTotalSales).to.bignumber.be.eq(new BN('1'));
 		});
 
 		it('should revert when Non-Minter tries to create NFT and lists for sale', async () => {
@@ -271,6 +273,8 @@ contract('PrivateMarketplace', (accounts) => {
 		it('should store auction details correctly', async () => {
 			// get auction details
 			const auction = await this.privateMarketplace.auction(currentAuctionId);
+			const userTotalAuctions = await this.privateMarketplace.userTotalAuctions(minter);
+
 			expect(auction.nftId).to.bignumber.be.eq(currentNftId);
 			expect(auction.sellerAddress).to.be.eq(minter);
 			expect(auction.initialPrice).to.bignumber.be.eq(ether('1'));
@@ -280,6 +284,7 @@ contract('PrivateMarketplace', (accounts) => {
 			expect(auction.winningBidId).to.bignumber.be.eq(new BN('0'));
 			expect(auction.cancelTimeStamp).to.bignumber.be.eq(new BN('0'));
 			expect(auction.buyTimestamp).to.bignumber.be.eq(new BN('0'));
+			expect(userTotalAuctions).to.bignumber.be.eq(new BN('1'));
 		});
 		it('should revert when Non-Minter tries to create NFT and lists for auction', async () => {
 			await expectRevert(
@@ -891,7 +896,7 @@ contract('PrivateMarketplace', (accounts) => {
 			await this.sampleToken.approve(this.Talien.address, MAX_UINT256, {from: user3});
 
 			// get talien for user1
-			await this.Talien.generateGalaxyItem(1, 1, true, {from: user1});
+			await this.Talien.generateItem(1, 1, true, {from: user1});
 
 			// buy nft from sale
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});

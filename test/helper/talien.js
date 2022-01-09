@@ -2,7 +2,7 @@ const {deployProxy} = require('@openzeppelin/truffle-upgrades');
 
 const url = 'https://token-cdn-domain/{id}.json';
 
-const TalienContract = artifacts.require('Galaxy');
+const TalienContract = artifacts.require('LaCucinaNfts');
 
 const {AccessoriesContract} = require('./AccessoriesHelper');
 const {TraitFactoryContract} = require('./TraitFactoryHelper');
@@ -38,8 +38,8 @@ class Talien {
 			}
 		);
 
-		const currentGalaxyItemId = await this.TraitFactory.getCurrentGalaxyItemId();
-		const currentSeriesId = await this.TraitFactory.currentSeries(currentGalaxyItemId);
+		const currentItemId = await this.TraitFactory.getCurrentItemId();
+		const currentSeriesId = await this.TraitFactory.currentSeries(currentItemId);
 
 		// grant updator role to talion contract
 		const UPDATOR_ROLE = await this.TraitFactory.UPDATOR_ROLE();
@@ -59,13 +59,17 @@ class Talien {
 		// add Talion as excepted address
 		await this.Accessories.addExceptedFromAddress(this.Talien.address, {from: this.operator});
 
-	
+		// activate nft generation
+		await this.TraitFactory.activateNFTGeneration(currentItemId, currentSeriesId, {
+			from: this.operator
+		});
+
 		return this.Talien;
 	};
 
-	generateTalien = async (galaxyItemId, seriesId, withAccessories, user) => {
+	generateTalien = async (itemId, seriesId, withAccessories, user) => {
 		// traitrate profile picture
-		await this.Talien.generateGalaxyItem(galaxyItemId, seriesId, withAccessories, {from: user});
+		await this.Talien.generateItem(itemId, seriesId, withAccessories, {from: user});
 	};
 }
 

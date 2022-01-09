@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol';
 import '../../interfaces/IVersionedContract.sol';
+import '../../library/LaCucinaUtils.sol';
 
 contract TraitFactory is
 	Initializable,
@@ -14,19 +15,16 @@ contract TraitFactory is
 	IVersionedContract
 {
 	using CountersUpgradeable for CountersUpgradeable.Counter;
-
 	/*
    	=======================================================================
    	======================== Structures ===================================
    	=======================================================================
 	*/
-	struct GalaxyItem {
+	struct Item {
 		string name;
-		uint256 totalSeries;
 	}
-
 	struct Series {
-		uint256 galaxyItemId;
+		uint256 itemId;
 		uint256 seriesId;
 		string name;
 		uint256 maxNfts;
@@ -34,28 +32,24 @@ contract TraitFactory is
 		bool isNumberedNFT;
 		uint8 totalTraits;
 	}
-
 	struct TraitDetail {
-		uint256 galaxyItemId;
+		uint256 itemId;
 		uint256 seriesId;
 		string name;
 	}
-
 	struct TraitVariation {
-		uint256 galaxyItemId;
+		uint256 itemId;
 		uint256 seriesId;
 		uint256 traitId;
 		string name;
 		string svg;
 		uint256 probability;
 	}
-
 	struct ThresholdDetail {
 		uint256 max;
 		string badgeName;
 		string badgeSvg;
 	}
-
 	/*
    	=======================================================================
    	======================== Constants ====================================
@@ -63,80 +57,69 @@ contract TraitFactory is
  	*/
 	bytes32 public constant OPERATOR_ROLE = keccak256('OPERATOR_ROLE');
 	bytes32 public constant UPDATOR_ROLE = keccak256('UPDATOR_ROLE');
-
 	/*
    	=======================================================================
    	======================== Private Variables ============================
    	=======================================================================
  	*/
-
-	CountersUpgradeable.Counter internal galaxyItemCounter;
+	uint256 nonce;
+	CountersUpgradeable.Counter internal itemCounter;
 	CountersUpgradeable.Counter internal traitCounter;
 	CountersUpgradeable.Counter internal traitVariationCounter;
 	CountersUpgradeable.Counter internal thresholdCounter;
-
 	/*
    	=======================================================================
-   	======================== Public Variables ============================
+   	======================== Public Variables =============================
    	=======================================================================
  	*/
-
 	string public fontName;
-
-	/// @notice price for generating new galaxyItem
-	uint256 public generationFee;
-
-	// @notice galaxyItemId => GalaxyItem
-	mapping(uint256 => GalaxyItem) public galaxyItems;
-
-	// @notice galaxyItemId => seriesId => Series
+	/// @notice price for generating new item with accessory
+	uint256 public generationFeeWithAccessory;
+	/// @notice price for generating new item without accessory
+	uint256 public generationFeeWithoutAccessory;
+	/// @notice itemId => Item
+	mapping(uint256 => Item) public items;
+	/// @notice itemId => seriesId => Series
 	mapping(uint256 => mapping(uint256 => Series)) public seriesDetails;
-
-	// @notice traitId => TraitDetail
+	/// @notice traitId => TraitDetail
 	mapping(uint256 => TraitDetail) public traitDetails;
-
-	// @notice traitVariationId => TraitVariation
+	/// @notice traitVariationId => TraitVariation
 	mapping(uint256 => TraitVariation) public traitVariations;
-
-	// @notice galaxyItemId => current seriesId
+	/// @notice itemId => current seriesId
 	mapping(uint256 => uint256) public currentSeries;
-
-	// @notice galaxyItemId => seriesId => traitIds
+	/// @notice itemId => seriesId => traitIds
 	mapping(uint256 => mapping(uint256 => uint256[])) public seriesTraitIds;
-
-	// @notice galaxyItemId => seriesId => traitId => totalVariations
+	/// @notice itemId => seriesId => traitId => totalVariations
 	mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public seriesTraitVariations;
-
-	// @notice galaxyItemId => seriesId => traitId => variationIds
+	/// @notice itemId => seriesId => traitId => variationIds
 	mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256[]))) public variationIds;
-
-	// galaxyItemId => seriesID => bool
+	/// @notice itemId => seriesID => bool
 	mapping(uint256 => mapping(uint256 => bool)) public isNftGenerationEnabled;
-
-	/// @notice  thresholdId  => ThresholdDetail
+	/// @notice thresholdId  => ThresholdDetail
 	mapping(uint256 => ThresholdDetail) public thresholds;
+	/// @notice itemId => item Hash => exists or not
+	mapping(uint256 => mapping(bytes32 => bool)) public itemHash;
 
 	/*
-		=======================================================================
+	=======================================================================
    	======================== Constructor/Initializer ======================
    	=======================================================================
  	*/
 	/**
 	 * @notice Used in place of the constructor to allow the contract to be upgradable via proxy.
 	 */
-	function initialize(string memory _fontName, uint256 _generationFee)
-		external
-		virtual
-		initializer
-	{
+	function initialize(
+		string memory _fontName,
+		uint256 _generationFeeWithAccessory,
+		uint256 _generationFeeWithoutAccessory
+	) external virtual initializer {
 		__Context_init_unchained();
 		__AccessControl_init_unchained();
 		__AccessControlEnumerable_init_unchained();
-
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-
 		fontName = _fontName;
-		generationFee = _generationFee;
+		generationFeeWithAccessory = _generationFeeWithAccessory;
+		generationFeeWithoutAccessory = _generationFeeWithoutAccessory;
 	}
 
 	/*
@@ -144,8 +127,8 @@ contract TraitFactory is
    	======================== Events =======================================
    	=======================================================================
  	*/
-	event GalaxyItemAdded(uint256 itemId);
-	event SeriesUpdated(uint256 galaxyItemId, uint256 seriesId);
+	event ItemAdded(uint256 itemId);
+	event SeriesUpdated(uint256 itemId, uint256 seriesId);
 	event TraitAdded(uint256 traitId);
 	event TraitVariationAdded(uint256 traitVariationId);
 	event TraitVariationUpdated(uint256 traitVariationId);
@@ -155,38 +138,26 @@ contract TraitFactory is
    	======================== Modifiers ====================================
    	=======================================================================
  	*/
-
 	modifier onlyOperator() {
 		require(hasRole(OPERATOR_ROLE, _msgSender()), 'TraitFactory: ONLY_OPERATOR_CAN_CALL');
 		_;
 	}
-
 	modifier onlyUpdator() {
 		require(hasRole(UPDATOR_ROLE, _msgSender()), 'TraitFactory: ONLY_UPDATOR_CAN_CALL');
 		_;
 	}
-
-	modifier onlyValidGalaxyItemId(uint256 _galaxyItemId) {
-		require(
-			_galaxyItemId > 0 && _galaxyItemId <= galaxyItemCounter.current(),
-			'TraitFactory: INVALID_ITEM_ID'
-		);
+	modifier onlyValidItemId(uint256 _itemId) {
+		require(_itemId > 0 && _itemId <= itemCounter.current(), 'TraitFactory: INVALID_ITEM_ID');
 		_;
 	}
-
-	modifier onlyValidseriesId(uint256 _galaxyItemId, uint256 _series) {
-		require(
-			_series > 0 && _series <= currentSeries[_galaxyItemId],
-			'TraitFactory: INVALID_SERIES_ID'
-		);
+	modifier onlyValidseriesId(uint256 _itemId, uint256 _series) {
+		require(_series > 0 && _series <= currentSeries[_itemId], 'TraitFactory: INVALID_SERIES_ID');
 		_;
 	}
-
 	modifier onlyValidTraitId(uint256 _traitId) {
 		require(_traitId > 0 && _traitId <= traitCounter.current(), 'TraitFactory: INVALID_TRAIT_ID');
 		_;
 	}
-
 	modifier onlyValidName(string memory _name) {
 		require(bytes(_name).length > 0, 'TraitFactory: INVALID_NAME');
 		_;
@@ -199,94 +170,85 @@ contract TraitFactory is
  	*/
 
 	/**
-	 * @notice This method allows operator to add the galaxy item
-	 * @param _itemName - indicates the name of the galaxy item. ex. Talien
-	 * @return galaxyItemId - indicates the id of newly added galaxy item
+	 * @notice This method allows operator to add the item
+	 * @param _itemName - indicates the name of the item. ex. Talien
+	 * @return itemId - indicates the id of newly added item
 	 */
-	function addGalaxyItem(string memory _itemName)
+	function addItem(string memory _itemName)
 		external
 		virtual
 		onlyOperator
 		onlyValidName(_itemName)
-		returns (uint256 galaxyItemId)
+		returns (uint256 itemId)
 	{
-		galaxyItemCounter.increment();
-		galaxyItemId = galaxyItemCounter.current();
-
-		galaxyItems[galaxyItemId].name = _itemName;
-		emit GalaxyItemAdded(galaxyItemId);
+		itemCounter.increment();
+		itemId = itemCounter.current();
+		items[itemId].name = _itemName;
+		emit ItemAdded(itemId);
 	}
 
 	/**
-	 * @notice This method allows operator to add the series for the galaxy item to allow minting of nfts
-	 * @param _galaxyItemId - indicates the id of galaxy item for which series to add
+	 * @notice This method allows operator to add the series for the item to allow minting of nfts
+	 * @param _itemId - indicates the id of item for which series to add
 	 * @param _maxNFTS - indicates the maximum number of nfts to mint in the series
 	 * @param _seriesName - indicates the name of the series
 	 * @param _isNumbered - indicates the whether the series nfts will be numbered or not
 	 */
 	function updateSeries(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _maxNFTS,
 		string memory _seriesName,
 		bool _isNumbered
-	) external virtual onlyOperator onlyValidGalaxyItemId(_galaxyItemId) onlyValidName(_seriesName) {
+	) external virtual onlyOperator onlyValidItemId(_itemId) onlyValidName(_seriesName) {
 		require(_maxNFTS > 0, 'TratiFactory: INSUFFICIENT_NFTS');
-
 		//increament series counter for item
-		currentSeries[_galaxyItemId] += 1;
-
+		currentSeries[_itemId] += 1;
 		//get current series id
-		uint256 seriesId = currentSeries[_galaxyItemId];
-
-		seriesDetails[_galaxyItemId][seriesId].galaxyItemId = _galaxyItemId;
-		seriesDetails[_galaxyItemId][seriesId].seriesId = seriesId;
-		seriesDetails[_galaxyItemId][seriesId].name = _seriesName;
-		seriesDetails[_galaxyItemId][seriesId].maxNfts = _maxNFTS;
-		seriesDetails[_galaxyItemId][seriesId].isNumberedNFT = _isNumbered;
-
-		emit SeriesUpdated(_galaxyItemId, seriesId);
+		uint256 seriesId = currentSeries[_itemId];
+		seriesDetails[_itemId][seriesId].itemId = _itemId;
+		seriesDetails[_itemId][seriesId].seriesId = seriesId;
+		seriesDetails[_itemId][seriesId].name = _seriesName;
+		seriesDetails[_itemId][seriesId].maxNfts = _maxNFTS;
+		seriesDetails[_itemId][seriesId].isNumberedNFT = _isNumbered;
+		emit SeriesUpdated(_itemId, seriesId);
 	}
 
 	/**
-	 * @notice This method allows operator to add the traits for the series of particular galaxy item.
-	 * @param _galaxyItemId - indicates the galaxy item id
-	 * @param _seriesId - indicates the series of galaxy item for which trait to add
+	 * @notice This method allows operator to add the traits for the series of particular item.
+	 * @param _itemId - indicates the item id
+	 * @param _seriesId - indicates the series of item for which trait to add
 	 * @param _traitName - indicates the trait name
 	 * @return traitId - indicates the unique trait id.
 	 */
 	function addTrait(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		string memory _traitName
 	)
 		external
 		virtual
 		onlyOperator
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 		onlyValidName(_traitName)
 		returns (uint256 traitId)
 	{
 		traitCounter.increment();
 		traitId = traitCounter.current();
-
-		traitDetails[traitId].galaxyItemId = _galaxyItemId;
+		traitDetails[traitId].itemId = _itemId;
 		traitDetails[traitId].seriesId = _seriesId;
 		traitDetails[traitId].name = _traitName;
-
-		seriesDetails[_galaxyItemId][_seriesId].totalTraits = uint8(
-			seriesDetails[_galaxyItemId][_seriesId].totalTraits + 1
+		seriesDetails[_itemId][_seriesId].totalTraits = uint8(
+			seriesDetails[_itemId][_seriesId].totalTraits + 1
 		);
-
-		seriesTraitIds[_galaxyItemId][_seriesId].push(traitId);
-
+		seriesTraitIds[_itemId][_seriesId].push(traitId);
 		emit TraitAdded(traitId);
 	}
 
 	/**
 	 * @notice This method allows operator to add the variation for the trait
-	 * @param _galaxyItemId - indicates the galaxy item id
-	 * @param _seriesId - indicates the series of galaxy
+	 * @param _itemId - indicates the item id
+	 * @param _seriesId - indicates the series of item
 	 * @param _traitId - indicates the trait id of given series
 	 * @param _variationName - indicates the variation name
 	 * @param _svg - indicates the svg of variation
@@ -294,7 +256,7 @@ contract TraitFactory is
 	 * @return variationId - indicatest the unique variation id
 	 */
 	function addTraitVariation(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _traitId,
 		string memory _variationName,
@@ -304,32 +266,27 @@ contract TraitFactory is
 		external
 		virtual
 		onlyOperator
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 		onlyValidTraitId(_traitId)
 		onlyValidName(_variationName)
 		returns (uint256 variationId)
 	{
 		require(bytes(_svg).length > 0, 'TraitFactory: INVALID_SVG');
-
 		traitVariationCounter.increment();
 		variationId = traitVariationCounter.current();
-
 		traitVariations[variationId] = TraitVariation(
-			_galaxyItemId,
+			_itemId,
 			_seriesId,
 			_traitId,
 			_variationName,
 			_svg,
 			_probabilty
 		);
-
 		// update total variations of trait
-		seriesTraitVariations[_galaxyItemId][_seriesId][_traitId] += 1;
-
+		seriesTraitVariations[_itemId][_seriesId][_traitId] += 1;
 		//update variation ids of trait
-		variationIds[_galaxyItemId][_seriesId][_traitId].push(variationId);
-
+		variationIds[_itemId][_seriesId][_traitId].push(variationId);
 		emit TraitVariationAdded(variationId);
 	}
 
@@ -351,30 +308,28 @@ contract TraitFactory is
 			'TraitFactory: INVALID_VARIATION_ID'
 		);
 		require(bytes(_svg).length > 0, 'TraitFactory: INVALID_SVG');
-
 		traitVariations[_traitVariationId].name = _variationName;
 		traitVariations[_traitVariationId].svg = _svg;
 		traitVariations[_traitVariationId].probability = _probabilty;
-
 		emit TraitVariationUpdated(_traitVariationId);
 	}
 
-	function activateNFTGeneration(uint256 _galaxyItemId, uint256 _seriesId)
+	function activateNFTGeneration(uint256 _itemId, uint256 _seriesId)
 		external
 		onlyOperator
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 	{
-		isNftGenerationEnabled[_galaxyItemId][_seriesId] = true;
+		isNftGenerationEnabled[_itemId][_seriesId] = true;
 	}
 
-	function deactivateNFTGeneration(uint256 _galaxyItemId, uint256 _seriesId)
+	function deactivateNFTGeneration(uint256 _itemId, uint256 _seriesId)
 		external
 		onlyOperator
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 	{
-		isNftGenerationEnabled[_galaxyItemId][_seriesId] = true;
+		isNftGenerationEnabled[_itemId][_seriesId] = true;
 	}
 
 	/**
@@ -391,15 +346,12 @@ contract TraitFactory is
 		string memory _badgeSvg
 	) external onlyOperator returns (uint256 thresholdId) {
 		require(bytes(_badgeSvg).length > 0, 'TraitFactory: INVALID_BADGE');
-
 		thresholdCounter.increment();
 		thresholdId = thresholdCounter.current();
-
 		// threshold value must be greater than previous value
 		if (thresholdId > 1) {
 			require(_maxValue > thresholds[thresholdId - 1].max, 'TraitFactory: INVALID_VALUE');
 		}
-
 		thresholds[thresholdId] = ThresholdDetail(_maxValue, _badge, _badgeSvg);
 	}
 
@@ -421,7 +373,6 @@ contract TraitFactory is
 			'TraitFactory: INVALID_THRESHOLD_ID'
 		);
 		require(bytes(_badgeSvg).length > 0, 'TraitFactory: INVALID_BADGE');
-
 		thresholds[_thresholdId] = ThresholdDetail(_maxValue, _badge, _badgeSvg);
 	}
 
@@ -440,34 +391,36 @@ contract TraitFactory is
 
 	/**
 	 * @notice This method allows updater to update the total nfts minted per series.
-	 * @param _galaxyItemId - indicates the galaxy item id
-	 * @param _seriesId - indicates the series of galaxy
+	 * @param _itemId - indicates the item id
+	 * @param _seriesId - indicates the series of item
 	 * @param _amount - indicates the amount of nfts minted
 	 */
 	function updateTotalNftsMinted(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _amount
-	)
-		external
-		virtual
-		onlyUpdator
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
-	{
+	) external virtual onlyUpdator onlyValidItemId(_itemId) onlyValidseriesId(_itemId, _seriesId) {
 		require(_amount > 0, 'TraitFactory: INVALID_AMOUNT');
-
-		Series storage series = seriesDetails[_galaxyItemId][_seriesId];
+		Series storage series = seriesDetails[_itemId][_seriesId];
 		series.totalNftsMinted += _amount;
 	}
 
 	/**
-	 * @notice This method allows admin to update the galaxy item generation fee
-	 * @param _newFee - indicates the new fee for generating the profile s
+	 * @notice This method allows admin to update the item generation fee for with accessory
+	 * @param _newFee - indicates the new fee for generating the item
 	 */
-	function updateItemGenerationFee(uint256 _newFee) external virtual onlyOperator {
-		require(_newFee > 0 && _newFee != generationFee, 'TraitFactory: INVALID_FEE');
-		generationFee = _newFee;
+	function updateItemGenerationFeeWithAccessory(uint256 _newFee) external virtual onlyOperator {
+		require(_newFee > 0 && _newFee != generationFeeWithAccessory, 'TraitFactory: INVALID_FEE');
+		generationFeeWithAccessory = _newFee;
+	}
+
+	/**
+	 * @notice This method allows admin to update the item generation fee for without accessory
+	 * @param _newFee - indicates the new fee for generating the item
+	 */
+	function updateItemGenerationFeeWithoutAccessory(uint256 _newFee) external virtual onlyOperator {
+		require(_newFee > 0 && _newFee != generationFeeWithoutAccessory, 'TraitFactory: INVALID_FEE');
+		generationFeeWithoutAccessory = _newFee;
 	}
 
 	/*
@@ -475,12 +428,109 @@ contract TraitFactory is
    	======================== Getter Methods ===============================
    	=======================================================================
  	*/
+	/**
+		@notice This method returns the unique traitVariationHash for item generation
+	 */
+	function getTraitVariationHash(uint256 _itemId, uint256 _seriesId)
+		external
+		virtual
+		onlyUpdator
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
+		returns (uint256 traitVariationHash, uint256 totalTraits)
+	{
+		require(isNftGenerationEnabled[_itemId][_seriesId], 'TraitFactory: NFT_GENERATION_DISABLED');
+
+		require(
+			seriesDetails[_itemId][_seriesId].totalNftsMinted <=
+				seriesDetails[_itemId][_seriesId].maxNfts,
+			'TraitFactory: MAX_NFT_EXCEEDED'
+		);
+
+		totalTraits = seriesDetails[_itemId][_seriesId].totalTraits;
+
+		require(totalTraits > 0, 'TraitFactory: INSUFFICIENT_TRAITS');
+
+		traitVariationHash = _getHash(_itemId, _seriesId, totalTraits);
+
+		bytes32 hash = keccak256(abi.encodePacked(_seriesId, uint8(totalTraits), traitVariationHash));
+
+		// get unique hash for the trait
+		while (itemHash[_itemId][hash]) {
+			traitVariationHash = _getHash(_itemId, _seriesId, totalTraits);
+			hash = keccak256(abi.encodePacked(_seriesId, uint8(totalTraits), traitVariationHash));
+		}
+
+		itemHash[_itemId][hash] = true;
+	}
+
+	function _getHash(
+		uint256 _itemId,
+		uint256 _seriesId,
+		uint256 _totalTraits
+	) internal virtual returns (uint256 traitVariationHash) {
+		for (uint8 i = 0; i < _totalTraits; i++) {
+			uint256 traitId = seriesTraitIds[_itemId][_seriesId][i];
+			uint256 totalVariations = seriesTraitVariations[_itemId][_seriesId][traitId];
+
+			require(totalVariations > 0, 'TraitFactory: INSUFFICIENT_VARIATIONS');
+
+			uint256 variationId = _getRandomTraitVariation(_itemId, _seriesId, traitId, totalVariations);
+
+			require(
+				variationId > 0 && variationId <= traitVariationCounter.current(),
+				'TraitFactory: INVALID_VARIAON_ID'
+			);
+
+			traitVariationHash += variationId * 256**i;
+
+			//increment nonce
+			nonce++;
+		}
+	}
+
+	function _getRandomTraitVariation(
+		uint256 _itemId,
+		uint256 _seriesId,
+		uint256 _traitId,
+		uint256 _totalVariations
+	) internal view returns (uint256) {
+		uint256 initialVariationId = variationIds[_itemId][_seriesId][_traitId][0];
+		if (_totalVariations == 1) {
+			return initialVariationId;
+		}
+
+		// Create and fill prefix array
+		uint256[] memory prefix = new uint256[](_totalVariations);
+
+		prefix[0] = traitVariations[initialVariationId].probability;
+
+		for (uint256 i = 1; i < _totalVariations; ++i) {
+			prefix[i] =
+				prefix[i - 1] +
+				traitVariations[variationIds[_itemId][_seriesId][_traitId][i]].probability;
+		}
+
+		return variationIds[_itemId][_seriesId][_traitId][_getIndex(prefix, _totalVariations)];
+	}
+
+	function _getIndex(uint256[] memory prefix, uint256 n) internal view returns (uint256 index) {
+		// prefix[n-1] is sum of all frequencies.
+		// Generate a random number with
+		// value from 1 to this sum
+		uint256 r = LaCucinaUtils.getRandomVariation(nonce, prefix[n - 1]) + 1;
+
+		// Find index of ceiling of r in prefix array
+		index = LaCucinaUtils.findCeil(prefix, r, 0, n - 1);
+
+		require(index < n, 'TraitFactory: INVALID_INDEX');
+	}
 
 	/**
-	 * @notice This method returns the current galaxy item id
+	 * @notice This method returns the current item id
 	 */
-	function getCurrentGalaxyItemId() external view virtual returns (uint256) {
-		return galaxyItemCounter.current();
+	function getCurrentItemId() external view virtual returns (uint256) {
+		return itemCounter.current();
 	}
 
 	/**
@@ -508,48 +558,45 @@ contract TraitFactory is
 	 * @notice This method returns the total variations of the trait for given series
 	 */
 	function getTotalVariationsForTrait(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _traitId
 	)
 		external
 		view
 		virtual
-		onlyValidGalaxyItemId(_galaxyItemId)
+		onlyValidItemId(_itemId)
 		onlyValidTraitId(_traitId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidseriesId(_itemId, _seriesId)
 		returns (uint256)
 	{
-		return seriesTraitVariations[_galaxyItemId][_seriesId][_traitId];
+		return seriesTraitVariations[_itemId][_seriesId][_traitId];
 	}
 
 	/**
 	 * @notice This method returns the trait id at given index of series
 	 */
 	function getSeriesTraitId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _index
 	)
 		external
 		view
 		virtual
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 		returns (uint256)
 	{
-		require(
-			_index < seriesDetails[_galaxyItemId][_seriesId].totalTraits,
-			'TraitFactory: INVALID_INDEX'
-		);
-		return seriesTraitIds[_galaxyItemId][_seriesId][_index];
+		require(_index < seriesDetails[_itemId][_seriesId].totalTraits, 'TraitFactory: INVALID_INDEX');
+		return seriesTraitIds[_itemId][_seriesId][_index];
 	}
 
 	/**
 	 * @notice This method returns the variation id at given index of trait series
 	 */
 	function getVariationsId(
-		uint256 _galaxyItemId,
+		uint256 _itemId,
 		uint256 _seriesId,
 		uint256 _traitId,
 		uint256 _index
@@ -557,16 +604,16 @@ contract TraitFactory is
 		external
 		view
 		virtual
-		onlyValidGalaxyItemId(_galaxyItemId)
-		onlyValidseriesId(_galaxyItemId, _seriesId)
+		onlyValidItemId(_itemId)
+		onlyValidseriesId(_itemId, _seriesId)
 		onlyValidTraitId(_traitId)
 		returns (uint256)
 	{
 		require(
-			_index < seriesTraitVariations[_galaxyItemId][_seriesId][_traitId],
+			_index < seriesTraitVariations[_itemId][_seriesId][_traitId],
 			'TraitFactory: INVALID_INDEX'
 		);
-		return variationIds[_galaxyItemId][_seriesId][_traitId][_index];
+		return variationIds[_itemId][_seriesId][_traitId][_index];
 	}
 
 	function getSvgNumber(uint256 _tokenId) external view returns (string memory svgNumber) {
@@ -609,7 +656,6 @@ contract TraitFactory is
 	function toString(uint256 value) internal pure returns (string memory) {
 		// Inspired by OraclizeAPI's implementation - MIT licence
 		// https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
-
 		if (value == 0) {
 			return '0';
 		}

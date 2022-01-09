@@ -1,16 +1,9 @@
 require('chai').should();
 const {deployProxy} = require('@openzeppelin/truffle-upgrades');
 
-const {bg01, bg02, bg03} = require('../../data/talien/background');
-const {greenBody} = require('../../data/talien/bodies');
 const {cowboy} = require('../../data/talien/clothes');
-const {angryEyes, regularEyes} = require('../../data/talien/eyes');
 const {cowboyHat} = require('../../data/talien/headAccessory');
-const {blueHead} = require('../../data/talien/heads');
 const {knife, sword} = require('../../data/talien/holdingAccessory');
-const {bigMouthBlue, biteLipMouthBlue, piercedMouthBlue} = require('../../data/talien/mouth');
-const {silver_badge, golden_badge, platinum_badge} = require('../../data/talien/badge');
-
 const Accessories = artifacts.require('Accessories');
 
 const url = 'https://token-cdn-domain/{id}.json';
@@ -35,8 +28,8 @@ class AccessoriesContract {
 		const MINTER_ROLE = await this.Accessories.MINTER_ROLE();
 		await this.Accessories.grantRole(MINTER_ROLE, this.operator, {from: this.owner});
 
-		// add galaxy item
-		await this.Accessories.addGalaxyItem('Talion', {from: this.operator});
+		// add  item
+		await this.Accessories.addItem('Talion', {from: this.operator});
 
 		// add accessory types
 		await this.addAccessoryTypes();
@@ -48,17 +41,17 @@ class AccessoriesContract {
 	};
 
 	addAccessoryTypes = async () => {
-		this.currentGalaxyItemId = await this.Accessories.getCurrentGalaxyItemId();
+		this.currentLaCucinaNftsItemId = await this.Accessories.getCurrentItemId();
 
-		await this.Accessories.addAccessoryType(this.currentGalaxyItemId, 'Head Accessories', {
+		await this.Accessories.addAccessoryType(this.currentLaCucinaNftsItemId, 'Head Accessories', {
 			from: this.operator
 		});
 
-		await this.Accessories.addAccessoryType(this.currentGalaxyItemId, 'Holding Accessories', {
+		await this.Accessories.addAccessoryType(this.currentLaCucinaNftsItemId, 'Holding Accessories', {
 			from: this.operator
 		});
 
-		await this.Accessories.addAccessoryType(this.currentGalaxyItemId, 'Clothes Accessories', {
+		await this.Accessories.addAccessoryType(this.currentLaCucinaNftsItemId, 'Clothes Accessories', {
 			from: this.operator
 		});
 	};
@@ -66,7 +59,7 @@ class AccessoriesContract {
 	addAccessories = async () => {
 		// add HEAD accessory
 		await this.Accessories.addAccessory(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			1, // HEAD TYPE
 			1, // series
 			'CowboyHat',
@@ -81,7 +74,7 @@ class AccessoriesContract {
 
 		// add Holding accessory
 		await this.Accessories.addAccessory(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			2, // Holding TYPE
 			1, // series
 			'Knife',
@@ -95,7 +88,7 @@ class AccessoriesContract {
 		);
 
 		await this.Accessories.addAccessory(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			2, // Holding TYPE
 			1, // series
 			'Sword',
@@ -110,7 +103,7 @@ class AccessoriesContract {
 
 		// add Clothes accessory
 		await this.Accessories.addAccessory(
-			this.currentGalaxyItemId,
+			this.currentLaCucinaNftsItemId,
 			3, // Holding TYPE
 			1, // series
 			'Cowboy',
