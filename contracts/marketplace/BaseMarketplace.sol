@@ -111,6 +111,9 @@ contract BaseMarketplace is
 	/// @notice tokenAddress => supported or not
 	mapping(address => bool) public supportedTokens;
 
+	/// @notice sellerAddress -> user`s total bids
+	mapping(address => uint256) public userTotalBids;
+
 	/*
    =======================================================================
    ======================== Events =======================================
@@ -505,7 +508,8 @@ contract BaseMarketplace is
 		_auction.bidIds.push(bidId);
 
 		userBidIds[_user].push(bidId);
-
+		userTotalBids[_user] += 1;
+		
 		emit PlaceBid(_auctionId, bidId, _user, _bidAmount, block.timestamp);
 	}
 
