@@ -1089,8 +1089,10 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should set store bid details correctly', async () => {
 			user2BalanceAfter = await this.sampleToken.balanceOf(user2);
-
 			expect(user2BalanceBefore).to.bignumber.be.gt(user2BalanceAfter);
+
+			const userTotalBids = await this.publicMarketplace.userTotalBids(user2);
+			expect(userTotalBids).to.bignumber.be.eq(new BN('4'));
 
 			const auction = await this.publicMarketplace.auction(currentAuctionId);
 			expect(auction.winningBidId).to.bignumber.be.eq(currentBidId);
