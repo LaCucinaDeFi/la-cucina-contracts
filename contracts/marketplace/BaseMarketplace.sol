@@ -82,6 +82,7 @@ contract BaseMarketplace is
 	/// @notice ERC1155 NFT contract
 	IIngredientNFT public nftContract;
 
+	/// @notice minimum duration in seconds for auction period
 	uint256 public minDuration;
 
 	/// @notice saleId -> saleInfo
@@ -344,7 +345,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
+	 * @notice This method allows operator to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function addSupportedToken(address _tokenAddress) external virtual onlyOperator {
@@ -353,7 +354,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to remove the ERC20/BEP20 token from the accepted token list.
+	 * @notice This method allows operator to remove the ERC20/BEP20 token from the accepted token list.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function removeSupportedToken(address _tokenAddress) external virtual onlyOperator {
@@ -362,7 +363,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to update minimum duration for the auction period.
+	 * @notice This method allows operator to update minimum duration for the auction period.
 	 * @param _newDuration indicates the new mint limit
 	 */
 	function updateMinimumDuration(uint256 _newDuration) external virtual onlyOperator {

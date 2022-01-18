@@ -26,6 +26,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 * @param _nftContractAddress - indicates the ERC1155 NFT contract address
 	 * @param _talienAddress - indicates the talien contract address
 	 * @param _earlyAccessTime - indicates the early access duration for the vip members(users with genesis Taliens)
+	 * @param _fundReceiver - indiacates the fund receiver address who will receives the payment for the SIs.
 	 */
 	function initialize(
 		address _nftContractAddress,
@@ -66,6 +67,8 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
 	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 *  @param _svgs - indicates the svgs for the ingredient variations
+	 *	@param _variationNames - indicates the variation names
 	 * 	@return nftId - indicates id of nft created in sale.
 	 * 	@return saleId - indicates saleId in which copies of new NFT are sold.
 	 */
@@ -110,6 +113,8 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
 	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 *  @param _svgs - indicates the svgs for the ingredient variations
+	 *	@param _variationNames - indicates the variation names
 	 * 	@return nftId - indicates id of nft created in sale.
 	 * 	@return auctionId - indicates auctionId though which copy of new unique NFT are sold.
 	 */
@@ -211,7 +216,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	}
 
 	/**
-	 * @notice This method finds the winner of the Auction and transfer the nft to winning bidder and accepted tokens to the nft seller/owner
+	 * @notice This method finds the winner of the Auction and transfer the nft to winning bidder and accepted tokens to the fund receiver
 	 * @param _auctionId indicates the auctionId which is to be resolve
 	 */
 	function resolveAuction(uint256 _auctionId)
@@ -232,7 +237,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 			'Market: CANNOT_RESOLVE_AUCTION_WITH_NO_BIDS'
 		);
 
-		// transfer the tokens to the auction creator
+		// transfer the tokens to the fundReceiver
 		require(
 			IBEP20(_auction.currency).transfer(fundReceiver, bid[_auction.winningBidId].bidAmount),
 			'Market: TRANSFER_FAILED'
