@@ -27,7 +27,7 @@ contract BaseMarketplaceWithRoyalties is BaseMarketplace {
               buyer cannot buy/hold more than one copy of same nft.
     * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
    */
-	function buyNFT(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
+	function buyNFT(uint256 _saleId) external virtual override onlyValidSaleId(_saleId) nonReentrant {
 		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
 		SaleInfo storage _sale = sale[_saleId];
 

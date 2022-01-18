@@ -49,7 +49,7 @@ contract('PrivateMarketplace', (accounts) => {
 		// deploy private marketplace
 		this.privateMarketplace = await deployProxy(
 			PrivateMarketplace,
-			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0'), fundReceiver],
 			{
 				initializer: 'initialize'
 			}
@@ -898,8 +898,16 @@ contract('PrivateMarketplace', (accounts) => {
 			// get talien for user1
 			await this.Talien.generateItem(1, 1, true, {from: user1});
 
+			const fundReceiverBalanceBefore = await this.sampleToken.balanceOf(fundReceiver);
+
 			// buy nft from sale
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
+
+			const fundReceiverBalanceAfter = await this.sampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('1'))
+			);
 		});
 
 		it('should revert when user with normal talien tries to get early access to ingredients', async () => {
@@ -934,9 +942,17 @@ contract('PrivateMarketplace', (accounts) => {
 			await this.Ingredient.safeTransferFrom(user1, stash, currentNftId, 1, '0x384', {
 				from: user1
 			});
+
+			const fundReceiverBalanceBefore = await this.sampleToken.balanceOf(fundReceiver);
+
 			// buy nft from sale
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
 
+			const fundReceiverBalanceAfter = await this.sampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('1'))
+			);
 			// cancel sale
 			await expectRevert(
 				this.privateMarketplace.cancelSale(currentSaleId, {from: minter}),
@@ -1286,8 +1302,16 @@ contract('PrivateMarketplace', (accounts) => {
 		});
 
 		it('should revert when bidder tries to bid on inactive auction', async () => {
+			const fundReceiverBalanceBefore = await this.sampleToken.balanceOf(fundReceiver);
+
 			// resolve auction
 			await this.privateMarketplace.resolveAuction(currentAuctionId);
+
+			const fundReceiverBalanceAfter = await this.sampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('3'))
+			);
 
 			await expectRevert(
 				this.privateMarketplace.placeBid(currentAuctionId, ether('6'), {from: user2}),

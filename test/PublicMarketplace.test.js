@@ -55,7 +55,7 @@ contract('PublicMarketplace', (accounts) => {
 		// deploy private marketplace
 		this.privateMarketplace = await deployProxy(
 			PrivateMarketplace,
-			[this.Ingredient.address, this.Talien.address, time.duration.days('0')],
+			[this.Ingredient.address, this.Talien.address, time.duration.days('0'), fundReceiver],
 			{
 				initializer: 'initialize'
 			}
