@@ -106,7 +106,7 @@ contract BaseERC721 is
 	}
 
 	function baseURI() external view virtual returns (string memory) {
-		return _baseTokenURI;
+		return string(abi.encodePacked(_baseTokenURI, '{id}'));
 	}
 
 	function tokenURI(uint256 _tokenId) public view override returns (string memory) {

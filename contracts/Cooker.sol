@@ -52,6 +52,7 @@ contract Cooker is
 	IBEP20 public lacToken;
 	ITalien public talien;
 
+	// @notie uncooking fees charged to non-genesis talien holders
 	uint256 public uncookingFee;
 
 	// @notice user without talien can prepare dish with maxIngredients number of ingredients
@@ -62,6 +63,9 @@ contract Cooker is
 
 	// flameId => FlameDetails
 	mapping(uint256 => FlameDetail) public flames;
+
+	// @notice indicates the address which receives the LAC fees
+	address public fundReceiver;
 
 	/*
    	=======================================================================
@@ -79,7 +83,8 @@ contract Cooker is
 		address _talien,
 		uint256 _uncookingFee,
 		uint256 _maxIngredients,
-		uint256 _additionalIngredients
+		uint256 _additionalIngredients,
+		address _fundReceiver
 	) external virtual initializer {
 		require(_ingredientNft != address(0), 'Cooker: INVALID_INGREDIENT_ADDRESS');
 		require(_dishesNft != address(0), 'Cooker: INVALID_DISHES_ADDRESS');
@@ -101,6 +106,7 @@ contract Cooker is
 		uncookingFee = _uncookingFee;
 		maxIngredients = _maxIngredients;
 		additionalIngredients = _additionalIngredients;
+		fundReceiver = _fundReceiver;
 	}
 
 	/*
@@ -161,7 +167,7 @@ contract Cooker is
 
 		if (flame.lacCharge > 0) // get the LAC tokens from user
 		{
-			require(lacToken.transferFrom(msg.sender, address(this), flame.lacCharge));
+			require(lacToken.transferFrom(msg.sender, fundReceiver, flame.lacCharge));
 		}
 
 		// get Ingredient NFTs from user
@@ -203,7 +209,7 @@ contract Cooker is
 
 		// get fees for uncooking if user don`t have genesis talien
 		if (!hasGenesisTalien) {
-			require(lacToken.transferFrom(msg.sender, address(this), uncookingFee));
+			require(lacToken.transferFrom(msg.sender, fundReceiver, uncookingFee));
 		}
 
 		// get the dish nft from user
@@ -312,7 +318,7 @@ contract Cooker is
 		if (newFlame.lacCharge > oldFlame.lacCharge) {
 			// get the LAC tokens from user
 			require(
-				lacToken.transferFrom(msg.sender, address(this), newFlame.lacCharge - oldFlame.lacCharge),
+				lacToken.transferFrom(msg.sender, fundReceiver, newFlame.lacCharge - oldFlame.lacCharge),
 				'Cooker: TRANSFER_FAILED'
 			);
 		}
@@ -386,6 +392,18 @@ contract Cooker is
 		require(_amount > 0 && tokenAmount >= _amount, 'Cooker: INSUFFICIENT_BALANCE');
 
 		require(IBEP20(_tokenAddress).transfer(_user, _amount));
+	}
+
+	/**
+	 * @notice This method allows operator to update the fund receivers address
+	 * @param _newFundReceiver - indicates the address of new fund receiver
+	 */
+	function updateFundReceiver(address _newFundReceiver) external virtual onlyOperator {
+		require(
+			_newFundReceiver != fundReceiver && _newFundReceiver != address(0),
+			'Cooker: INVALID_ADDRESS'
+		);
+		fundReceiver = _newFundReceiver;
 	}
 
 	/*

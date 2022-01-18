@@ -83,7 +83,8 @@ contract('Cooker', (accounts) => {
 				this.Talien.address,
 				ether('5'),
 				3,
-				2
+				2,
+				fundReceiver
 			],
 			{
 				initializer: 'initialize'
@@ -460,6 +461,8 @@ contract('Cooker', (accounts) => {
 			// generate talien for user1
 			await this.Talien.generateItem(1, 1, true, {from: user1});
 
+			const fundReceiverBalanceBefore = await this.SampleToken.balanceOf(fundReceiver);
+
 			// prepare the dish
 			this.prepareDish1Tx = await this.Cooker.cookDish(1, 1, [1, 2, 3, 4, 5], {from: user1});
 
@@ -514,6 +517,12 @@ contract('Cooker', (accounts) => {
 			expect(cookerGoldBalanceAfter).to.bignumber.be.eq(new BN('1'));
 			expect(cookerBeefBalanceAfter).to.bignumber.be.eq(new BN('1'));
 			expect(cookerTruffleBalanceAfter).to.bignumber.be.eq(new BN('1'));
+
+			const fundReceiverBalanceAfter = await this.SampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('0'))
+			);
 
 			//get current dish id
 			const preparedDishId = await this.Dish.getCurrentTokenId();
@@ -753,8 +762,12 @@ contract('Cooker', (accounts) => {
 			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
 
+			await this.SampleToken.approve(this.Cooker.address, MAX_UINT256, {from: user1});
+
+			const fundReceiverBalanceBefore = await this.SampleToken.balanceOf(fundReceiver);
+
 			// prepare the dish
-			this.prepareDish8Tx = await this.Cooker.cookDish(1, 1, [2, 3, 4, 5], {from: user1});
+			this.prepareDish8Tx = await this.Cooker.cookDish(1, 2, [2, 3, 4, 5], {from: user1});
 			console.log(
 				'gas cost for cooking dish8: ',
 				gasToEth(this.prepareDish8Tx.receipt.cumulativeGasUsed)
@@ -770,6 +783,12 @@ contract('Cooker', (accounts) => {
 
 			//get the svg of dish
 			const dishSvg = await this.Dish.serveDish(currentDishId, {gas: GAS_LIMIT});
+
+			const fundReceiverBalanceAfter = await this.SampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('5'))
+			);
 
 			const addresssPath = await path.join(
 				'generated/cooker',
@@ -791,7 +810,6 @@ contract('Cooker', (accounts) => {
 				this.Cooker.cookDish(4, 1, [2, 4, 5], {from: user1}),
 				'Kitchen: INVALID_DISH_ID'
 			);
-
 			// prepare the dish
 			this.prepareDish9Tx = await this.Cooker.cookDish(1, 1, [2, 4, 5], {from: user1});
 			console.log(
@@ -849,7 +867,15 @@ contract('Cooker', (accounts) => {
 		it('should update the flame for the dish correctly', async () => {
 			isDishReadyToUncookBefore = await this.Cooker.isDishReadyToUncook(1);
 
+			const fundReceiverBalanceBefore = await this.SampleToken.balanceOf(fundReceiver);
+
 			await this.Cooker.updateFlame(currentDishId, 2, {from: user1});
+
+			const fundReceiverBalanceAfter = await this.SampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(ether('5'))
+			);
 
 			isDishReadyToUncookAfter = await this.Cooker.isDishReadyToUncook(1);
 
@@ -1022,10 +1048,19 @@ contract('Cooker', (accounts) => {
 			await this.Dish.setApprovalForAll(this.Cooker.address, true, {from: user2});
 			await time.increase(time.duration.days('1'));
 
+			const fundReceiverBalanceBefore = await this.SampleToken.balanceOf(fundReceiver);
+			const uncookingFee = await this.Cooker.uncookingFee();
+
 			this.uncookTx1 = await this.Cooker.uncookDish(currentDishId, {from: user2});
 			console.log(
 				'gas cost for uncooking dish: ',
 				gasToEth(this.uncookTx1.receipt.cumulativeGasUsed)
+			);
+
+			const fundReceiverBalanceAfter = await this.SampleToken.balanceOf(fundReceiver);
+
+			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
+				fundReceiverBalanceBefore.add(uncookingFee)
 			);
 
 			const lacBalAfter = await this.SampleToken.balanceOf(user2);
@@ -1084,6 +1119,8 @@ contract('Cooker', (accounts) => {
 
 	describe('claimAllTokens()', () => {
 		it('should claim tokens send to cooker contract', async () => {
+			await this.SampleToken.transfer(this.Cooker.address, ether('5'), {from: user1});
+
 			const cookerTokenBalBefore = await this.SampleToken.balanceOf(this.Cooker.address);
 			const owenerTokenBalBefore = await this.SampleToken.balanceOf(owner);
 
@@ -1093,7 +1130,7 @@ contract('Cooker', (accounts) => {
 			const cookerTokenBalAfter = await this.SampleToken.balanceOf(this.Cooker.address);
 			const owenerTokenBalAfter = await this.SampleToken.balanceOf(owner);
 
-			expect(cookerTokenBalBefore).to.bignumber.be.gt(new BN('0'));
+			expect(cookerTokenBalBefore).to.bignumber.be.eq(ether('5'));
 			expect(owenerTokenBalBefore).to.bignumber.be.eq(new BN('0'));
 
 			expect(cookerTokenBalAfter).to.bignumber.be.eq(new BN('0'));

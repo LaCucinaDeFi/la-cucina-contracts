@@ -28,7 +28,8 @@ contract CookerV2 is Cooker {
 		address _talien,
 		uint256 _uncookingFee,
 		uint256 _maxIngredients,
-		uint256 _additionalIngredients
+		uint256 _additionalIngredients,
+		address _fundReceiver
 	) external virtual override initializer {
 		require(_ingredientNft != address(0), 'Cooker: INVALID_INGREDIENT_ADDRESS');
 		require(_dishesNft != address(0), 'Cooker: INVALID_DISHES_ADDRESS');
@@ -48,6 +49,7 @@ contract CookerV2 is Cooker {
 		uncookingFee = _uncookingFee;
 		maxIngredients = _maxIngredients;
 		additionalIngredients = _additionalIngredients;
+		fundReceiver = _fundReceiver;
 	}
 
 	/*
