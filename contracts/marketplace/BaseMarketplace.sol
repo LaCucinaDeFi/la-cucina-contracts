@@ -263,7 +263,7 @@ contract BaseMarketplace is
 		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
 		SaleInfo storage _sale = sale[_saleId];
 
-		//transfer tokens to the fund receiver
+		//transfer tokens to the seller
 		require(
 			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
 			'Market: TRANSFER_FROM_FAILED'
