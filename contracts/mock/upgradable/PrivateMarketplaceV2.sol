@@ -27,12 +27,14 @@ contract PrivateMarketplaceV2 is PrivateMarketplace {
 	function initialize(
 		address _nftContractAddress,
 		address _talienAddress,
-		uint256 _earlyAccessTime
+		uint256 _earlyAccessTime,
+		address _fundReceiver
 	) external virtual override initializer {
 		__Marketplace_init(_nftContractAddress);
 		require(_talienAddress != address(0), 'PrivateMarketplace: INVALID_TALIEN_ADDRESS');
 		talien = ITalien(_talienAddress);
 		earlyAccessTime = _earlyAccessTime;
+		fundReceiver = _fundReceiver;
 	}
 
 	/*

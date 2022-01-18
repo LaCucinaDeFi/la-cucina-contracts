@@ -13,6 +13,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
  */
 	ITalien public talien;
 	uint256 public earlyAccessTime;
+	address public fundReceiver;
 
 	/*
    =======================================================================
@@ -25,16 +26,19 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 * @param _nftContractAddress - indicates the ERC1155 NFT contract address
 	 * @param _talienAddress - indicates the talien contract address
 	 * @param _earlyAccessTime - indicates the early access duration for the vip members(users with genesis Taliens)
+	 * @param _fundReceiver - indiacates the fund receiver address who will receives the payment for the SIs.
 	 */
 	function initialize(
 		address _nftContractAddress,
 		address _talienAddress,
-		uint256 _earlyAccessTime
+		uint256 _earlyAccessTime,
+		address _fundReceiver
 	) external virtual initializer {
 		__Marketplace_init(_nftContractAddress);
 		require(_talienAddress != address(0), 'PrivateMarketplace: INVALID_TALIEN_ADDRESS');
 		talien = ITalien(_talienAddress);
 		earlyAccessTime = _earlyAccessTime;
+		fundReceiver = _fundReceiver;
 	}
 
 	/*
@@ -63,6 +67,8 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
 	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 *  @param _svgs - indicates the svgs for the ingredient variations
+	 *	@param _variationNames - indicates the variation names
 	 * 	@return nftId - indicates id of nft created in sale.
 	 * 	@return saleId - indicates saleId in which copies of new NFT are sold.
 	 */
@@ -107,6 +113,8 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	 *  @param _nutritionsHash - indicates the nutritions
 	 *  @param _ipfsHash - indicates the ipfs hash for the ingredient
 	 * 	@param _keywords - indicates the list of keywords for the dish name
+	 *  @param _svgs - indicates the svgs for the ingredient variations
+	 *	@param _variationNames - indicates the variation names
 	 * 	@return nftId - indicates id of nft created in sale.
 	 * 	@return auctionId - indicates auctionId though which copy of new unique NFT are sold.
 	 */
@@ -152,7 +160,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
               buyer cannot buy/hold more than one copy of same nft.
     * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
    */
-	function buyNFT(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
+	function buyNFT(uint256 _saleId) external virtual override onlyValidSaleId(_saleId) nonReentrant {
 		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
 		SaleInfo storage _sale = sale[_saleId];
 
@@ -166,9 +174,9 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 			);
 		}
 
-		//transfer tokens to the seller
+		//transfer tokens to the fund receiver
 		require(
-			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			IBEP20(_sale.currency).transferFrom(msg.sender, fundReceiver, _sale.sellingPrice),
 			'Market: TRANSFER_FROM_FAILED'
 		);
 
@@ -194,6 +202,7 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	function placeBid(uint256 _auctionId, uint256 _bidAmount)
 		external
 		virtual
+		override
 		onlyValidAuctionId(_auctionId)
 		nonReentrant
 		returns (uint256 bidId)
@@ -204,6 +213,49 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 		}
 
 		bidId = _placeBid(_auctionId, _bidAmount, msg.sender);
+	}
+
+	/**
+	 * @notice This method finds the winner of the Auction and transfer the nft to winning bidder and accepted tokens to the fund receiver
+	 * @param _auctionId indicates the auctionId which is to be resolve
+	 */
+	function resolveAuction(uint256 _auctionId)
+		external
+		virtual
+		override
+		onlyValidAuctionId(_auctionId)
+		nonReentrant
+	{
+		AuctionInfo storage _auction = auction[_auctionId];
+		require(isActiveAuction(_auctionId), 'Market: CANNOT_RESOLVE_INACTIVE_AUCTION');
+		require(
+			block.timestamp > (_auction.startBlock + _auction.duration),
+			'Market: CANNOT_RESOLVE_DURING_AUCTION'
+		);
+		require(
+			_auction.winningBidId != 0 && _auction.bidIds.length > 0,
+			'Market: CANNOT_RESOLVE_AUCTION_WITH_NO_BIDS'
+		);
+
+		// transfer the tokens to the fundReceiver
+		require(
+			IBEP20(_auction.currency).transfer(fundReceiver, bid[_auction.winningBidId].bidAmount),
+			'Market: TRANSFER_FAILED'
+		);
+
+		nftContract.safeTransferFrom(
+			address(this),
+			bid[_auction.winningBidId].bidderAddress,
+			_auction.nftId,
+			1,
+			''
+		);
+
+		//close auction
+		_auction.status = 0;
+		_auction.buyTimestamp = block.timestamp;
+
+		emit BuyAuctionNFT(bid[_auction.winningBidId].bidderAddress, _auction.nftId, _auctionId);
 	}
 
 	/**
@@ -251,12 +303,24 @@ contract PrivateMarketplace is Initializable, BaseMarketplace, IVersionedContrac
 	}
 
 	/**
-	 * @notice This method allows admin to update the early access time, so that user with genesis talien can get early access to ingredients.
+	 * @notice This method allows operator to update the early access time, so that user with genesis talien can get early access to ingredients.
 	 * @param _newAccessTime - indicates the new access time
 	 */
 	function updateEarlyAccessTime(uint256 _newAccessTime) external virtual onlyOperator {
 		require(earlyAccessTime != _newAccessTime, 'PrivateMarketplace: ALREADY_SET');
 		earlyAccessTime = _newAccessTime;
+	}
+
+	/**
+	 * @notice This method allows operator to update the fund receivers address
+	 * @param _newFundReceiver - indicates the address of new fund receiver
+	 */
+	function updateFundReceiver(address _newFundReceiver) external virtual onlyOperator {
+		require(
+			_newFundReceiver != fundReceiver && _newFundReceiver != address(0),
+			'PrivateMarketplace: INVALID_ADDRESS'
+		);
+		fundReceiver = _newFundReceiver;
 	}
 
 	/**

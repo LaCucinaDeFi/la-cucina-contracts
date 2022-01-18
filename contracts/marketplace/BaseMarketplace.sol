@@ -82,6 +82,7 @@ contract BaseMarketplace is
 	/// @notice ERC1155 NFT contract
 	IIngredientNFT public nftContract;
 
+	/// @notice minimum duration in seconds for auction period
 	uint256 public minDuration;
 
 	/// @notice saleId -> saleInfo
@@ -255,6 +256,50 @@ contract BaseMarketplace is
 	}
 
 	/**
+    * @notice This method allows anyone with accepted tokens to purchase the NFT from the particular sale. user needs to approve his ERC20/BEP20 tokens to this contract.
+              buyer cannot buy/hold more than one copy of same nft.
+    * @param _saleId indicates the saleId in from which buyer buys required NFT at specified price.
+   */
+	function buyNFT(uint256 _saleId) external virtual onlyValidSaleId(_saleId) nonReentrant {
+		require(isActiveSale(_saleId), 'Market: CANNOT_BUY_FROM_INACTIVE_SALE');
+		SaleInfo storage _sale = sale[_saleId];
+
+		//transfer tokens to the seller
+		require(
+			IBEP20(_sale.currency).transferFrom(msg.sender, _sale.seller, _sale.sellingPrice),
+			'Market: TRANSFER_FROM_FAILED'
+		);
+
+		//transfer one nft to buyer
+		nftContract.safeTransferFrom(address(this), msg.sender, _sale.nftId, 1, '');
+
+		_sale.buyer = msg.sender;
+		_sale.remainingCopies = _sale.remainingCopies - 1;
+
+		//check if all copies of sale is sold
+		if (_sale.remainingCopies == 0) {
+			_sale.sellTimeStamp = block.timestamp;
+		}
+
+		emit BuySaleNFT(msg.sender, _sale.nftId, _saleId, block.timestamp);
+	}
+
+	/**
+	 * @notice This method allows anyone with accepted token to place the bid on auction to buy NFT. bidder need to approve his accepted tokens.
+	 * @param _auctionId indicates the auctionId for which user wants place bid.
+	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
+	 */
+	function placeBid(uint256 _auctionId, uint256 _bidAmount)
+		external
+		virtual
+		onlyValidAuctionId(_auctionId)
+		nonReentrant
+		returns (uint256 bidId)
+	{
+		bidId = _placeBid(_auctionId, _bidAmount, msg.sender);
+	}
+
+	/**
 	 * @notice This method finds the winner of the Auction and transfer the nft to winning bidder and accepted tokens to the nft seller/owner
 	 * @param _auctionId indicates the auctionId which is to be resolve
 	 */
@@ -300,7 +345,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
+	 * @notice This method allows operator to add the ERC20/BEP20 token which will be acceted for purchasing/selling NFT.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function addSupportedToken(address _tokenAddress) external virtual onlyOperator {
@@ -309,7 +354,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to remove the ERC20/BEP20 token from the accepted token list.
+	 * @notice This method allows operator to remove the ERC20/BEP20 token from the accepted token list.
 	 * @param _tokenAddress indicates the ERC20/BEP20 token address
 	 */
 	function removeSupportedToken(address _tokenAddress) external virtual onlyOperator {
@@ -318,7 +363,7 @@ contract BaseMarketplace is
 	}
 
 	/**
-	 * @notice This method allows admin to update minimum duration for the auction period.
+	 * @notice This method allows operator to update minimum duration for the auction period.
 	 * @param _newDuration indicates the new mint limit
 	 */
 	function updateMinimumDuration(uint256 _newDuration) external virtual onlyOperator {
@@ -509,7 +554,7 @@ contract BaseMarketplace is
 
 		userBidIds[_user].push(bidId);
 		userTotalBids[_user] += 1;
-		
+
 		emit PlaceBid(_auctionId, bidId, _user, _bidAmount, block.timestamp);
 	}
 

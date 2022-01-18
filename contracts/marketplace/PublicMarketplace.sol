@@ -68,21 +68,6 @@ contract PublicMarketplace is Initializable, BaseMarketplaceWithRoyalties, IVers
 	}
 
 	/**
-	 * @notice This method allows anyone with accepted token to place the bid on auction to buy NFT. bidder need to approve his accepted tokens.
-	 * @param _auctionId indicates the auctionId for which user wants place bid.
-	 * @param _bidAmount indicates the bidAmount which must be greater than the existing winning bid amount or startingPrice in case of first bid.
-	 */
-	function placeBid(uint256 _auctionId, uint256 _bidAmount)
-		external
-		virtual
-		onlyValidAuctionId(_auctionId)
-		nonReentrant
-		returns (uint256 bidId)
-	{
-		bidId = _placeBid(_auctionId, _bidAmount, msg.sender);
-	}
-
-	/**
 	 * @notice This method allows NFT sale creator to cancel the sale and claim back the nft token
 	 * @param _saleId indicates the saleId which user wants to cancel
 	 */
