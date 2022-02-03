@@ -117,6 +117,20 @@ contract BaseERC1155 is
  	*/
 
 	/**
+	 * @notice This function allows minter to mint the tokens
+	 * @param _to - indicates the user address to which tokens to mint
+	 * @param _id - indicates the ingredient id to mint
+	 * @param _amount - indicates the amount of copies of nft type to mint
+	 */
+	function mint(
+		address _to,
+		uint256 _id,
+		uint256 _amount
+	) external virtual onlyMinter onlyValidNftId(_id) nonReentrant {
+		_mint(_to, _id, _amount, '');
+	}
+
+	/**
 	 * @notice This function allows minter to burn the tokens
 	 * @param _from - indicates the user address from which tokens to removed
 	 * @param _id - indicates the ingredient id to burn

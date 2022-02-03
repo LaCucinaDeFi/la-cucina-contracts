@@ -13,7 +13,10 @@ const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 const url = '';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
 const GAS_LIMIT = 85000000;
-
+const GAS_PRICE = 10; // 10 gwei
+const gasToEth = (gascost) => {
+	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
+};
 contract('IngredientsNFT', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
@@ -88,7 +91,9 @@ contract('IngredientsNFT', (accounts) => {
 		it('should add ingredient details correctly', async () => {
 			const ingredient = await this.Ingredient.ingredients(currentIngredientId);
 			const ownerBalance = await this.Ingredient.balanceOf(owner, currentIngredientId);
+			const addIngredientGasCost = gasToEth(this.addIngredientTX.receipt.cumulativeGasUsed);
 
+			console.log('addIngredientGasCost: ', addIngredientGasCost.toString());
 			expect(ownerBalance).to.bignumber.be.eq(new BN('10'));
 			expect(currentIngredientId).to.bignumber.be.eq(new BN('1'));
 			expect(ingredient.id).to.bignumber.be.eq(new BN('1'));
@@ -543,13 +548,22 @@ contract('IngredientsNFT', (accounts) => {
 			user2BalanceBefore = await this.Ingredient.balanceOf(user2, currentIngredientId);
 
 			// transfer nft
-			await this.Ingredient.safeTransferFrom(user1, user2, currentIngredientId, 1, '0x837', {
-				from: user1
-			});
+			this.transferTx = await this.Ingredient.safeTransferFrom(
+				user1,
+				user2,
+				currentIngredientId,
+				1,
+				'0x837',
+				{
+					from: user1
+				}
+			);
 		});
 
 		it('should transfer ingredient nfts correctly', async () => {
 			const user2BalanceAfter = await this.Ingredient.balanceOf(user2, currentIngredientId);
+			const transferGasCost = gasToEth(this.transferTx.receipt.cumulativeGasUsed);
+			console.log('transfer NFT cost: ', transferGasCost.toString());
 
 			expect(user2BalanceBefore).to.bignumber.be.eq(new BN('0'));
 			expect(user2BalanceAfter).to.bignumber.be.eq(new BN('1'));
@@ -1076,6 +1090,60 @@ contract('IngredientsNFT', (accounts) => {
 					}
 				),
 				'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES'
+			);
+		});
+	});
+
+	describe('mint()', () => {
+		let currentIngredientId;
+		let totalSupplyBefore;
+		let userIngredientsBefore;
+
+		before(async () => {
+			currentIngredientId = await this.Ingredient.getCurrentNftId();
+			totalSupplyBefore = await this.Ingredient.totalSupply(currentIngredientId);
+			userIngredientsBefore = await this.Ingredient.balanceOf(user1, currentIngredientId);
+
+			// add ingredient contract as excepted from address
+			await this.Ingredient.addExceptedAddress(user1, {from: operator});
+
+			//mint ingredient
+			this.mintTx = await this.Ingredient.mint(user1, currentIngredientId, 5, {from: minter});
+		});
+
+		it('should mint the tokens to user correctly', async () => {
+			const totalSupplyAfter = await this.Ingredient.totalSupply(currentIngredientId);
+			const userIngredientsAfter = await this.Ingredient.balanceOf(user1, currentIngredientId);
+
+			const gasCost = gasToEth(this.mintTx.receipt.cumulativeGasUsed);
+			console.log('gasCost for minting tokens: ', gasCost.toString());
+
+			expect(totalSupplyAfter).to.bignumber.be.eq(totalSupplyBefore.add(new BN('5')));
+			expect(userIngredientsAfter).to.bignumber.be.eq(userIngredientsBefore.add(new BN('5')));
+		});
+
+		it('should revert when non-minter tries mint the tokens to user', async () => {
+			await expectRevert(
+				this.Ingredient.mint(user1, currentIngredientId, 5, {from: user1}),
+				'BaseERC1155: ONLY_MINTER_CAN_CALL'
+			);
+		});
+
+		it('should revert when minter tries mint the tokens to user with invalid nft id', async () => {
+			await expectRevert(
+				this.Ingredient.mint(user1, 0, 5, {from: minter}),
+				'BaseERC1155: INVALID_NFT_ID'
+			);
+			await expectRevert(
+				this.Ingredient.mint(user1, 50, 5, {from: minter}),
+				'BaseERC1155: INVALID_NFT_ID'
+			);
+		});
+
+		it('should revert when minter tries mint the tokens to zero address', async () => {
+			await expectRevert(
+				this.Ingredient.mint(ZERO_ADDRESS, currentIngredientId, 5, {from: minter}),
+				'ERC1155: mint to the zero address'
 			);
 		});
 	});
