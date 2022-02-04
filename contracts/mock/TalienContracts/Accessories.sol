@@ -288,7 +288,7 @@ contract Accessories is BaseERC1155WithRoyalties {
 		address _account,
 		uint256 _accessoryId,
 		uint256 _amount
-	) external virtual onlyMinter onlyValidNftId(_accessoryId) {
+	) external virtual override onlyMinter onlyValidNftId(_accessoryId) {
 		require(_account != address(0), 'Accessories: INVALID_ACCOUNT');
 		require(_amount > 0, 'Accessories: INVALID_AMOUNT');
 		_mint(_account, _accessoryId, _amount, '');
