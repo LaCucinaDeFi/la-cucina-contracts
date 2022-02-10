@@ -305,17 +305,43 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 			variationIdHash += variationId * 256**i;
 		}
 
-		Ingredient memory ingredient1 = ingredients[_ingredientIds[0]];
-		Ingredient memory ingredient2 = ingredients[_ingredientIds[1]];
+		require(_ingredientIds.length > 1, 'IngredientsNFT: INSUFFICIENT_INGREDIENTS');
 
-		require(ingredient1.keywords.length >= 1, 'IngredientsNFT: INVALID_INDEX');
-		require(ingredient2.keywords.length >= 2, 'IngredientsNFT: INVALID_INDEX');
+		uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
+		Ingredient memory ingredient1 = ingredients[_ingredientIds[randomIndex]];
+
+		_nonce++;
+
+		randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
+		Ingredient memory ingredient2 = ingredients[_ingredientIds[randomIndex]];
+
+		require(ingredient1.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
+		require(ingredient2.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
+
+		string memory keyword1;
+		string memory keyword2;
+
+		if (ingredient1.keywords.length == 1) {
+			keyword1 = ingredient1.keywords[0];
+		} else {
+			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient1.keywords.length);
+			keyword1 = ingredient1.keywords[randomIndex];
+		}
+		
+		_nonce++;
+
+		if (ingredient2.keywords.length == 1) {
+			keyword2 = ingredient2.keywords[0];
+		} else {
+			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient2.keywords.length);
+			keyword2 = ingredient2.keywords[randomIndex];
+		}
 
 		dishName = string(
 			abi.encodePacked(
-				ingredient1.keywords[0], // 1st keyword of 1st ingredient
+				keyword1, // 1st keyword of 1st ingredient
 				' ',
-				ingredient2.keywords[1], // 2nd keyword of 2nd ingredient
+				keyword2, // 2nd keyword of 2nd ingredient
 				' ',
 				_dishTypeName
 			)
