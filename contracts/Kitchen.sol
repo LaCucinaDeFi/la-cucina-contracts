@@ -223,6 +223,7 @@ contract Kitchen is AccessControlUpgradeable, ReentrancyGuardUpgradeable, IVersi
 			uint256 baseVariationId = baseIngredient[baseIngredientId].variationIds[randomVarionIndex];
 
 			baseVariationHash += baseVariationId * 256**baseIndex;
+			nonce++;
 		}
 		dishName = dishType[_dishTypeId].name;
 	}
