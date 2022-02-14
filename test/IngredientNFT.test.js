@@ -4,6 +4,7 @@ const {expect} = require('chai');
 const {expectRevert, BN, ether} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
 const {ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 
 const papayas = require('../data/ingredients/papaya');
 
@@ -12,11 +13,7 @@ const IngredientsNFTV2 = artifacts.require('IngredientsNFTV2');
 
 const url = '';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
-const GAS_LIMIT = 85000000;
-const GAS_PRICE = 10; // 10 gwei
-const gasToEth = (gascost) => {
-	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
-};
+
 contract('IngredientsNFT', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
