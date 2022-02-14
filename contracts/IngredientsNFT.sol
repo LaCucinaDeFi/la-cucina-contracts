@@ -285,7 +285,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 
 			require(totalVariations > 0, 'IngredientNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
-			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = LaCucinaUtils.getRandomVariation(_nonce, totalVariations);
 
 			uint256 variationId = ingredients[_ingredientIds[i]].defIds[variationIndex];
@@ -321,7 +320,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 
 		string memory keyword1;
 		string memory keyword2;
-		string memory keyword3;
 
 		if (ingredient1.keywords.length == 1) {
 			keyword1 = ingredient1.keywords[0];
@@ -342,6 +340,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		}
 
 		if (_ingredientIds.length > 2) {
+			string memory keyword3;
+
 			_nonce++;
 
 			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
@@ -354,19 +354,28 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient3.keywords.length);
 				keyword3 = ingredient3.keywords[randomIndex];
 			}
+			dishName = string(
+				abi.encodePacked(
+					keyword1, // randomly selected keyword of randomly selected SI1
+					' ',
+					keyword2, // randomly selected keyword of randomly selected SI2
+					' ',
+					keyword3, // randomly selected keyword of randomly selected SI3
+					' ',
+					_dishTypeName
+				)
+			);
 		} else {
-			keyword3 = _dishTypeName;
+			dishName = string(
+				abi.encodePacked(
+					keyword1, // randomly selected keyword of randomly selected SI1
+					' ',
+					keyword2, // randomly selected keyword of randomly selected SI2
+					' ',
+					_dishTypeName // dish type name
+				)
+			);
 		}
-
-		dishName = string(
-			abi.encodePacked(
-				keyword1, // 1st keyword of 1st ingredient
-				' ',
-				keyword2, // 2nd keyword of 2nd ingredient
-				' ',
-				keyword3
-			)
-		);
 	}
 
 	/**
