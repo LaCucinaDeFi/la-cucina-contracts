@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const {MAX_UINT256, ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 const {Talien} = require('./helper/talien');
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 
 const doughs = require('../data/dough');
 const sauces = require('../data/sauce');
@@ -28,12 +29,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
-const GAS_LIMIT = 85000000;
-const GAS_PRICE = 10; // 10 gwei
 
-const gasToEth = (gascost) => {
-	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
-};
 contract('Cooker', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
@@ -470,15 +466,15 @@ contract('Cooker', (accounts) => {
 
 			//get dish details
 			const dishDetail = await this.Dish.dish(currentDishId);
-			const dishName = await this.Dish.dishNames(currentDishId);
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 			expect(dishDetail.cooked).to.be.eq(true);
 			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
 			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('3'));
 			expect(dishDetail.flameType).bignumber.to.be.eq(new BN('1'));
-			expect(dishName).to.be.eq(`${papayas[0].keyword} ${caviar[0].keyword} Pizza`);
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -573,6 +569,8 @@ contract('Cooker', (accounts) => {
 
 			//get dish owner
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -606,6 +604,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -639,6 +639,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -669,6 +671,8 @@ contract('Cooker', (accounts) => {
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
@@ -705,6 +709,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -739,6 +745,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -778,6 +786,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -822,6 +832,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
