@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const {MAX_UINT256, ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 const {Talien} = require('./helper/talien');
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 
 const doughs = require('../data/dough');
 const sauces = require('../data/sauce');
@@ -28,12 +29,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
-const GAS_LIMIT = 85000000;
-const GAS_PRICE = 10; // 10 gwei
 
-const gasToEth = (gascost) => {
-	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
-};
 contract('Cooker', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
