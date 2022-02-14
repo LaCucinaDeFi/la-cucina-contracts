@@ -870,11 +870,6 @@ contract('Cooker', (accounts) => {
 		});
 	});
 
-	describe('getIngredientHash()', () => {
-		it('should get the random dishNames correctly', async () => {});
-		it('should get the random dishNames correctly', async () => {});
-	});
-
 	describe('updateFlame()', () => {
 		let currentDishId;
 		let isDishReadyToUncookBefore;
