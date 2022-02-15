@@ -431,6 +431,14 @@ contract BaseMarketplace is
 			sale[_saleId].cancelTimeStamp == 0;
 	}
 
+	/**
+	 * @notice This method allows user to get the total bids placed on particular auction
+	 * @param _auctionId - indicates the auction id
+	 */
+	function getTotalBidsOfAuction(uint256 _auctionId) external view virtual returns (uint256) {
+		return auction[_auctionId].bidIds.length;
+	}
+
 	/*
    =======================================================================
    ======================== Internal Methods ===============================

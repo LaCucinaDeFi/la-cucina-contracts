@@ -1160,6 +1160,11 @@ contract('PublicMarketplace', (accounts) => {
 			expect(auction.winningBidId).to.bignumber.be.eq(currentBidId);
 		});
 
+		it('should get the total bids on auction correctly', async () => {
+			const totalBids = await this.publicMarketplace.getTotalBidsOfAuction(currentAuctionId);
+			expect(totalBids).to.bignumber.be.eq(new BN('2'));
+		});
+
 		it('should revert if tokens are not approved before placing bid', async () => {
 			await this.sampleToken.mint(accounts[6], ether('7'), {from: owner});
 
