@@ -367,10 +367,7 @@ contract BaseMarketplace is
 	 * @param _newDuration indicates the new mint limit
 	 */
 	function updateMinimumDuration(uint256 _newDuration) external virtual onlyOperator {
-		require(
-			_newDuration > 0 && _newDuration != minDuration,
-			'MintingStatoin: INVALID_MINIMUM_DURATION'
-		);
+		require(_newDuration > 0 && _newDuration != minDuration, 'Market: INVALID_MINIMUM_DURATION');
 		minDuration = _newDuration;
 	}
 
@@ -435,8 +432,30 @@ contract BaseMarketplace is
 	 * @notice This method allows user to get the total bids placed on particular auction
 	 * @param _auctionId - indicates the auction id
 	 */
-	function getTotalBidsOfAuction(uint256 _auctionId) external view virtual returns (uint256) {
+	function getTotalBidsOfAuction(uint256 _auctionId)
+		external
+		view
+		virtual
+		onlyValidAuctionId(_auctionId)
+		returns (uint256)
+	{
 		return auction[_auctionId].bidIds.length;
+	}
+
+	/**
+	 * @notice This method allows user to get the bid id of particular auction
+	 * @param _auctionId - indicates the auction id
+	 * @param _index - indicates the index of the list
+	 */
+	function getBidIdOfAuction(uint256 _auctionId, uint256 _index)
+		external
+		view
+		virtual
+		onlyValidAuctionId(_auctionId)
+		returns (uint256)
+	{
+		require(_index < auction[_auctionId].bidIds.length, 'Market: INVALID_INDEX');
+		return auction[_auctionId].bidIds[_index];
 	}
 
 	/*
