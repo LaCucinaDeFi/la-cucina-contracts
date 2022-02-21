@@ -1050,7 +1050,7 @@ contract('PublicMarketplace', (accounts) => {
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
 					from: operator
 				}),
-				'MintingStatoin: INVALID_MINIMUM_DURATION'
+				'Market: INVALID_MINIMUM_DURATION'
 			);
 		});
 
@@ -1059,7 +1059,7 @@ contract('PublicMarketplace', (accounts) => {
 				this.publicMarketplace.updateMinimumDuration(String(time.duration.days('0')), {
 					from: operator
 				}),
-				'MintingStatoin: INVALID_MINIMUM_DURATION'
+				'Market: INVALID_MINIMUM_DURATION'
 			);
 		});
 		it('should revert when non-admin tries to update minimum duration', async () => {
@@ -1163,6 +1163,25 @@ contract('PublicMarketplace', (accounts) => {
 		it('should get the total bids on auction correctly', async () => {
 			const totalBids = await this.publicMarketplace.getTotalBidsOfAuction(currentAuctionId);
 			expect(totalBids).to.bignumber.be.eq(new BN('2'));
+
+			await expectRevert(
+				this.publicMarketplace.getTotalBidsOfAuction(20),
+				'Market: INVALID_AUCTION_ID'
+			);
+		});
+
+		it('should get the bid id of auction correctly', async () => {
+			const bidId = await this.publicMarketplace.getBidIdOfAuction(currentAuctionId, 1);
+			expect(bidId).to.bignumber.be.eq(currentBidId);
+
+			await expectRevert(
+				this.publicMarketplace.getBidIdOfAuction(20, 0),
+				'Market: INVALID_AUCTION_ID'
+			);
+			await expectRevert(
+				this.publicMarketplace.getBidIdOfAuction(currentAuctionId, 2),
+				'Market: INVALID_INDEX'
+			);
 		});
 
 		it('should revert if tokens are not approved before placing bid', async () => {
