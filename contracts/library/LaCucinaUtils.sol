@@ -55,7 +55,15 @@ library LaCucinaUtils {
 		require(_max > 0, 'LaCucinaUtils: INVALID_MAX');
 		uint256 randomnumber = uint256(
 			keccak256(
-				abi.encodePacked(block.timestamp, block.difficulty, block.number, msg.sender, _seed)
+				abi.encodePacked(
+					block.timestamp,
+					block.difficulty,
+					block.number,
+					block.coinbase,
+					block.gaslimit,
+					msg.sender,
+					_seed
+				)
 			)
 		) % _max;
 

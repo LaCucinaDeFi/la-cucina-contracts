@@ -286,20 +286,18 @@ contract DishesNFT is BaseERC721 {
 				siIdsList[slot] = siId;
 			}
 
-			if (variationIndexValue > 0) {
-				variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
-					? variationIndexValue / slotMultiplier
-					: variationIndexValue;
+			variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+				? variationIndexValue / slotMultiplier
+				: variationIndexValue;
 
-				(, , uint256 totalVariations, ) = ingredientNft.ingredients(siId);
+			(, , uint256 totalVariations, ) = ingredientNft.ingredients(siId);
 
-				require(
-					totalVariations > 0 && variationIndex < totalVariations,
-					'DishesNFT: INVALID_SI_VARIATION_INDEX'
-				);
-				variationIndexList[slot] = variationIndex;
-				totalVariationsList[slot] = totalVariations;
-			}
+			require(
+				totalVariations > 0 && variationIndex < totalVariations,
+				'DishesNFT: INVALID_SI_VARIATION_INDEX'
+			);
+			variationIndexList[slot] = variationIndex;
+			totalVariationsList[slot] = totalVariations;
 		}
 
 		// get the placeholders for ingredients
@@ -404,10 +402,9 @@ contract DishesNFT is BaseERC721 {
 
 			// get random starting variationId
 			defId = ingredientNft.getVariationIdByIndex(_ingredientId, startingIndex);
-			uint256 nextVariationIndex = (startingIndex + 1) < totalVariationsList[index]
+			variationIndexList[index] = (startingIndex + 1) < totalVariationsList[index]
 				? (startingIndex + 1)
 				: 0;
-			variationIndexList[index] = nextVariationIndex;
 
 			uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
 			uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
