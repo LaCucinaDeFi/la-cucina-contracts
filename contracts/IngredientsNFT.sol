@@ -273,21 +273,20 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		external
 		view
 		returns (
-			uint256 variationIdHash,
+			uint256 siHash,
+			uint256 variationIndexHash,
 			string memory dishName,
 			uint256 plutamins,
 			uint256 strongies
 		)
 	{
-		// get variationIdHash
+		// get siHash
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
 			uint256 totalVariations = ingredients[_ingredientIds[i]].totalVariations;
 
 			require(totalVariations > 0, 'IngredientNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
 			uint256 variationIndex = LaCucinaUtils.getRandomVariation(_nonce, totalVariations);
-
-			uint256 variationId = ingredients[_ingredientIds[i]].defIds[variationIndex];
 
 			(uint256 plutamin, uint256 strongie) = getMultiplier(
 				ingredients[_ingredientIds[i]].nutritionsHash
@@ -301,7 +300,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				strongies += strongie;
 			}
 
-			variationIdHash += variationId * 256**i;
+			siHash += _ingredientIds[i] * 256**i;
+			variationIndexHash += variationIndex * 256**i;
 		}
 
 		require(_ingredientIds.length > 1, 'IngredientsNFT: INSUFFICIENT_INGREDIENTS');

@@ -199,7 +199,7 @@ contract Cooker is
 		require(isDishReadyToUncook(_dishId), 'Cooker: CANNOT_UNCOOK_WHILE_PREPARING');
 
 		// get details of dish
-		(, , uint256 totalIngredients, uint256 ingredientVariationHash, , , , , , ) = dishesNft.dish(
+		(, , uint256 totalIngredients, uint256 ingredientVariationHash, , , , , , , ) = dishesNft.dish(
 			_dishId
 		);
 
@@ -223,26 +223,22 @@ contract Cooker is
 		uint256 bitMask;
 		uint256 slottedValue;
 		uint256 slotMultiplier;
-		uint256 variation;
+		uint256 siId;
 
-		// Iterate Ingredient variation hash and assemble SVG sandwich
+		// Iterate Ingredient si hash and assemble SVG sandwich
 		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
 			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
 			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
 			slottedValue = ingredientVariationHash & bitMask; // Extract slotted value from hash
 			if (slottedValue > 0) {
-				variation = (slot > 0) // Extract variation from slotted value
+				siId = (slot > 0) // Extract siId from slotted value
 					? slottedValue / slotMultiplier
 					: slottedValue;
 
-				assert(variation > 0 && variation <= ingredientNft.getCurrentDefs());
-
-				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
-
-				assert(ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId());
+				assert(siId > 0 && siId <= ingredientNft.getCurrentNftId());
 
 				// transfer the ingredient nft to user
-				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
+				ingredientNft.safeTransferFrom(address(this), msg.sender, siId, 1, '');
 			}
 		}
 	}
@@ -303,7 +299,7 @@ contract Cooker is
 		require(!isDishReadyToUncook(_dishNFTId), 'Cooker: CANNOT_UPDATE_FLAME');
 
 		// get details of dish
-		(, , , , , , uint256 oldFlameId, , , ) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , uint256 oldFlameId, , , ) = dishesNft.dish(_dishNFTId);
 
 		require(
 			dishesNft.ownerOf(_dishNFTId) == msg.sender,
@@ -424,7 +420,7 @@ contract Cooker is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (bool)
 	{
-		(, , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (block.timestamp > completionTime) {
 			return true;
@@ -473,7 +469,7 @@ contract Cooker is
 		onlyValidDishNFTId(_dishNFTId)
 		returns (uint256)
 	{
-		(, , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
+		(, , , , , , , , , uint256 completionTime, ) = dishesNft.dish(_dishNFTId);
 
 		if (completionTime > block.timestamp) {
 			return completionTime - block.timestamp;

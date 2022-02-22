@@ -276,7 +276,7 @@ contract('DishesNFT', (accounts) => {
 			expect(dishDetails.cooked).to.be.eq(true);
 			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
-			expect(dishDetails.variationIdHash).to.bignumber.be.gt(new BN('0'));
+			expect(dishDetails.siHash).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.creationTime).to.bignumber.be.gt(new BN('0'));

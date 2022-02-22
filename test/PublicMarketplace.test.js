@@ -3,6 +3,7 @@ const {expect} = require('chai');
 const {expectRevert, ether, BN, time, expectEvent} = require('@openzeppelin/test-helpers');
 const {ZERO_ADDRESS, MAX_UINT256} = require('@openzeppelin/test-helpers/src/constants');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 
 const papayas = require('../data/ingredients/papaya');
 const caviar = require('../data/ingredients/caviar');
@@ -21,7 +22,6 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
-const GAS_LIMIT = 85000000;
 
 contract('PublicMarketplace', (accounts) => {
 	const owner = accounts[0];
@@ -246,6 +246,11 @@ contract('PublicMarketplace', (accounts) => {
 					from: user1
 				}
 			);
+
+			console.log(
+				'gas cost for selling NFT in sale in public marketplace: ',
+				gasToEth(this.sale1.receipt.cumulativeGasUsed)
+			);
 		});
 
 		it('should generate sale id correctly', async () => {
@@ -319,6 +324,11 @@ contract('PublicMarketplace', (accounts) => {
 				{
 					from: user1
 				}
+			);
+
+			console.log(
+				'gas cost for selling NFT in auction in public marketplace: ',
+				gasToEth(this.auction1.receipt.cumulativeGasUsed)
 			);
 		});
 
@@ -549,6 +559,11 @@ contract('PublicMarketplace', (accounts) => {
 				from: user2
 			});
 
+			console.log(
+				'gas cost for placing bid in public marketplace: ',
+				gasToEth(this.bidTx.receipt.cumulativeGasUsed)
+			);
+
 			await expectRevert(
 				this.publicMarketplace.updateAuction(
 					currentAuctionId,
@@ -612,7 +627,15 @@ contract('PublicMarketplace', (accounts) => {
 			user1NFTBalBefore = await this.Ingredient.balanceOf(user1, currentNftId);
 
 			// cancel sale
-			await this.publicMarketplace.cancelSaleAndClaimToken(currentSaleId, {from: user1});
+			this.cancelSaleAndClaimTokenTx = await this.publicMarketplace.cancelSaleAndClaimToken(
+				currentSaleId,
+				{from: user1}
+			);
+
+			console.log(
+				'gas cost for cancelling sale in public marketplace: ',
+				gasToEth(this.cancelSaleAndClaimTokenTx.receipt.cumulativeGasUsed)
+			);
 		});
 
 		it('should update sale status to canceled correctly', async () => {
@@ -676,7 +699,15 @@ contract('PublicMarketplace', (accounts) => {
 
 		it('should transfer nft back to user after cancelling auction', async () => {
 			// cancel sale
-			await this.publicMarketplace.cancelAuctionAndClaimToken(currentAuctionId, {from: user1});
+			this.cancelAuctionAndClaimTokenTx = await this.publicMarketplace.cancelAuctionAndClaimToken(
+				currentAuctionId,
+				{from: user1}
+			);
+
+			console.log(
+				'gas cost for cancelling auction in public marketplace: ',
+				gasToEth(this.cancelAuctionAndClaimTokenTx.receipt.cumulativeGasUsed)
+			);
 
 			const AuctionAfterCancel = await this.publicMarketplace.auction(currentAuctionId);
 			const user1NFTBalAfter = await this.Ingredient.balanceOf(user1, currentNftId);
@@ -765,6 +796,11 @@ contract('PublicMarketplace', (accounts) => {
 
 			// buy nft from sale
 			this.buyNFTTx = await this.publicMarketplace.buyNFT(currentSaleId, {from: user2});
+
+			console.log(
+				'gas cost for buying NFT in public marketplace: ',
+				gasToEth(this.buyNFTTx.receipt.cumulativeGasUsed)
+			);
 		});
 
 		it('should reflect nft in user wallet and close the sale correctly', async () => {
@@ -1277,6 +1313,10 @@ contract('PublicMarketplace', (accounts) => {
 
 			// resolve auction
 			this.resolveTx = await this.publicMarketplace.resolveAuction(currentAuctionId);
+			console.log(
+				'gas cost for resolving auction in public marketplace: ',
+				gasToEth(this.resolveTx.receipt.cumulativeGasUsed)
+			);
 
 			const auction = await this.publicMarketplace.auction(currentAuctionId);
 
