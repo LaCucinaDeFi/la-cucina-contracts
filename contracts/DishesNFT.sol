@@ -18,8 +18,7 @@ contract DishesNFT is BaseERC721 {
 		bool cooked;
 		uint256 dishId;
 		uint256 totalIngredients;
-		uint256 siHash; // indicates hash of the indexes of ingredient ids
-		uint256 variationIndexHash;
+		uint256 variationIdHash; // indicates hash of the indexes of ingredient variations
 		uint256 totalBaseIngredients;
 		uint256 baseVariationHash;
 		uint256 flameType;
@@ -60,6 +59,8 @@ contract DishesNFT is BaseERC721 {
 	mapping(uint256 => string) public dishNames;
 	// userAddress => isExcepted?
 	mapping(address => bool) public exceptedAddresses;
+	// dishID => Variation
+	mapping(uint256 => uint256) public variationIndexHashes;
 
 	/*
    	=======================================================================
@@ -138,7 +139,7 @@ contract DishesNFT is BaseERC721 {
 		nonce++;
 
 		(
-			uint256 siHash,
+			uint256 ingredientVariationHash,
 			uint256 variationIndexHash,
 			string memory dishName,
 			uint256 plutamins,
@@ -154,8 +155,7 @@ contract DishesNFT is BaseERC721 {
 			true,
 			_dishId,
 			_ingredientIds.length,
-			siHash,
-			variationIndexHash,
+			ingredientVariationHash,
 			totalBaseIngredients,
 			baseVariationHash,
 			_flameId,
@@ -163,6 +163,8 @@ contract DishesNFT is BaseERC721 {
 			block.timestamp + _preparationTime,
 			multiplier
 		);
+
+		variationIndexHashes[dishNFTId] = variationIndexHash;
 
 		dishNames[dishNFTId] = dishName;
 		nonce++;
@@ -257,12 +259,10 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
 		uint256 bitMask;
 		uint256 slotMultiplier;
-		uint256 siIdValue;
-		uint256 siId;
+		uint256 variationIdValue;
+		uint256 variationId;
 		uint256 variationIndexValue;
 		uint256 variationIndex;
 
@@ -272,32 +272,37 @@ contract DishesNFT is BaseERC721 {
 
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			siIdValue = dishToServe.siHash & bitMask;
-			variationIndexValue = dishToServe.variationIndexHash & bitMask;
+			slotMultiplier = uint256(256**slot); // Create slot multiplier
+			bitMask = 255 * slotMultiplier; // Create bit mask for slot
+			variationIdValue = dishToServe.variationIdHash & bitMask;
+			variationIndexValue = variationIndexHashes[_dishId] & bitMask;
 
-			if (siIdValue > 0) {
-				siId = (slot > 0) // Extract Ingredient variation ID from slotted value
-					? siIdValue / slotMultiplier
-					: siIdValue;
+			if (variationIdValue > 0) {
+				variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
+					? variationIdValue / slotMultiplier
+					: variationIdValue;
 
-				require(siId > 0 && siId <= ingredientNft.getCurrentNftId(), 'DishesNFT: INVALID_SI_ID');
-				siIdsList[slot] = siId;
+				require(
+					variationId > 0 && variationId <= ingredientNft.getCurrentDefs(),
+					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
+				);
+
+				(uint256 ingredientId, , ) = ingredientNft.defs(variationId);
+				siIdsList[slot] = ingredientId;
+
+				variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+					? variationIndexValue / slotMultiplier
+					: variationIndexValue;
+
+				(, , uint256 totalVariations, ) = ingredientNft.ingredients(ingredientId);
+
+				require(
+					totalVariations > 0 && variationIndex < totalVariations,
+					'DishesNFT: INVALID_SI_VARIATION_INDEX'
+				);
+				variationIndexList[slot] = variationIndex;
+				totalVariationsList[slot] = totalVariations;
 			}
-
-			variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
-				? variationIndexValue / slotMultiplier
-				: variationIndexValue;
-
-			(, , uint256 totalVariations, ) = ingredientNft.ingredients(siId);
-
-			require(
-				totalVariations > 0 && variationIndex < totalVariations,
-				'DishesNFT: INVALID_SI_VARIATION_INDEX'
-			);
-			variationIndexList[slot] = variationIndex;
-			totalVariationsList[slot] = totalVariations;
 		}
 
 		// get the placeholders for ingredients
