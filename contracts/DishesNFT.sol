@@ -25,6 +25,7 @@ contract DishesNFT is BaseERC721 {
 		uint256 creationTime;
 		uint256 completionTime;
 		int256 multiplier;
+		uint256 variationIndexHash;
 	}
 
 	/*
@@ -59,8 +60,9 @@ contract DishesNFT is BaseERC721 {
 	mapping(uint256 => string) public dishNames;
 	// userAddress => isExcepted?
 	mapping(address => bool) public exceptedAddresses;
-	// dishID => Variation
-	mapping(uint256 => uint256) public variationIndexHashes;
+
+	// // dishID => Variation
+	// mapping(uint256 => uint256) public variationIndexHashes;
 
 	/*
    	=======================================================================
@@ -161,10 +163,11 @@ contract DishesNFT is BaseERC721 {
 			_flameId,
 			block.timestamp,
 			block.timestamp + _preparationTime,
-			multiplier
+			multiplier,
+			variationIndexHash
 		);
 
-		variationIndexHashes[dishNFTId] = variationIndexHash;
+		// variationIndexHashes[dishNFTId] = variationIndexHash;
 
 		dishNames[dishNFTId] = dishName;
 		nonce++;
@@ -275,7 +278,7 @@ contract DishesNFT is BaseERC721 {
 			slotMultiplier = uint256(256**slot); // Create slot multiplier
 			bitMask = 255 * slotMultiplier; // Create bit mask for slot
 			variationIdValue = dishToServe.variationIdHash & bitMask;
-			variationIndexValue = variationIndexHashes[_dishId] & bitMask;
+			variationIndexValue = dishToServe.variationIndexHash & bitMask;
 
 			if (variationIdValue > 0) {
 				variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
