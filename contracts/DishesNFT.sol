@@ -25,7 +25,6 @@ contract DishesNFT is BaseERC721 {
 		uint256 creationTime;
 		uint256 completionTime;
 		int256 multiplier;
-		uint256 variationIndexHash;
 	}
 
 	/*
@@ -60,9 +59,6 @@ contract DishesNFT is BaseERC721 {
 	mapping(uint256 => string) public dishNames;
 	// userAddress => isExcepted?
 	mapping(address => bool) public exceptedAddresses;
-
-	// // dishID => Variation
-	// mapping(uint256 => uint256) public variationIndexHashes;
 
 	/*
    	=======================================================================
@@ -163,11 +159,9 @@ contract DishesNFT is BaseERC721 {
 			_flameId,
 			block.timestamp,
 			block.timestamp + _preparationTime,
-			multiplier,
-			variationIndexHash
+			multiplier
 		);
-
-		// variationIndexHashes[dishNFTId] = variationIndexHash;
+		variationIndexHashes[dishNFTId] = variationIndexHash;
 
 		dishNames[dishNFTId] = dishName;
 		nonce++;
@@ -262,26 +256,19 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
-		uint256 bitMask;
-		uint256 slotMultiplier;
-		uint256 variationIdValue;
-		uint256 variationId;
-		uint256 variationIndexValue;
-		uint256 variationIndex;
-
 		uint256[] memory siIdsList = new uint256[](dishToServe.totalIngredients);
 		uint256[] memory variationIndexList = new uint256[](dishToServe.totalIngredients);
 		uint256[] memory totalVariationsList = new uint256[](dishToServe.totalIngredients);
 
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
-			slotMultiplier = uint256(256**slot); // Create slot multiplier
-			bitMask = 255 * slotMultiplier; // Create bit mask for slot
-			variationIdValue = dishToServe.variationIdHash & bitMask;
-			variationIndexValue = dishToServe.variationIndexHash & bitMask;
+			uint256 slotMultiplier = uint256(256**slot); // Create slot multiplier
+			uint256 bitMask = 255 * slotMultiplier; // Create bit mask for slot
+			uint256 variationIdValue = dishToServe.variationIdHash & bitMask;
+			uint256 variationIndexValue = variationIndexHashes[_dishId] & bitMask;
 
 			if (variationIdValue > 0) {
-				variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
+				uint256 variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
 					? variationIdValue / slotMultiplier
 					: variationIdValue;
 
@@ -293,7 +280,7 @@ contract DishesNFT is BaseERC721 {
 				(uint256 ingredientId, , ) = ingredientNft.defs(variationId);
 				siIdsList[slot] = ingredientId;
 
-				variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+				uint256 variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
 					? variationIndexValue / slotMultiplier
 					: variationIndexValue;
 
@@ -447,4 +434,5 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	uint256[50] private __gap;
+	mapping(uint256 => uint256) public variationIndexHashes;
 }
