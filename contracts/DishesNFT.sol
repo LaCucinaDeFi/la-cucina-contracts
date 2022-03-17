@@ -334,8 +334,6 @@ contract DishesNFT is BaseERC721 {
 		uint256 variationIdHash = dishToServe.variationIdHash;
 		uint256 variationId;
 
-		//require(variationIdHash > 0, 'falied1');
-
 		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
 		string[] memory defs = new string[](dishToServe.totalIngredients);
 
@@ -352,13 +350,12 @@ contract DishesNFT is BaseERC721 {
 
 			(, , string memory svg) = ingredientNft.defs(variationId);
 
-			variationIdList[slot] = variationId;
-			defs[slot] = svg;
+			variationIdList[slot - 1] = variationId;
+			defs[slot - 1] = svg;
 
 			variationIdHash -= variationId * slotMultiplier;
 		}
 
-		// require(false, 'failed1');
 		// get the placeholders for ingredients
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
