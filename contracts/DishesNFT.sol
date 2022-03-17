@@ -231,6 +231,11 @@ contract DishesNFT is BaseERC721 {
 		max = _newMax;
 	}
 
+	function updateDishThreshold(uint256 _newThreshold) external virtual onlyOperator {
+		require(_newThreshold != dishIdThreshold, 'DishesNFT: ALREADY_SET');
+		dishIdThreshold = _newThreshold;
+	}
+
 	/*
    	=======================================================================
    	======================== Getter Methods ===============================
@@ -254,6 +259,26 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
+		if (_dishId < dishIdThreshold) {
+			_serveDish256(dishToServe);
+		} else {
+			_serveDish1M(dishToServe);
+		}
+
+		return accumulator;
+	}
+
+	/*
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+	*/
+
+	function _serveDish256(Dish memory dishToServe)
+		internal
+		view
+		returns (string memory accumulator)
+	{
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
 		uint256 bitMask;
@@ -293,15 +318,48 @@ contract DishesNFT is BaseERC721 {
 			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
 		);
 		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
-
-		return accumulator;
 	}
 
-	/*
-   	=======================================================================
-   	======================== Internal Methods =============================
-   	=======================================================================
-	*/
+	function _serveDish1M(Dish memory dishToServe) internal view returns (string memory accumulator) {
+		uint256 slotConst = 1000000;
+		uint256 slotMultiplier;
+		uint256 variationIdHash = dishToServe.variationIdHash;
+		uint256 variationId;
+
+		//require(variationIdHash > 0, 'falied1');
+
+		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
+		string[] memory defs = new string[](dishToServe.totalIngredients);
+
+		for (uint8 slot = uint8(dishToServe.totalIngredients); slot > uint8(0); slot--) {
+			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
+			variationId = (slot > 0) // Extract variation from slotted value
+				? variationIdHash / slotMultiplier
+				: variationIdHash;
+
+			//require(false, 'falied2');
+
+			require(
+				variationId > 0 && variationId <= ingredientNft.getCurrentDefs(),
+				'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
+			);
+
+			(, , string memory svg) = ingredientNft.defs(variationId);
+
+			variationIdList[slot] = variationId;
+			defs[slot] = svg;
+
+			variationIdHash -= variationId * slotMultiplier;
+		}
+
+		// get the placeholders for ingredients
+		accumulator = LaCucinaUtils.strConcat(
+			accumulator,
+			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
+		);
+		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
+	}
+
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
@@ -419,4 +477,6 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	uint256[50] private __gap;
+
+	uint256 public dishIdThreshold;
 }

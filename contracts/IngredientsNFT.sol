@@ -302,7 +302,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				strongies += strongie;
 			}
 
-			variationIdHash += variationId * 256**i;
+			variationIdHash += variationId * 1000000**i;
 		}
 
 		Ingredient memory ingredient1 = ingredients[_ingredientIds[0]];

@@ -39,4 +39,6 @@ interface IDishesNFT is IERC721Upgradeable {
 		uint256 _flameId,
 		uint256 _preparationTime
 	) external;
+
+	function dishIdThreshold() external view returns (uint256);
 }
