@@ -259,11 +259,15 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
+		string memory svg;
+
 		if (_dishId < dishIdThreshold) {
-			_serveDish256(dishToServe);
+			svg = _serveDish256(dishToServe, accumulator);
 		} else {
-			_serveDish1M(dishToServe);
+			svg = _serveDish1M(dishToServe, accumulator);
 		}
+
+		accumulator = LaCucinaUtils.strConcat(accumulator, svg);
 
 		return accumulator;
 	}
@@ -274,10 +278,10 @@ contract DishesNFT is BaseERC721 {
    	=======================================================================
 	*/
 
-	function _serveDish256(Dish memory dishToServe)
+	function _serveDish256(Dish memory dishToServe, string memory accumulator)
 		internal
 		view
-		returns (string memory accumulator)
+		returns (string memory IngredientsSvg)
 	{
 		uint256 slotConst = 256;
 		uint256 slotMask = 255;
@@ -317,10 +321,14 @@ contract DishesNFT is BaseERC721 {
 			accumulator,
 			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
 		);
-		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
+		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 	}
 
-	function _serveDish1M(Dish memory dishToServe) internal view returns (string memory accumulator) {
+	function _serveDish1M(Dish memory dishToServe, string memory accumulator)
+		internal
+		view
+		returns (string memory IngredientsSvg)
+	{
 		uint256 slotConst = 1000000;
 		uint256 slotMultiplier;
 		uint256 variationIdHash = dishToServe.variationIdHash;
@@ -337,8 +345,6 @@ contract DishesNFT is BaseERC721 {
 				? variationIdHash / slotMultiplier
 				: variationIdHash;
 
-			//require(false, 'falied2');
-
 			require(
 				variationId > 0 && variationId <= ingredientNft.getCurrentDefs(),
 				'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
@@ -352,12 +358,14 @@ contract DishesNFT is BaseERC721 {
 			variationIdHash -= variationId * slotMultiplier;
 		}
 
+		// require(false, 'failed1');
 		// get the placeholders for ingredients
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
 			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
 		);
-		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
+
+		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 	}
 
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
