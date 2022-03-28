@@ -411,6 +411,19 @@ contract BaseMarketplace is
 	}
 
 	/**
+		* @notice This method returns the total bids of auction
+	 */
+	function getTotalBidsOfAuction(uint256 _auctionId)
+		external
+		view
+		virtual
+		onlyValidAuctionId(_auctionId)
+		returns (uint256)
+	{
+		return auction[_auctionId].bidIds.length;
+	}
+
+	/**
 	 * @notice This method allows user to check if particular auction is acive or not.
 	 * @param _auctionId indicates the auction id.
 	 * @return isActive - returns true if auction is active false otherwise.

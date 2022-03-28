@@ -1650,6 +1650,11 @@ contract('PrivateMarketplace', (accounts) => {
 			isSupported = await this.privateMarketplace.supportedTokens(this.sampleToken.address);
 			expect(isSupported).to.be.eq(false);
 		});
+
+		it('should get the total bids of auction correctly', async () => {
+			const totalBids = await this.privateMarketplace.getTotalBidsOfAuction(1);
+			expect(totalBids).to.bignumber.be.eq(totalBids);
+		});
 	});
 
 	describe('upgradeProxy()', () => {
