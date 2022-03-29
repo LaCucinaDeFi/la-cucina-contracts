@@ -78,7 +78,8 @@ interface IIngredientNFT is INFT {
 		external
 		view
 		returns (
-			uint256 variationIdHash,
+			uint256 siHash,
+			uint256 variationIndexHash,
 			string memory dishName,
 			uint256 plutamins,
 			uint256 strongies

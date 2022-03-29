@@ -148,6 +148,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		for (uint256 i = 0; i < totalVariations; i++) {
 			_addVariation(ingredientId, _variationNames[i], _svgs[i]);
 		}
+		
 		// set total variations
 		ingredients[ingredientId].totalVariations = totalVariations;
 	}
@@ -274,25 +275,23 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		view
 		returns (
 			uint256 variationIdHash,
+			uint256 variationIndexHash,
 			string memory dishName,
 			uint256 plutamins,
 			uint256 strongies
 		)
 	{
-		// get variationIdHash
+		// get siHash
 		for (uint256 i = 0; i < _ingredientIds.length; i++) {
-			uint256 totalVariations = ingredients[_ingredientIds[i]].totalVariations;
+			Ingredient memory ingredient = ingredients[_ingredientIds[i]];
+			uint256 totalVariations = ingredient.totalVariations;
 
 			require(totalVariations > 0, 'IngredientNFT: INSUFFICIENT_INGREDIENT_VARIATIONS');
 
-			// add plus one to avoid the 0 as random variation id
 			uint256 variationIndex = LaCucinaUtils.getRandomVariation(_nonce, totalVariations);
+			uint256 variationId = ingredient.defIds[variationIndex];
 
-			uint256 variationId = ingredients[_ingredientIds[i]].defIds[variationIndex];
-
-			(uint256 plutamin, uint256 strongie) = getMultiplier(
-				ingredients[_ingredientIds[i]].nutritionsHash
-			);
+			(uint256 plutamin, uint256 strongie) = getMultiplier(ingredient.nutritionsHash);
 
 			if (i == 0) {
 				plutamins = plutamin;
@@ -303,23 +302,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 			}
 
 			variationIdHash += variationId * 1000000**i;
+			variationIndexHash += variationIndex * 1000000**i;
 		}
 
-		Ingredient memory ingredient1 = ingredients[_ingredientIds[0]];
-		Ingredient memory ingredient2 = ingredients[_ingredientIds[1]];
-
-		require(ingredient1.keywords.length >= 1, 'IngredientsNFT: INVALID_INDEX');
-		require(ingredient2.keywords.length >= 2, 'IngredientsNFT: INVALID_INDEX');
-
-		dishName = string(
-			abi.encodePacked(
-				ingredient1.keywords[0], // 1st keyword of 1st ingredient
-				' ',
-				ingredient2.keywords[1], // 2nd keyword of 2nd ingredient
-				' ',
-				_dishTypeName
-			)
-		);
+		dishName = _getDishName(_ingredientIds, _dishTypeName, _nonce);
 	}
 
 	/**
@@ -480,6 +466,66 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		ingredients[_ingredientId].defIds.push(defsId);
 
 		emit IngredientVariationAdded(_ingredientId, defsId);
+	}
+
+	function _getRandomKeyword(uint256 _nonce, uint256[] memory _ingredientIds)
+		internal
+		view
+		returns (string memory keyword)
+	{
+		uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
+		Ingredient memory ingredient = ingredients[_ingredientIds[randomIndex]];
+
+		require(ingredient.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
+
+		if (ingredient.keywords.length == 1) {
+			keyword = ingredient.keywords[0];
+		} else {
+			_nonce++;
+			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient.keywords.length);
+			keyword = ingredient.keywords[randomIndex];
+		}
+	}
+
+	function _getDishName(
+		uint256[] memory _ingredientIds,
+		string memory _dishTypeName,
+		uint256 _nonce
+	) internal view returns (string memory dishName) {
+		require(_ingredientIds.length > 1, 'IngredientsNFT: INSUFFICIENT_INGREDIENTS');
+
+		_nonce++;
+		string memory keyword1 = _getRandomKeyword(_nonce, _ingredientIds);
+
+		_nonce++;
+		string memory keyword2 = _getRandomKeyword(_nonce, _ingredientIds);
+
+		if (_ingredientIds.length > 2) {
+			_nonce++;
+			string memory keyword3 = _getRandomKeyword(_nonce, _ingredientIds);
+
+			dishName = string(
+				abi.encodePacked(
+					keyword1, // randomly selected keyword of randomly selected SI1
+					' ',
+					keyword2, // randomly selected keyword of randomly selected SI2
+					' ',
+					keyword3, // randomly selected keyword of randomly selected SI3
+					' ',
+					_dishTypeName
+				)
+			);
+		} else {
+			dishName = string(
+				abi.encodePacked(
+					keyword1, // randomly selected keyword of randomly selected SI1
+					' ',
+					keyword2, // randomly selected keyword of randomly selected SI2
+					' ',
+					_dishTypeName // dish type name
+				)
+			);
+		}
 	}
 
 	/**

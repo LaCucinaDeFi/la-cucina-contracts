@@ -137,7 +137,8 @@ contract DishesNFT is BaseERC721 {
 		nonce++;
 
 		(
-			uint256 ingredientVariaionHash,
+			uint256 ingredientVariationHash,
+			uint256 variationIndexHash,
 			string memory dishName,
 			uint256 plutamins,
 			uint256 strongies
@@ -152,7 +153,7 @@ contract DishesNFT is BaseERC721 {
 			true,
 			_dishId,
 			_ingredientIds.length,
-			ingredientVariaionHash,
+			ingredientVariationHash,
 			totalBaseIngredients,
 			baseVariationHash,
 			_flameId,
@@ -160,6 +161,7 @@ contract DishesNFT is BaseERC721 {
 			block.timestamp + _preparationTime,
 			multiplier
 		);
+		variationIndexHashes[dishNFTId] = variationIndexHash;
 
 		dishNames[dishNFTId] = dishName;
 		nonce++;
@@ -262,9 +264,9 @@ contract DishesNFT is BaseERC721 {
 		string memory svg;
 
 		if (_dishId < dishIdThreshold) {
-			svg = _serveDish256(dishToServe, accumulator);
+			svg = _serveDish256(_dishId, dishToServe, accumulator);
 		} else {
-			svg = _serveDish1M(dishToServe, accumulator);
+			svg = _serveDish1M(_dishId, dishToServe, accumulator);
 		}
 
 		accumulator = LaCucinaUtils.strConcat(accumulator, svg);
@@ -278,29 +280,24 @@ contract DishesNFT is BaseERC721 {
    	=======================================================================
 	*/
 
-	function _serveDish256(Dish memory dishToServe, string memory accumulator)
-		internal
-		view
-		returns (string memory IngredientsSvg)
-	{
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
-		uint256 bitMask;
-		uint256 slotMultiplier;
-		uint256 variationIdValue;
-		uint256 variationId;
-
-		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
-		string[] memory defs = new string[](dishToServe.totalIngredients);
+	function _serveDish256(
+		uint256 dishNftId,
+		Dish memory dishToServe,
+		string memory accumulator
+	) internal view returns (string memory IngredientsSvg) {
+		uint256[] memory siIdsList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory variationIndexList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory totalVariationsList = new uint256[](dishToServe.totalIngredients);
 
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 0; slot < uint8(dishToServe.totalIngredients); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			variationIdValue = dishToServe.variationIdHash & bitMask;
+			uint256 slotMultiplier = uint256(256**slot); // Create slot multiplier
+			uint256 bitMask = 255 * slotMultiplier; // Create bit mask for slot
+			uint256 variationIdValue = dishToServe.variationIdHash & bitMask;
+			uint256 variationIndexValue = variationIndexHashes[dishNftId] & bitMask;
 
 			if (variationIdValue > 0) {
-				variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
+				uint256 variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
 					? variationIdValue / slotMultiplier
 					: variationIdValue;
 
@@ -309,36 +306,50 @@ contract DishesNFT is BaseERC721 {
 					'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 				);
 
-				(, , string memory svg) = ingredientNft.defs(variationId);
+				(uint256 ingredientId, , ) = ingredientNft.defs(variationId);
+				siIdsList[slot] = ingredientId;
 
-				variationIdList[slot] = variationId;
-				defs[slot] = svg;
+				uint256 variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+					? variationIndexValue / slotMultiplier
+					: variationIndexValue;
+
+				(, , uint256 totalVariations, ) = ingredientNft.ingredients(ingredientId);
+
+				require(
+					totalVariations > 0 && variationIndex < totalVariations,
+					'DishesNFT: INVALID_SI_VARIATION_INDEX'
+				);
+				variationIndexList[slot] = variationIndex;
+				totalVariationsList[slot] = totalVariations;
 			}
 		}
 
 		// get the placeholders for ingredients
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
+			_getPlaceHolder(dishToServe.dishId, variationIndexList, totalVariationsList, siIdsList)
 		);
 		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 	}
 
-	function _serveDish1M(Dish memory dishToServe, string memory accumulator)
-		internal
-		view
-		returns (string memory IngredientsSvg)
-	{
+	function _serveDish1M(
+		uint256 dishNftId,
+		Dish memory dishToServe,
+		string memory accumulator
+	) internal view returns (string memory IngredientsSvg) {
 		uint256 slotConst = 1000000;
 		uint256 slotMultiplier;
 		uint256 variationIdHash = dishToServe.variationIdHash;
+		uint256 variationIndexHash = variationIndexHashes[dishNftId];
 		uint256 variationId;
 
-		uint256[] memory variationIdList = new uint256[](dishToServe.totalIngredients);
-		string[] memory defs = new string[](dishToServe.totalIngredients);
+		uint256[] memory siIdsList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory variationIndexList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory totalVariationsList = new uint256[](dishToServe.totalIngredients);
 
 		for (uint8 slot = uint8(dishToServe.totalIngredients); slot > uint8(0); slot--) {
-			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
+			uint256 tempSlot = slot - 1;
+			slotMultiplier = uint256(slotConst**(tempSlot)); // Create slot multiplier
 			variationId = (slot > 0) // Extract variation from slotted value
 				? variationIdHash / slotMultiplier
 				: variationIdHash;
@@ -348,20 +359,31 @@ contract DishesNFT is BaseERC721 {
 				'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
 			);
 
-			(, , string memory svg) = ingredientNft.defs(variationId);
+			(uint256 ingredientId, , ) = ingredientNft.defs(variationId);
+			siIdsList[tempSlot] = ingredientId;
 
-			variationIdList[slot - 1] = variationId;
-			defs[slot - 1] = svg;
+			uint256 variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+				? variationIndexHash / slotMultiplier
+				: variationIndexHash;
+
+			(, , uint256 totalVariations, ) = ingredientNft.ingredients(ingredientId);
+
+			require(
+				totalVariations > 0 && variationIndex < totalVariations,
+				'DishesNFT: INVALID_SI_VARIATION_INDEX'
+			);
+			variationIndexList[tempSlot] = variationIndex;
+			totalVariationsList[tempSlot] = totalVariations;
 
 			variationIdHash -= variationId * slotMultiplier;
+			variationIndexHash -= variationIndex * slotMultiplier;
 		}
 
 		// get the placeholders for ingredients
 		accumulator = LaCucinaUtils.strConcat(
 			accumulator,
-			_getPlaceHolder(dishToServe.dishId, variationIdList, defs)
+			_getPlaceHolder(dishToServe.dishId, variationIndexList, totalVariationsList, siIdsList)
 		);
-
 		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 	}
 
@@ -438,18 +460,23 @@ contract DishesNFT is BaseERC721 {
 	 */
 	function _getPlaceHolder(
 		uint256 dishTypeId,
-		uint256[] memory variationIdList,
-		string[] memory defs
+		uint256[] memory variationIndexList,
+		uint256[] memory totalVariationsList,
+		uint256[] memory siIdsList
 	) internal view returns (string memory ingredientPlaceholders) {
-		uint256 ingredientId;
 		uint256 defId;
-
+		uint256 startingIndex;
 		for (uint256 position = 0; position < kitchen.totalCoordinates(); position++) {
-			(uint256 _ingredientId, , ) = ingredientNft.defs(
-				variationIdList[position % variationIdList.length]
-			);
-			ingredientId = _ingredientId;
-			defId = position % variationIdList.length;
+			uint256 index = position % siIdsList.length;
+			uint256 _ingredientId = siIdsList[index];
+
+			startingIndex = variationIndexList[index];
+
+			// get random starting variationId
+			defId = ingredientNft.getVariationIdByIndex(_ingredientId, startingIndex);
+			variationIndexList[index] = (startingIndex + 1) < totalVariationsList[index]
+				? (startingIndex + 1)
+				: 0;
 
 			uint256 x = kitchen.getXCoordinateAtIndex(dishTypeId, position);
 			uint256 y = kitchen.getYCoordinateAtIndex(dishTypeId, position);
@@ -462,7 +489,9 @@ contract DishesNFT is BaseERC721 {
 					'" width="50" height="50" xml:space="preserve">'
 				)
 			);
-			placeHolder = string(abi.encodePacked(placeHolder, defs[defId]));
+			(, , string memory _IngredientSvg) = ingredientNft.defs(defId);
+
+			placeHolder = string(abi.encodePacked(placeHolder, _IngredientSvg));
 			placeHolder = string(abi.encodePacked(placeHolder, '</svg>'));
 			ingredientPlaceholders = string(abi.encodePacked(ingredientPlaceholders, placeHolder));
 		}
@@ -484,4 +513,5 @@ contract DishesNFT is BaseERC721 {
 	uint256[50] private __gap;
 
 	uint256 public dishIdThreshold;
+	mapping(uint256 => uint256) public variationIndexHashes;
 }
