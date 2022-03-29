@@ -2,6 +2,7 @@ require('chai').should();
 const {expect} = require('chai');
 const {expectRevert, BN, time, ether} = require('@openzeppelin/test-helpers');
 const {deployProxy, upgradeProxy} = require('@openzeppelin/truffle-upgrades');
+const {getIngredients} = require('./helper/NutrisionHash');
 
 const fs = require('fs');
 const path = require('path');
@@ -535,6 +536,20 @@ contract('Cooker', (accounts) => {
 			expect(dishOwner1).to.be.eq(user1);
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(preparedDishId).to.bignumber.be.eq(new BN('1'));
+
+			const variationIdHash = dishDetail.variationIdHash;
+			const totalIngredients = dishDetail.totalIngredients;
+
+			const ingredientIds = await getIngredients(
+				variationIdHash,
+				totalIngredients,
+				this.Ingredient
+			);
+
+			console.log('ingredientIDs: ', ingredientIds);
+			ingredientIds.forEach((id) => {
+				console.log('ingredientId: ', id.toString());
+			});
 		});
 
 		it('should serve the prepared dish correctly', async () => {
@@ -676,7 +691,7 @@ contract('Cooker', (accounts) => {
 			const dishName = await this.Dish.dishNames(currentDishId);
 			console.log('dishName: ', dishName.toString());
 
-			//get user1`s dish balance
+			//get user1`s dish balanceuncookDish
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
 
 			expect(dishOwner).to.be.eq(user1);
@@ -986,6 +1001,15 @@ contract('Cooker', (accounts) => {
 		it('should uncook dish correctly', async () => {
 			// // add Cooker contract as excepted address in ingredient
 			await this.Dish.addExceptedAddress(this.Cooker.address, {from: operator});
+
+			const dishSvg = await this.Dish.serveDish(1);
+
+			const addresssPath = await path.join('generated/cooker', 'pizza1.svg');
+			dishId++;
+
+			await fs.writeFile(addresssPath, dishSvg.toString(), (err) => {
+				if (err) throw err;
+			});
 
 			// uncook dish
 			this.uncookTx = await this.Cooker.uncookDish(1, {from: user1});
