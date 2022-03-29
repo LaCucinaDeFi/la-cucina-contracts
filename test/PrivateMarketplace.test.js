@@ -8,6 +8,7 @@ const IngredientNFT = artifacts.require('IngredientsNFT');
 const PrivateMarketplace = artifacts.require('PrivateMarketplace');
 const PrivateMarketplaceV2 = artifacts.require('PrivateMarketplaceV2');
 
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 const {Talien} = require('./helper/talien');
 const papayas = require('../data/ingredients/papaya');
 
@@ -123,6 +124,11 @@ contract('PrivateMarketplace', (accounts) => {
 				{
 					from: minter
 				}
+			);
+
+			console.log(
+				'gas cost for creating sale in new & exciting marketplace: ',
+				gasToEth(this.saleTx.receipt.cumulativeGasUsed)
 			);
 
 			currentNftId = await this.Ingredient.getCurrentNftId();
@@ -257,6 +263,10 @@ contract('PrivateMarketplace', (accounts) => {
 				}
 			);
 
+			console.log(
+				'gas cost for creating auction in new & exciting marketplace: ',
+				gasToEth(this.auctionTx.receipt.cumulativeGasUsed)
+			);
 			currentNftId = await this.Ingredient.getCurrentNftId();
 		});
 
@@ -742,7 +752,14 @@ contract('PrivateMarketplace', (accounts) => {
 			);
 
 			// cancel auction
-			await this.privateMarketplace.cancelAuction(currentAuctionId, {from: minter});
+			this.cancelAuctionTx = await this.privateMarketplace.cancelAuction(currentAuctionId, {
+				from: minter
+			});
+
+			console.log(
+				'gas cost for canceling auction in new & exciting marketplace: ',
+				gasToEth(this.cancelAuctionTx.receipt.cumulativeGasUsed)
+			);
 		});
 
 		it('shoud delete the auction data after canceling auction', async () => {
@@ -904,6 +921,11 @@ contract('PrivateMarketplace', (accounts) => {
 			this.buyNFTTx = await this.privateMarketplace.buyNFT(currentSaleId, {from: user1});
 
 			const fundReceiverBalanceAfter = await this.sampleToken.balanceOf(fundReceiver);
+
+			console.log(
+				'gas cost for buying nft from new & exciting marketplace: ',
+				gasToEth(this.buyNFTTx.receipt.cumulativeGasUsed)
+			);
 
 			expect(fundReceiverBalanceAfter).to.bignumber.be.eq(
 				fundReceiverBalanceBefore.add(ether('1'))
@@ -1167,7 +1189,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.privateMarketplace.updateMinimumDuration(String(time.duration.days('4')), {
 					from: operator
 				}),
-				'MintingStatoin: INVALID_MINIMUM_DURATION'
+				'Market: INVALID_MINIMUM_DURATION'
 			);
 		});
 
@@ -1176,7 +1198,7 @@ contract('PrivateMarketplace', (accounts) => {
 				this.privateMarketplace.updateMinimumDuration(String(time.duration.days('0')), {
 					from: operator
 				}),
-				'MintingStatoin: INVALID_MINIMUM_DURATION'
+				'Market: INVALID_MINIMUM_DURATION'
 			);
 		});
 		it('should revert when non-admin tries to update minimum duration', async () => {
@@ -1219,7 +1241,14 @@ contract('PrivateMarketplace', (accounts) => {
 			user1BalanceBefore = await this.sampleToken.balanceOf(user1);
 
 			// place bid for user1
-			await this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {from: user1});
+			this.placeBidTx = await this.privateMarketplace.placeBid(currentAuctionId, ether('2'), {
+				from: user1
+			});
+
+			console.log(
+				'gas cost for place bid in new & exciting marketplace: ',
+				gasToEth(this.placeBidTx.receipt.cumulativeGasUsed)
+			);
 
 			currentBidId = await this.privateMarketplace.getCurrentBidId();
 		});
@@ -1259,6 +1288,30 @@ contract('PrivateMarketplace', (accounts) => {
 
 			const auction = await this.privateMarketplace.auction(currentAuctionId);
 			expect(auction.winningBidId).to.bignumber.be.eq(currentBidId);
+		});
+
+		it('should get the total bids on auction correctly', async () => {
+			const totalBids = await this.privateMarketplace.getTotalBidsOfAuction(currentAuctionId);
+			expect(totalBids).to.bignumber.be.eq(new BN('2'));
+
+			await expectRevert(
+				this.privateMarketplace.getTotalBidsOfAuction(20),
+				'Market: INVALID_AUCTION_ID'
+			);
+		});
+
+		it('should get the bid id of auction correctly', async () => {
+			const bidId = await this.privateMarketplace.getBidIdOfAuction(currentAuctionId, 1);
+			expect(bidId).to.bignumber.be.eq(currentBidId);
+
+			await expectRevert(
+				this.privateMarketplace.getBidIdOfAuction(20, 0),
+				'Market: INVALID_AUCTION_ID'
+			);
+			await expectRevert(
+				this.privateMarketplace.getBidIdOfAuction(currentAuctionId, 2),
+				'Market: INVALID_INDEX'
+			);
 		});
 
 		it('should revert if tokens are not approved before placing bid', async () => {
@@ -1433,6 +1486,11 @@ contract('PrivateMarketplace', (accounts) => {
 
 			// resolve auction
 			this.resolveTx = await this.privateMarketplace.resolveAuction(currentAuctionId);
+
+			console.log(
+				'gas cost for resolving auction in new & exciting marketplace: ',
+				gasToEth(this.resolveTx.receipt.cumulativeGasUsed)
+			);
 
 			const auction = await this.privateMarketplace.auction(currentAuctionId);
 
@@ -1633,7 +1691,12 @@ contract('PrivateMarketplace', (accounts) => {
 			expect(isActive).to.be.eq(true);
 
 			// cancel sale
-			await this.privateMarketplace.cancelSale(currentSaleId, {from: minter});
+			this.cancelSaleTx = await this.privateMarketplace.cancelSale(currentSaleId, {from: minter});
+
+			console.log(
+				'gas cost for canceling sale in new & exciting marketplace: ',
+				gasToEth(this.cancelSaleTx.receipt.cumulativeGasUsed)
+			);
 
 			isActive = await this.privateMarketplace.isActiveSale(currentSaleId);
 			expect(isActive).to.be.eq(false);

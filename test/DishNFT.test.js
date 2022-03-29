@@ -270,18 +270,19 @@ contract('DishesNFT', (accounts) => {
 			//get user1`s dish balance
 			const dishBalance = await this.Dish.balanceOf(user1);
 			const dishOwner = await this.Dish.ownerOf(currentDishIdAfter);
+			const variationIndexHash = await this.Dish.variationIndexHashes(currentDishIdAfter);
 
 			expect(dishBalance).to.bignumber.be.eq(new BN('1'));
 			expect(dishOwner).to.bignumber.be.eq(user1);
 			expect(dishDetails.cooked).to.be.eq(true);
 			expect(dishDetails.dishId).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.totalIngredients).to.bignumber.be.eq(new BN('3'));
-			expect(dishDetails.variationIdHash).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.totalBaseIngredients).to.bignumber.be.eq(new BN('3'));
 			expect(dishDetails.flameType).to.bignumber.be.eq(new BN('1'));
 			expect(dishDetails.creationTime).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.completionTime).to.bignumber.be.gt(dishDetails.creationTime);
 			expect(dishDetails.multiplier).to.bignumber.be.eq(new BN('2897315367569879096'));
+			expect(variationIndexHash).to.bignumber.be.eq(new BN('0'));
 
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(currentDishIdAfter).to.bignumber.be.eq(new BN('1'));

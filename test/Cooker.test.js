@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const {MAX_UINT256, ZERO_ADDRESS} = require('@openzeppelin/test-helpers/src/constants');
 const {Talien} = require('./helper/talien');
+const {GAS_LIMIT, gasToEth} = require('./helper/utils');
 
 const doughs = require('../data/dough');
 const sauces = require('../data/sauce');
@@ -28,12 +29,7 @@ const SampleToken = artifacts.require('SampleToken');
 
 const url = 'https://token-cdn-domain/{id}.json';
 const ipfsHash = 'bafybeihabfo2rluufjg22a5v33jojcamglrj4ucgcw7on6v33sc6blnxcm';
-const GAS_LIMIT = 85000000;
-const GAS_PRICE = 10; // 10 gwei
 
-const gasToEth = (gascost) => {
-	return (Number(gascost) * GAS_PRICE) / 10 ** 9;
-};
 contract('Cooker', (accounts) => {
 	const owner = accounts[0];
 	const minter = accounts[1];
@@ -455,7 +451,7 @@ contract('Cooker', (accounts) => {
 			);
 		});
 
-		it('should make pizza with all ingredients', async () => {
+		it('should make pizza with all(5) Wingredients', async () => {
 			// approve tokens to Cooker
 			await this.SampleToken.approve(this.Talien.address, MAX_UINT256, {from: user1});
 			// generate talien for user1
@@ -467,18 +463,19 @@ contract('Cooker', (accounts) => {
 			this.prepareDish1Tx = await this.Cooker.cookDish(1, 1, [1, 2, 3, 4, 5], {from: user1});
 
 			const currentDishId = await this.Dish.getCurrentTokenId();
+			const variationIndexHash = await this.Dish.variationIndexHashes(currentDishId);
 
 			//get dish details
 			const dishDetail = await this.Dish.dish(currentDishId);
-			const dishName = await this.Dish.dishNames(currentDishId);
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 			expect(dishDetail.cooked).to.be.eq(true);
 			expect(dishDetail.totalIngredients).bignumber.to.be.eq(new BN('5'));
 			expect(dishDetail.totalBaseIngredients).bignumber.to.be.eq(new BN('3'));
 			expect(dishDetail.flameType).bignumber.to.be.eq(new BN('1'));
-			expect(dishName).to.be.eq(`${papayas[0].keyword} ${caviar[0].keyword} Pizza`);
 
 			// get users ingredient balance
 			const user1CaviarBalanceAfter = await this.Ingredient.balanceOf(user1, 1);
@@ -494,6 +491,7 @@ contract('Cooker', (accounts) => {
 			const cookerBeefBalanceAfter = await this.Ingredient.balanceOf(this.Cooker.address, 4);
 			const cookerTruffleBalanceAfter = await this.Ingredient.balanceOf(this.Cooker.address, 5);
 
+			expect(variationIndexHash).to.bignumber.be.gt(new BN('0'));
 			expect(user1CaviarBalance).to.bignumber.be.eq(new BN('1'));
 			expect(user1TunaBalance).to.bignumber.be.eq(new BN('1'));
 			expect(user1GoldBalance).to.bignumber.be.eq(new BN('1'));
@@ -557,7 +555,7 @@ contract('Cooker', (accounts) => {
 			});
 		});
 
-		it('should prepare pizza using caviar and tuna only', async () => {
+		it('should prepare pizza using papaya and caviar only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
@@ -573,6 +571,8 @@ contract('Cooker', (accounts) => {
 
 			//get dish owner
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -590,7 +590,7 @@ contract('Cooker', (accounts) => {
 			});
 		});
 
-		it('should prepare pizza using caviar and gold only', async () => {
+		it('should prepare pizza using papaya and leaves only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
@@ -606,6 +606,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -622,7 +624,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using caviar and beef only', async () => {
+		it('should prepare pizza using papaya and venom only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
@@ -639,6 +641,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -655,7 +659,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using cheese and beef only', async () => {
+		it('should prepare pizza using papaya and ant_eggs only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
@@ -669,6 +673,8 @@ contract('Cooker', (accounts) => {
 
 			//get current dish id
 			const currentDishId = await this.Dish.getCurrentTokenId();
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
@@ -688,7 +694,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using tuna and Truffle only', async () => {
+		it('should prepare pizza using caviar and ant_eggs only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 5, 1, '0x384', {from: owner});
@@ -705,6 +711,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -721,7 +729,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using caviar and tuna and truffle only', async () => {
+		it('should prepare pizza using papaya, caviar and ant_eggs only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 1, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
@@ -739,6 +747,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -755,7 +765,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using tuna, gold, beef and truffle only', async () => {
+		it('should prepare pizza using caviar, leaves, venom and ant_eggs only', async () => {
 			// mint ingredients to the user1prepa
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 3, 1, '0x384', {from: owner});
@@ -778,6 +788,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -800,7 +812,7 @@ contract('Cooker', (accounts) => {
 				if (err) throw err;
 			});
 		});
-		it('should prepare pizza using caviar, gold,and truffle only', async () => {
+		it('should prepare pizza using caviar, venom and ant_eggs only', async () => {
 			// mint ingredients to the user1
 			await this.Ingredient.safeTransferFrom(owner, user1, 2, 1, '0x384', {from: owner});
 			await this.Ingredient.safeTransferFrom(owner, user1, 4, 1, '0x384', {from: owner});
@@ -822,6 +834,8 @@ contract('Cooker', (accounts) => {
 
 			//get user1`s dish balance
 			const dishOwner = await this.Dish.ownerOf(currentDishId);
+			const dishName = await this.Dish.dishNames(currentDishId);
+			console.log('dishName: ', dishName.toString());
 
 			expect(dishOwner).to.be.eq(user1);
 
@@ -976,7 +990,7 @@ contract('Cooker', (accounts) => {
 			// uncook dish
 			this.uncookTx = await this.Cooker.uncookDish(1, {from: user1});
 			console.log(
-				'gas cost for uncooking dish: ',
+				'gas cost for uncooking dish having 5 ingredients: ',
 				gasToEth(this.uncookTx.receipt.cumulativeGasUsed)
 			);
 
@@ -1087,7 +1101,7 @@ contract('Cooker', (accounts) => {
 
 			this.uncookTx2 = await this.Cooker.uncookDish(currentDishId, {from: user2});
 			console.log(
-				'gas cost for uncooking dish: ',
+				'gas cost for uncooking dish having 3 ingredients: ',
 				gasToEth(this.uncookTx2.receipt.cumulativeGasUsed)
 			);
 
@@ -1095,6 +1109,20 @@ contract('Cooker', (accounts) => {
 
 			expect(lacBalBefore).to.bignumber.be.gt(lacBalAfter);
 			expect(lacBalBefore).to.bignumber.be.eq(lacBalAfter.add(new BN(ether('5'))));
+
+			// uncook for dish having 2 ingredients
+			this.uncookTx3 = await this.Cooker.uncookDish(2, {from: user1});
+			console.log(
+				'gas cost for uncooking dish having 2 ingredients: ',
+				gasToEth(this.uncookTx3.receipt.cumulativeGasUsed)
+			);
+
+			// uncook for dish having 4 ingredients
+			this.uncookTx4 = await this.Cooker.uncookDish(8, {from: user1});
+			console.log(
+				'gas cost for uncooking dish having 4 ingredients: ',
+				gasToEth(this.uncookTx4.receipt.cumulativeGasUsed)
+			);
 		});
 
 		it('should revert when non-dishOwner tries to uncook the dish', async () => {
