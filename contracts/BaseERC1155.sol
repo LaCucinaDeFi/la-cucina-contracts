@@ -235,8 +235,8 @@ contract BaseERC1155 is
 		uint256 id,
 		uint256 amount,
 		bytes memory data
-	) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-		ERC1155SupplyUpgradeable._mint(account, id, amount, data);
+	) internal virtual override(ERC1155Upgradeable) {
+		ERC1155Upgradeable._mint(account, id, amount, data);
 	}
 
 	/**
@@ -247,8 +247,8 @@ contract BaseERC1155 is
 		uint256[] memory ids,
 		uint256[] memory amounts,
 		bytes memory data
-	) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-		ERC1155SupplyUpgradeable._mintBatch(to, ids, amounts, data);
+	) internal virtual override(ERC1155Upgradeable) {
+		ERC1155Upgradeable._mintBatch(to, ids, amounts, data);
 	}
 
 	/**
@@ -258,8 +258,8 @@ contract BaseERC1155 is
 		address account,
 		uint256 id,
 		uint256 amount
-	) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-		ERC1155SupplyUpgradeable._burn(account, id, amount);
+	) internal virtual override(ERC1155Upgradeable) {
+		ERC1155Upgradeable._burn(account, id, amount);
 	}
 
 	/**
@@ -269,8 +269,8 @@ contract BaseERC1155 is
 		address account,
 		uint256[] memory ids,
 		uint256[] memory amounts
-	) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-		ERC1155SupplyUpgradeable._burnBatch(account, ids, amounts);
+	) internal virtual override(ERC1155Upgradeable) {
+		ERC1155Upgradeable._burnBatch(account, ids, amounts);
 	}
 
 	function _beforeTokenTransfer(
@@ -280,7 +280,7 @@ contract BaseERC1155 is
 		uint256[] memory ids,
 		uint256[] memory amounts,
 		bytes memory data
-	) internal virtual override(ERC1155Upgradeable, ERC1155PausableUpgradeable) {
+	) internal virtual override(ERC1155SupplyUpgradeable, ERC1155PausableUpgradeable) {
 		super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 	}
 

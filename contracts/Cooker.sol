@@ -218,33 +218,27 @@ contract Cooker is
 		// uncook the dish
 		dishesNft.uncookDish(_dishId);
 
-		uint256 slotConst = 256;
-		uint256 slotMask = 255;
-		uint256 bitMask;
-		uint256 slottedValue;
-		uint256 slotMultiplier;
-		uint256 variation;
-
-		// Iterate Ingredient variation hash and assemble SVG sandwich
-		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
-			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
-			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
-			slottedValue = ingredientVariationHash & bitMask; // Extract slotted value from hash
-			if (slottedValue > 0) {
-				variation = (slot > 0) // Extract variation from slotted value
-					? slottedValue / slotMultiplier
-					: slottedValue;
-
-				assert(variation > 0 && variation <= ingredientNft.getCurrentDefs());
-
-				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
-
-				assert(ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId());
-
-				// transfer the ingredient nft to user
-				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
-			}
+		if (_dishId < dishesNft.dishIdThreshold()) {
+			_transferIngredients256(ingredientVariationHash, totalIngredients);
+		} else {
+			_transferIngredients1M(ingredientVariationHash, totalIngredients);
 		}
+	}
+
+	/**
+	 * @notice This method alloes operator to uncook the dish by returning the dishNFT
+	 * @param _dishId - indicates the id of dish to be uncooked.
+	 */
+	function uncookDishOperator(uint256 _dishId) external virtual onlyOperator nonReentrant {
+		require(isDishReadyToUncook(_dishId), 'Cooker: CANNOT_UNCOOK_WHILE_PREPARING');
+
+		address dishOwner = dishesNft.ownerOf(_dishId);
+
+		// get the dish nft from user
+		dishesNft.transferFrom(dishOwner, address(this), _dishId);
+
+		// uncook the dish
+		dishesNft.uncookDish(_dishId);
 	}
 
 	/**
@@ -404,6 +398,66 @@ contract Cooker is
 			'Cooker: INVALID_ADDRESS'
 		);
 		fundReceiver = _newFundReceiver;
+	}
+
+	function _transferIngredients256(uint256 variationIdHash, uint256 totalIngredients)
+		internal
+		virtual
+	{
+		uint256 slotConst = 256;
+		uint256 slotMask = 255;
+		uint256 bitMask;
+		uint256 slottedValue;
+		uint256 slotMultiplier;
+		uint256 variation;
+
+		// Iterate Ingredient variation hash and assemble SVG sandwich
+		for (uint8 slot = 0; slot <= uint8(totalIngredients); slot++) {
+			slotMultiplier = uint256(slotConst**slot); // Create slot multiplier
+			bitMask = slotMask * slotMultiplier; // Create bit mask for slot
+			slottedValue = variationIdHash & bitMask; // Extract slotted value from hash
+			if (slottedValue > 0) {
+				variation = (slot > 0) // Extract variation from slotted value
+					? slottedValue / slotMultiplier
+					: slottedValue;
+
+				assert(variation > 0 && variation <= ingredientNft.getCurrentDefs());
+
+				(uint256 ingredientId, , ) = ingredientNft.defs(variation);
+
+				assert(ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId());
+
+				// transfer the ingredient nft to user
+				ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
+			}
+		}
+	}
+
+	function _transferIngredients1M(uint256 variationIdHash, uint256 totalIngredients)
+		internal
+		virtual
+	{
+		uint256 slotConst = 1000000;
+		uint256 slotMultiplier;
+		uint256 variation;
+
+		for (uint8 slot = uint8(totalIngredients); slot > uint8(0); slot--) {
+			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
+			variation = (slot > 0) // Extract variation from slotted value
+				? variationIdHash / slotMultiplier
+				: variationIdHash;
+
+			assert(variation > 0 && variation <= ingredientNft.getCurrentDefs());
+
+			(uint256 ingredientId, , ) = ingredientNft.defs(variation);
+
+			assert(ingredientId > 0 && ingredientId <= ingredientNft.getCurrentNftId());
+
+			// transfer the ingredient nft to user
+			ingredientNft.safeTransferFrom(address(this), msg.sender, ingredientId, 1, '');
+
+			variationIdHash -= variation * slotMultiplier;
+		}
 	}
 
 	/*

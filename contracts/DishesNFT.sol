@@ -233,6 +233,11 @@ contract DishesNFT is BaseERC721 {
 		max = _newMax;
 	}
 
+	function updateDishThreshold(uint256 _newThreshold) external virtual onlyOperator {
+		require(_newThreshold != dishIdThreshold, 'DishesNFT: ALREADY_SET');
+		dishIdThreshold = _newThreshold;
+	}
+
 	/*
    	=======================================================================
    	======================== Getter Methods ===============================
@@ -256,6 +261,30 @@ contract DishesNFT is BaseERC721 {
 
 		accumulator = _prepareDefs(dishToServe.totalBaseIngredients, dishToServe.baseVariationHash);
 
+		string memory svg;
+
+		if (_dishId < dishIdThreshold) {
+			svg = _serveDish256(_dishId, dishToServe, accumulator);
+		} else {
+			svg = _serveDish1M(_dishId, dishToServe, accumulator);
+		}
+
+		accumulator = LaCucinaUtils.strConcat(accumulator, svg);
+
+		return accumulator;
+	}
+
+	/*
+   	=======================================================================
+   	======================== Internal Methods =============================
+   	=======================================================================
+	*/
+
+	function _serveDish256(
+		uint256 dishNftId,
+		Dish memory dishToServe,
+		string memory accumulator
+	) internal view returns (string memory IngredientsSvg) {
 		uint256[] memory siIdsList = new uint256[](dishToServe.totalIngredients);
 		uint256[] memory variationIndexList = new uint256[](dishToServe.totalIngredients);
 		uint256[] memory totalVariationsList = new uint256[](dishToServe.totalIngredients);
@@ -265,7 +294,7 @@ contract DishesNFT is BaseERC721 {
 			uint256 slotMultiplier = uint256(256**slot); // Create slot multiplier
 			uint256 bitMask = 255 * slotMultiplier; // Create bit mask for slot
 			uint256 variationIdValue = dishToServe.variationIdHash & bitMask;
-			uint256 variationIndexValue = variationIndexHashes[_dishId] & bitMask;
+			uint256 variationIndexValue = variationIndexHashes[dishNftId] & bitMask;
 
 			if (variationIdValue > 0) {
 				uint256 variationId = (slot > 0) // Extract Ingredient variation ID from slotted value
@@ -300,16 +329,64 @@ contract DishesNFT is BaseERC721 {
 			accumulator,
 			_getPlaceHolder(dishToServe.dishId, variationIndexList, totalVariationsList, siIdsList)
 		);
-		accumulator = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
-
-		return accumulator;
+		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
 	}
 
-	/*
-   	=======================================================================
-   	======================== Internal Methods =============================
-   	=======================================================================
-	*/
+	function _serveDish1M(
+		uint256 dishNftId,
+		Dish memory dishToServe,
+		string memory accumulator
+	) internal view returns (string memory IngredientsSvg) {
+		uint256 slotConst = 1000000;
+		uint256 slotMultiplier;
+		uint256 variationIdHash = dishToServe.variationIdHash;
+		uint256 variationIndexHash = variationIndexHashes[dishNftId];
+		uint256 variationId;
+
+		uint256[] memory siIdsList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory variationIndexList = new uint256[](dishToServe.totalIngredients);
+		uint256[] memory totalVariationsList = new uint256[](dishToServe.totalIngredients);
+
+		for (uint8 slot = uint8(dishToServe.totalIngredients); slot > uint8(0); slot--) {
+			uint256 tempSlot = slot - 1;
+			slotMultiplier = uint256(slotConst**(tempSlot)); // Create slot multiplier
+			variationId = (slot > 0) // Extract variation from slotted value
+				? variationIdHash / slotMultiplier
+				: variationIdHash;
+
+			require(
+				variationId > 0 && variationId <= ingredientNft.getCurrentDefs(),
+				'DishesNFT: INVALID_INGREDIENT_VARIATION_INDEX'
+			);
+
+			(uint256 ingredientId, , ) = ingredientNft.defs(variationId);
+			siIdsList[tempSlot] = ingredientId;
+
+			uint256 variationIndex = (slot > 0) // Extract Ingredient variation ID from slotted value
+				? variationIndexHash / slotMultiplier
+				: variationIndexHash;
+
+			(, , uint256 totalVariations, ) = ingredientNft.ingredients(ingredientId);
+
+			require(
+				totalVariations > 0 && variationIndex < totalVariations,
+				'DishesNFT: INVALID_SI_VARIATION_INDEX'
+			);
+			variationIndexList[tempSlot] = variationIndex;
+			totalVariationsList[tempSlot] = totalVariations;
+
+			variationIdHash -= variationId * slotMultiplier;
+			variationIndexHash -= variationIndex * slotMultiplier;
+		}
+
+		// get the placeholders for ingredients
+		accumulator = LaCucinaUtils.strConcat(
+			accumulator,
+			_getPlaceHolder(dishToServe.dishId, variationIndexList, totalVariationsList, siIdsList)
+		);
+		IngredientsSvg = LaCucinaUtils.strConcat(accumulator, string('</svg>'));
+	}
+
 	function _prepareDefs(uint256 _totalBaseIngredients, uint256 _baseVariationHash)
 		internal
 		view
@@ -434,5 +511,7 @@ contract DishesNFT is BaseERC721 {
 	}
 
 	uint256[50] private __gap;
+
+	uint256 public dishIdThreshold;
 	mapping(uint256 => uint256) public variationIndexHashes;
 }

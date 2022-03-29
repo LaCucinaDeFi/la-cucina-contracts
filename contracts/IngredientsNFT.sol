@@ -148,6 +148,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		for (uint256 i = 0; i < totalVariations; i++) {
 			_addVariation(ingredientId, _variationNames[i], _svgs[i]);
 		}
+		
 		// set total variations
 		ingredients[ingredientId].totalVariations = totalVariations;
 	}
@@ -300,8 +301,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				strongies += strongie;
 			}
 
-			variationIdHash += variationId * 256**i;
-			variationIndexHash += variationIndex * 256**i;
+			variationIdHash += variationId * 1000000**i;
+			variationIndexHash += variationIndex * 1000000**i;
 		}
 
 		dishName = _getDishName(_ingredientIds, _dishTypeName, _nonce);
