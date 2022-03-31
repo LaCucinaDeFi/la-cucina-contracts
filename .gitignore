@@ -4,7 +4,9 @@ build
 secrets.json
 secrets.test.json
 
-.openzeppelin
+.openzeppelin/unknown-999.json
+.openzeppelin/unknown-1337.json
+
 coverage
 coverage.json
 
