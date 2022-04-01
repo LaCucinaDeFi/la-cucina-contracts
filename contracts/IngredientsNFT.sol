@@ -139,7 +139,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string[] memory _variationNames
 	) external virtual returns (uint256 ingredientId) {
 		uint256 totalVariations = _svgs.length;
-		require(_svgs.length > 0, 'IngredientsNFT: INSUFFICIENT_VARIATIONS');
 		require(_svgs.length == _variationNames.length, 'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES');
 
 		ingredientId = _addIngredient(_name, _nutritionsHash, _ipfsHash, _keywords, _amount, _user);
@@ -148,7 +147,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		for (uint256 i = 0; i < totalVariations; i++) {
 			_addVariation(ingredientId, _variationNames[i], _svgs[i]);
 		}
-		
+
 		// set total variations
 		ingredients[ingredientId].totalVariations = totalVariations;
 	}
@@ -181,8 +180,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		onlyOperator
 		onlyValidNftId(_tokenId)
 	{
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
-
 		ingredients[_tokenId].name = _name;
 		emit IngredientUpdated(_tokenId);
 	}
@@ -198,9 +195,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _name,
 		string memory _svg
 	) external virtual onlyOperator onlyValidDefId(_defId) {
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
-
 		Defs storage ingredientVariaion = defs[_defId];
 
 		ingredientVariaion.name = _name;
@@ -421,10 +415,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 _amount,
 		address _user
 	) internal virtual onlyMinter returns (uint256 ingredientId) {
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
-		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_keywords.length > 1, 'IngredientNFT: INSUFFICIENT_KEYWORDS');
-		require(_amount > 0, 'IngredientNFT: INVALID_AMOUNT');
 		require(_user != address(0), 'IngredientNFT: INVALID_USER');
 
 		// generate ingredient Id
@@ -454,9 +445,6 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _name,
 		string memory _svg
 	) internal virtual returns (uint256 defsId) {
-		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
-		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
-
 		// increment defs counter
 		defsCounter.increment();
 
@@ -468,21 +456,18 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		emit IngredientVariationAdded(_ingredientId, defsId);
 	}
 
-	function _getRandomKeyword(uint256 _nonce, uint256[] memory _ingredientIds)
+	function _getRandomKeyword(uint256 _nonce, Ingredient memory ingredient)
 		internal
 		view
 		returns (string memory keyword)
 	{
-		uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
-		Ingredient memory ingredient = ingredients[_ingredientIds[randomIndex]];
-
 		require(ingredient.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
 
 		if (ingredient.keywords.length == 1) {
 			keyword = ingredient.keywords[0];
 		} else {
 			_nonce++;
-			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient.keywords.length);
+			uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient.keywords.length);
 			keyword = ingredient.keywords[randomIndex];
 		}
 	}
@@ -492,36 +477,62 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _dishTypeName,
 		uint256 _nonce
 	) internal view returns (string memory dishName) {
-		require(_ingredientIds.length > 1, 'IngredientsNFT: INSUFFICIENT_INGREDIENTS');
+		uint256 totalIngredients = _ingredientIds.length;
 
-		_nonce++;
-		string memory keyword1 = _getRandomKeyword(_nonce, _ingredientIds);
+		if (totalIngredients > 3) {
+			string[] memory keywords = new string[](3);
+			uint256[] memory uniqueIndexes = new uint256[](3);
 
-		_nonce++;
-		string memory keyword2 = _getRandomKeyword(_nonce, _ingredientIds);
+			uniqueIndexes[0] = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
+			Ingredient memory ingredient = ingredients[_ingredientIds[uniqueIndexes[0]]];
+			keywords[0] = _getRandomKeyword(_nonce, ingredient);
 
-		if (_ingredientIds.length > 2) {
-			_nonce++;
-			string memory keyword3 = _getRandomKeyword(_nonce, _ingredientIds);
+			bool flag;
 
+			while (
+				uniqueIndexes[0] != uniqueIndexes[1] &&
+				uniqueIndexes[1] != uniqueIndexes[2] &&
+				uniqueIndexes[0] != uniqueIndexes[2]
+			) {
+				++_nonce;
+				uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
+
+				if (!flag && randomIndex != uniqueIndexes[0]) {
+					uniqueIndexes[1] = randomIndex;
+					flag = true;
+					ingredient = ingredients[_ingredientIds[randomIndex]];
+					keywords[1] = _getRandomKeyword(_nonce, ingredient);
+				} else if (flag && randomIndex != uniqueIndexes[1]) {
+					uniqueIndexes[2] = randomIndex;
+					ingredient = ingredients[_ingredientIds[randomIndex]];
+					keywords[2] = _getRandomKeyword(_nonce, ingredient);
+				}
+			}
 			dishName = string(
 				abi.encodePacked(
-					keyword1, // randomly selected keyword of randomly selected SI1
+					keywords[0], // randomly selected keyword of randomly selected SI1
 					' ',
-					keyword2, // randomly selected keyword of randomly selected SI2
+					keywords[1], // randomly selected keyword of randomly selected SI2
 					' ',
-					keyword3, // randomly selected keyword of randomly selected SI3
+					keywords[2], // randomly selected keyword of randomly selected SI3
 					' ',
 					_dishTypeName
 				)
 			);
 		} else {
+			string[] memory keywords = new string[](totalIngredients);
+			string memory keyNames;
+			Ingredient memory ingredient;
+
+			for (uint8 i = 0; i < totalIngredients; i++) {
+				ingredient = ingredients[_ingredientIds[i]];
+				_nonce++;
+				keywords[i] = _getRandomKeyword(_nonce, ingredient);
+				keyNames = string(abi.encodePacked(keyNames, keywords[i], ' '));
+			}
 			dishName = string(
 				abi.encodePacked(
-					keyword1, // randomly selected keyword of randomly selected SI1
-					' ',
-					keyword2, // randomly selected keyword of randomly selected SI2
-					' ',
+					keyNames,
 					_dishTypeName // dish type name
 				)
 			);
