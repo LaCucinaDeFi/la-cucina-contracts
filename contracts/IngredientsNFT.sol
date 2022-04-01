@@ -139,6 +139,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string[] memory _variationNames
 	) external virtual returns (uint256 ingredientId) {
 		uint256 totalVariations = _svgs.length;
+		require(_svgs.length > 0, 'IngredientsNFT: INSUFFICIENT_VARIATIONS');
 		require(_svgs.length == _variationNames.length, 'IngredientsNFT: INSUFFICIENT_VARIATION_NAMES');
 
 		ingredientId = _addIngredient(_name, _nutritionsHash, _ipfsHash, _keywords, _amount, _user);
@@ -180,6 +181,8 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		onlyOperator
 		onlyValidNftId(_tokenId)
 	{
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
+
 		ingredients[_tokenId].name = _name;
 		emit IngredientUpdated(_tokenId);
 	}
@@ -195,6 +198,9 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _name,
 		string memory _svg
 	) external virtual onlyOperator onlyValidDefId(_defId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
+		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
+
 		Defs storage ingredientVariaion = defs[_defId];
 
 		ingredientVariaion.name = _name;
@@ -385,14 +391,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		pure
 		returns (uint256 plutamins, uint256 strongies)
 	{
-		uint256 slotConst = 100000;
-		uint256 slotMultiplier;
-		uint256 nutrition;
-
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 7; slot > uint8(0); slot--) {
-			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
-			nutrition = (slot > 0) // Extract nutrition from slotted value
+			uint256 slotMultiplier = uint256(100000**(slot - 1)); // Create slot multiplier
+			uint256 nutrition = (slot > 0) // Extract nutrition from slotted value
 				? nutritionsHash / slotMultiplier
 				: nutritionsHash;
 			// store 2nd and last nutrition i.e plutamins and strongies
@@ -415,7 +417,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		uint256 _amount,
 		address _user
 	) internal virtual onlyMinter returns (uint256 ingredientId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_INGREDIENT_NAME');
+		require(bytes(_ipfsHash).length > 0, 'IngredientNFT: INVALID_IPFS_HASH');
 		require(_keywords.length > 1, 'IngredientNFT: INSUFFICIENT_KEYWORDS');
+		require(_amount > 0, 'IngredientNFT: INVALID_AMOUNT');
 		require(_user != address(0), 'IngredientNFT: INVALID_USER');
 
 		// generate ingredient Id
@@ -445,6 +450,9 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _name,
 		string memory _svg
 	) internal virtual returns (uint256 defsId) {
+		require(bytes(_name).length > 0, 'IngredientNFT: INVALID_NAME');
+		require(bytes(_svg).length > 0, 'IngredientNFT: INVALID_SVG');
+
 		// increment defs counter
 		defsCounter.increment();
 
@@ -456,11 +464,12 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		emit IngredientVariationAdded(_ingredientId, defsId);
 	}
 
-	function _getRandomKeyword(uint256 _nonce, Ingredient memory ingredient)
+	function _getRandomKeyword(uint256 _nonce, uint256 _ingredientId)
 		internal
 		view
 		returns (string memory keyword)
 	{
+		Ingredient memory ingredient = ingredients[_ingredientId];
 		require(ingredient.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
 
 		if (ingredient.keywords.length == 1) {
@@ -484,15 +493,15 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 			uint256[] memory uniqueIndexes = new uint256[](3);
 
 			uniqueIndexes[0] = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
-			Ingredient memory ingredient = ingredients[_ingredientIds[uniqueIndexes[0]]];
-			keywords[0] = _getRandomKeyword(_nonce, ingredient);
+			keywords[0] = _getRandomKeyword(_nonce, _ingredientIds[uniqueIndexes[0]]);
 
 			bool flag;
 
 			while (
-				uniqueIndexes[0] != uniqueIndexes[1] &&
-				uniqueIndexes[1] != uniqueIndexes[2] &&
-				uniqueIndexes[0] != uniqueIndexes[2]
+				uniqueIndexes[0] == uniqueIndexes[1] ||
+				uniqueIndexes[1] == uniqueIndexes[2] ||
+				uniqueIndexes[0] == uniqueIndexes[2] ||
+				bytes(keywords[2]).length == 0
 			) {
 				++_nonce;
 				uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
@@ -500,12 +509,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 				if (!flag && randomIndex != uniqueIndexes[0]) {
 					uniqueIndexes[1] = randomIndex;
 					flag = true;
-					ingredient = ingredients[_ingredientIds[randomIndex]];
-					keywords[1] = _getRandomKeyword(_nonce, ingredient);
-				} else if (flag && randomIndex != uniqueIndexes[1]) {
+					keywords[1] = _getRandomKeyword(_nonce, _ingredientIds[randomIndex]);
+				} else if (flag && randomIndex != uniqueIndexes[0] && randomIndex != uniqueIndexes[1]) {
 					uniqueIndexes[2] = randomIndex;
-					ingredient = ingredients[_ingredientIds[randomIndex]];
-					keywords[2] = _getRandomKeyword(_nonce, ingredient);
+					keywords[2] = _getRandomKeyword(_nonce, _ingredientIds[randomIndex]);
 				}
 			}
 			dishName = string(
@@ -522,12 +529,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		} else {
 			string[] memory keywords = new string[](totalIngredients);
 			string memory keyNames;
-			Ingredient memory ingredient;
 
 			for (uint8 i = 0; i < totalIngredients; i++) {
-				ingredient = ingredients[_ingredientIds[i]];
 				_nonce++;
-				keywords[i] = _getRandomKeyword(_nonce, ingredient);
+				keywords[i] = _getRandomKeyword(_nonce, _ingredientIds[i]);
 				keyNames = string(abi.encodePacked(keyNames, keywords[i], ' '));
 			}
 			dishName = string(
