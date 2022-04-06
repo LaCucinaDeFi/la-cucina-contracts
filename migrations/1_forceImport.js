@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const {upgradeProxy, forceImport} = require('@openzeppelin/truffle-upgrades');
 
 const PublicMarketplace = artifacts.require('PublicMarketplace');
@@ -28,17 +26,5 @@ module.exports = async function (deployer) {
 			contractInstance,
 			{kind: 'transparent'}
 		);
-
-		const addresssPath = await path.join(
-			'.openzeppelin/',
-			contractInstance.contractName,
-			'_',
-			network_id,
-			'.json'
-		);
-
-		await fs.writeFile(addresssPath, instance, (err) => {
-			if (err) throw err;
-		});
 	}
 };
