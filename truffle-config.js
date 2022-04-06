@@ -72,7 +72,8 @@ module.exports = {
 				new HDWalletProvider(test_data.mnemonic, 'https://data-seed-prebsc-1-s2.binance.org:8545/'),
 			network_id: 97,
 			gasPrice: 10000000000, // 10 gwei (in wei)
-			skipDryRun: true
+			skipDryRun: true,
+			networkCheckTimeout: 10000000
 		},
 		bsc_main: {
 			provider: () => new HDWalletProvider(mnemonic, 'https://bsc-dataseed1.ninicoin.io'),

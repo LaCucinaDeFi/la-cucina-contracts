@@ -1189,7 +1189,7 @@ contract('PublicMarketplace', (accounts) => {
 
 			await expectRevert(
 				this.publicMarketplace.placeBid(currentAuctionId, ether('7'), {from: accounts[6]}),
-				'ERC20: transfer amount exceeds allowance'
+				'ERC20: insufficient allowance'
 			);
 		});
 
