@@ -148,7 +148,7 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		for (uint256 i = 0; i < totalVariations; i++) {
 			_addVariation(ingredientId, _variationNames[i], _svgs[i]);
 		}
-		
+
 		// set total variations
 		ingredients[ingredientId].totalVariations = totalVariations;
 	}
@@ -391,14 +391,10 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		pure
 		returns (uint256 plutamins, uint256 strongies)
 	{
-		uint256 slotConst = 100000;
-		uint256 slotMultiplier;
-		uint256 nutrition;
-
 		// Iterate Ingredient hash and assemble SVGs
 		for (uint8 slot = 7; slot > uint8(0); slot--) {
-			slotMultiplier = uint256(slotConst**(slot - 1)); // Create slot multiplier
-			nutrition = (slot > 0) // Extract nutrition from slotted value
+			uint256 slotMultiplier = uint256(100000**(slot - 1)); // Create slot multiplier
+			uint256 nutrition = (slot > 0) // Extract nutrition from slotted value
 				? nutritionsHash / slotMultiplier
 				: nutritionsHash;
 			// store 2nd and last nutrition i.e plutamins and strongies
@@ -468,21 +464,19 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		emit IngredientVariationAdded(_ingredientId, defsId);
 	}
 
-	function _getRandomKeyword(uint256 _nonce, uint256[] memory _ingredientIds)
+	function _getRandomKeyword(uint256 _nonce, uint256 _ingredientId)
 		internal
 		view
 		returns (string memory keyword)
 	{
-		uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, _ingredientIds.length);
-		Ingredient memory ingredient = ingredients[_ingredientIds[randomIndex]];
-
+		Ingredient memory ingredient = ingredients[_ingredientId];
 		require(ingredient.keywords.length > 0, 'IngredientsNFT: INSUFFICIENT_KEYWORDS');
 
 		if (ingredient.keywords.length == 1) {
 			keyword = ingredient.keywords[0];
 		} else {
 			_nonce++;
-			randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient.keywords.length);
+			uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, ingredient.keywords.length);
 			keyword = ingredient.keywords[randomIndex];
 		}
 	}
@@ -492,36 +486,58 @@ contract IngredientsNFT is BaseERC1155WithRoyalties {
 		string memory _dishTypeName,
 		uint256 _nonce
 	) internal view returns (string memory dishName) {
-		require(_ingredientIds.length > 1, 'IngredientsNFT: INSUFFICIENT_INGREDIENTS');
+		uint256 totalIngredients = _ingredientIds.length;
 
-		_nonce++;
-		string memory keyword1 = _getRandomKeyword(_nonce, _ingredientIds);
+		if (totalIngredients > 3) {
+			string[] memory keywords = new string[](3);
+			uint256[] memory uniqueIndexes = new uint256[](3);
 
-		_nonce++;
-		string memory keyword2 = _getRandomKeyword(_nonce, _ingredientIds);
+			uniqueIndexes[0] = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
+			keywords[0] = _getRandomKeyword(_nonce, _ingredientIds[uniqueIndexes[0]]);
 
-		if (_ingredientIds.length > 2) {
-			_nonce++;
-			string memory keyword3 = _getRandomKeyword(_nonce, _ingredientIds);
+			bool flag;
 
+			while (
+				uniqueIndexes[0] == uniqueIndexes[1] ||
+				uniqueIndexes[1] == uniqueIndexes[2] ||
+				uniqueIndexes[0] == uniqueIndexes[2] ||
+				bytes(keywords[2]).length == 0
+			) {
+				++_nonce;
+				uint256 randomIndex = LaCucinaUtils.getRandomVariation(_nonce, totalIngredients);
+
+				if (!flag && randomIndex != uniqueIndexes[0]) {
+					uniqueIndexes[1] = randomIndex;
+					flag = true;
+					keywords[1] = _getRandomKeyword(_nonce, _ingredientIds[randomIndex]);
+				} else if (flag && randomIndex != uniqueIndexes[0] && randomIndex != uniqueIndexes[1]) {
+					uniqueIndexes[2] = randomIndex;
+					keywords[2] = _getRandomKeyword(_nonce, _ingredientIds[randomIndex]);
+				}
+			}
 			dishName = string(
 				abi.encodePacked(
-					keyword1, // randomly selected keyword of randomly selected SI1
+					keywords[0], // randomly selected keyword of randomly selected SI1
 					' ',
-					keyword2, // randomly selected keyword of randomly selected SI2
+					keywords[1], // randomly selected keyword of randomly selected SI2
 					' ',
-					keyword3, // randomly selected keyword of randomly selected SI3
+					keywords[2], // randomly selected keyword of randomly selected SI3
 					' ',
 					_dishTypeName
 				)
 			);
 		} else {
+			string[] memory keywords = new string[](totalIngredients);
+			string memory keyNames;
+
+			for (uint8 i = 0; i < totalIngredients; i++) {
+				_nonce++;
+				keywords[i] = _getRandomKeyword(_nonce, _ingredientIds[i]);
+				keyNames = string(abi.encodePacked(keyNames, keywords[i], ' '));
+			}
 			dishName = string(
 				abi.encodePacked(
-					keyword1, // randomly selected keyword of randomly selected SI1
-					' ',
-					keyword2, // randomly selected keyword of randomly selected SI2
-					' ',
+					keyNames,
 					_dishTypeName // dish type name
 				)
 			);

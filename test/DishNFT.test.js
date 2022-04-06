@@ -282,7 +282,7 @@ contract('DishesNFT', (accounts) => {
 			expect(dishDetails.creationTime).to.bignumber.be.gt(new BN('0'));
 			expect(dishDetails.completionTime).to.bignumber.be.gt(dishDetails.creationTime);
 			expect(dishDetails.multiplier).to.bignumber.be.eq(new BN('2897315367569879096'));
-			expect(variationIndexHash).to.bignumber.be.eq(new BN('0'));
+			expect(variationIndexHash).to.bignumber.be.gt(new BN('0'));
 
 			expect(currentDishIdBefore).to.bignumber.be.eq(new BN('0'));
 			expect(currentDishIdAfter).to.bignumber.be.eq(new BN('1'));

@@ -492,7 +492,7 @@ contract('Cooker', (accounts) => {
 			const cookerBeefBalanceAfter = await this.Ingredient.balanceOf(this.Cooker.address, 4);
 			const cookerTruffleBalanceAfter = await this.Ingredient.balanceOf(this.Cooker.address, 5);
 
-			expect(variationIndexHash).to.bignumber.be.gt(new BN('0'));
+			expect(variationIndexHash).to.bignumber.be.eq(new BN('0'));
 			expect(user1CaviarBalance).to.bignumber.be.eq(new BN('1'));
 			expect(user1TunaBalance).to.bignumber.be.eq(new BN('1'));
 			expect(user1GoldBalance).to.bignumber.be.eq(new BN('1'));
@@ -540,13 +540,13 @@ contract('Cooker', (accounts) => {
 			const variationIdHash = dishDetail.variationIdHash;
 			const totalIngredients = dishDetail.totalIngredients;
 
-			const ingredientIds = await getIngredients(
-				variationIdHash,
-				totalIngredients,
-				this.Ingredient
-			);
+			// const ingredientIds = await getIngredients(
+			// 	variationIdHash,
+			// 	totalIngredients,
+			// 	this.Ingredient
+			// );
 
-			console.log('ingredientIDs: ', ingredientIds);
+			// console.log('ingredientIDs: ', ingredientIds);
 			ingredientIds.forEach((id) => {
 				console.log('ingredientId: ', id.toString());
 			});
